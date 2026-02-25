@@ -52,7 +52,7 @@ export default function SportFilter({
               <span
                 className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
                   isActive
-                    ? "bg-accent-green text-black"
+                    ? "bg-accent-green text-white"
                     : "bg-bg-border text-slate-500"
                 }`}
               >

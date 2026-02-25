@@ -18,7 +18,7 @@ export default function Header() {
         {/* Logo */}
         <a href="/" className="flex items-center gap-2 group">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-green">
-            <Zap className="h-4 w-4 text-black" fill="black" />
+            <Zap className="h-4 w-4 text-white" fill="white" />
           </div>
           <span className="text-lg font-bold tracking-tight text-white">
             WeLike<span className="text-accent-green">Sportz</span>
@@ -45,7 +45,7 @@ export default function Header() {
           </span>
           <a
             href="/predictions"
-            className="rounded-lg bg-accent-green px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+            className="rounded-lg bg-accent-green px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             View Predictions
           </a>
@@ -77,7 +77,7 @@ export default function Header() {
           <a
             href="/predictions"
             onClick={() => setMenuOpen(false)}
-            className="mt-3 block rounded-lg bg-accent-green px-4 py-2 text-center text-sm font-semibold text-black"
+            className="mt-3 block rounded-lg bg-accent-green px-4 py-2 text-center text-sm font-semibold text-white"
           >
             View Predictions
           </a>

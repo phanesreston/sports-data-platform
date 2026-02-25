@@ -13,7 +13,7 @@
 }
 
 body {
-  background-color: #080810;
+  background-color: #05091c;
   color: #f1f5f9;
   font-family: var(--font-inter);
   -webkit-font-smoothing: antialiased;
@@ -24,17 +24,17 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f0f1a;
+  background: #080f23;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1c1c2e;
+  background: #172034;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #22c55e33;
+  background: rgba(96, 165, 250, 0.2);
 }
 
 /* Odds button hover glow */
 .odds-btn:hover {
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.25);
 }

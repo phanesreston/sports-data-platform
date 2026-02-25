@@ -15,7 +15,7 @@ export default function Hero() {
         className="pointer-events-none absolute inset-x-0 top-0 h-[500px]"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(34,197,94,0.12), transparent)",
+            "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(96,165,250,0.10), transparent)",
         }}
       />
 
@@ -47,7 +47,7 @@ export default function Hero() {
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
               href="/predictions"
-              className="rounded-xl bg-accent-green px-8 py-3.5 text-base font-bold text-black shadow-lg shadow-accent-green/20 transition-all hover:bg-green-400 hover:shadow-accent-green/30"
+              className="rounded-xl bg-accent-green px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-accent-green/20 transition-all hover:bg-blue-400 hover:shadow-accent-green/30"
             >
               Browse Predictions
             </a>
