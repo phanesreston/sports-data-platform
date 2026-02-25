@@ -38,3 +38,27 @@ body {
 .odds-btn:hover {
   box-shadow: 0 0 12px rgba(96, 165, 250, 0.25);
 }
+
+/* Carousel slide fade-in */
+@keyframes carouselFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.carousel-slide {
+  animation: carouselFadeIn 0.35s ease-out;
+}
+
+/* Hide scrollbar on sport nav */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

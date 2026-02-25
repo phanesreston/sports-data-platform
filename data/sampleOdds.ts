@@ -49,6 +49,7 @@ export interface OddsEvent {
   awayStats: TeamStats;
   h2h: H2HStats;
   markets: Market[];
+  featured?: boolean;
 }
 
 export const SAMPLE_ODDS: OddsEvent[] = [
@@ -56,6 +57,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-001",
     sport: "football",
     league: "Premier League",
+    featured: true,
     homeTeam: "Arsenal",
     awayTeam: "Chelsea",
     commenceTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
@@ -102,6 +104,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-002",
     sport: "football",
     league: "Premier League",
+    featured: true,
     homeTeam: "Man City",
     awayTeam: "Liverpool",
     commenceTime: new Date(Date.now() + 5 * 3600 * 1000).toISOString(),
@@ -194,6 +197,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-004",
     sport: "basketball",
     league: "NBA",
+    featured: true,
     homeTeam: "LA Lakers",
     awayTeam: "Golden State Warriors",
     commenceTime: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
@@ -284,6 +288,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-006",
     sport: "tennis",
     league: "ATP Masters",
+    featured: true,
     homeTeam: "N. Djokovic",
     awayTeam: "C. Alcaraz",
     commenceTime: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
@@ -374,6 +379,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-008",
     sport: "american_football",
     league: "NFL",
+    featured: true,
     homeTeam: "Kansas City Chiefs",
     awayTeam: "Buffalo Bills",
     commenceTime: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
@@ -464,6 +470,7 @@ export const SAMPLE_ODDS: OddsEvent[] = [
     id: "evt-010",
     sport: "cricket",
     league: "IPL",
+    featured: true,
     homeTeam: "Mumbai Indians",
     awayTeam: "Chennai Super Kings",
     commenceTime: new Date(Date.now() + 10 * 3600 * 1000).toISOString(),
