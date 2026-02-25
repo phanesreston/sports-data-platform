@@ -1,9 +1,9 @@
-import { TrendingUp, Globe, BookOpen } from "lucide-react";
+import { BarChart2, Activity, TrendingUp } from "lucide-react";
 
 const stats = [
-  { icon: Globe, label: "Sports covered", value: "40+" },
-  { icon: BookOpen, label: "Bookmakers", value: "80+" },
-  { icon: TrendingUp, label: "Markets tracked", value: "Live" },
+  { icon: BarChart2, label: "Markets per match", value: "3+" },
+  { icon: Activity, label: "Games of form tracked", value: "5" },
+  { icon: TrendingUp, label: "Sports covered", value: "40+" },
 ];
 
 export default function Hero() {
@@ -27,28 +27,29 @@ export default function Hero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-green" />
             </span>
-            Live odds updated in real-time
+            Stats-powered predictions
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl">
-            Bet Smarter.{" "}
-            <span className="text-accent-green">Not Harder.</span>
+            Know the Stats.{" "}
+            <span className="text-accent-green">Back Your Pick.</span>
           </h1>
 
           {/* Subheadline */}
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-400 sm:text-xl">
-            Compare real-time odds across 40+ sports and 80+ bookmakers in one
-            place. Stop leaving value on the table.
+            We analyse team form, head-to-head records, and historical data
+            across multiple markets — so you know the probability before you
+            place a bet.
           </p>
 
           {/* CTA buttons */}
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
-              href="#odds"
+              href="#predictions"
               className="rounded-xl bg-accent-green px-8 py-3.5 text-base font-bold text-black shadow-lg shadow-accent-green/20 transition-all hover:bg-green-400 hover:shadow-accent-green/30"
             >
-              Browse Live Odds
+              Browse Predictions
             </a>
             <a
               href="#how-it-works"

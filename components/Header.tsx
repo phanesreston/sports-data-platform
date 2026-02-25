@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Menu, X, Zap } from "lucide-react";
 
 const navLinks = [
-  { label: "Odds", href: "#odds" },
-  { label: "Leagues", href: "#leagues" },
+  { label: "Predictions", href: "#predictions" },
+  { label: "Sports", href: "#predictions" },
   { label: "How It Works", href: "#how-it-works" },
 ];
 
@@ -41,13 +41,13 @@ export default function Header() {
         {/* CTA */}
         <div className="hidden items-center gap-3 md:flex">
           <span className="rounded-full bg-accent-green/10 px-3 py-1 text-xs font-semibold text-accent-green ring-1 ring-accent-green/20">
-            LIVE ODDS
+            LIVE DATA
           </span>
           <a
-            href="#odds"
+            href="#predictions"
             className="rounded-lg bg-accent-green px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
           >
-            View Odds
+            View Predictions
           </a>
         </div>
 
@@ -75,11 +75,11 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="#odds"
+            href="#predictions"
             onClick={() => setMenuOpen(false)}
             className="mt-3 block rounded-lg bg-accent-green px-4 py-2 text-center text-sm font-semibold text-black"
           >
-            View Odds
+            View Predictions
           </a>
         </div>
       )}

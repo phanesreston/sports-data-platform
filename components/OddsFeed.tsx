@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
 import type { Sport } from "@/data/sampleOdds";
 import SportFilter from "./SportFilter";
-import OddsCard from "./OddsCard";
+import PredictionCard from "./PredictionCard";
 
 export default function OddsFeed() {
   const [selectedSport, setSelectedSport] = useState<Sport | "all">("all");
@@ -25,15 +25,18 @@ export default function OddsFeed() {
   }, [selectedSport]);
 
   return (
-    <section id="odds" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+    <section
+      id="predictions"
+      className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8"
+    >
       {/* Section header */}
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-extrabold text-white">
-            Upcoming Events
+            Predictions &amp; Markets
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Best available odds — updated live
+            Stats-powered predictions across multiple betting markets
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -63,9 +66,9 @@ export default function OddsFeed() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2">
           {filtered.map((event) => (
-            <OddsCard key={event.id} event={event} />
+            <PredictionCard key={event.id} event={event} />
           ))}
         </div>
       )}
