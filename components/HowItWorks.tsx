@@ -1,83 +1,93 @@
 import { Database, BarChart2, Target } from "lucide-react";
 
-const steps = [
+const sections = [
   {
     number: "01",
     icon: Database,
     title: "We gather the data",
-    description:
-      "Form guides, head-to-head records, and match statistics collected from across all major leagues and competitions worldwide.",
+    paragraphs: [
+      "Every prediction on WeLikeSportz starts with raw data. We collect form guides, head-to-head records, and match statistics from across all major leagues and competitions worldwide.",
+      "This includes each team's last five results, their average goals scored and conceded, and the full historical record between the two sides — giving us a reliable picture of how teams have been performing and how they match up against each other.",
+    ],
   },
   {
     number: "02",
     icon: BarChart2,
     title: "We run the analysis",
-    description:
-      "Our model weighs recent form, team strength, and historical trends to calculate the probability of each possible outcome.",
+    paragraphs: [
+      "Once the data is in, our model weighs each factor to calculate the probability of each possible outcome. Recent form is given more weight than older results, and head-to-head history is balanced against current team strength.",
+      "The result is a probability percentage for each market — Match Result, Over/Under, and more — so you can see not just what we think is likely, but how confident we are in that assessment.",
+    ],
   },
   {
     number: "03",
     icon: Target,
     title: "You make the call",
-    description:
-      "Every prediction highlights the statistically strongest outcome so you can compare the numbers and decide with confidence.",
+    paragraphs: [
+      "Every prediction card highlights the statistically strongest outcome — the pick we'd point to based on the numbers alone. We also surface the best available odds from across the major bookmakers so you can see where the value sits.",
+      "We don't tell you what to do. We present the analysis clearly and transparently so you can make an informed decision yourself.",
+    ],
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section
-      id="how-it-works"
-      className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
-    >
-      {/* Section header */}
-      <div className="mb-12 text-center">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent-purple/20 bg-accent-purple/5 px-4 py-1.5 text-sm font-medium text-accent-purple">
-          Simple &amp; transparent
-        </div>
-        <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-          How It Works
-        </h2>
-        <p className="mt-3 text-slate-400">
-          Data-driven analysis, clearly explained in three steps.
+    <article className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
+      {/* Article header */}
+      <header className="mb-14 border-b border-bg-border pb-10">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent-purple">
+          About the platform
         </p>
-      </div>
+        <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl">
+          How It Works
+        </h1>
+        <p className="mt-5 text-lg leading-relaxed text-slate-400">
+          WeLikeSportz turns raw match data into clear, probability-based
+          predictions. Here&apos;s exactly what we do and how we do it — no
+          black box, no jargon.
+        </p>
+      </header>
 
-      {/* Steps */}
-      <div className="grid gap-6 sm:grid-cols-3">
-        {steps.map(({ number, icon: Icon, title, description }, index) => (
-          <div
-            key={number}
-            className="relative flex flex-col rounded-2xl border border-bg-border bg-bg-card p-6"
-          >
-            {/* Connector line (between cards on desktop) */}
-            {index < steps.length - 1 && (
-              <div
-                aria-hidden
-                className="absolute -right-3 top-1/2 hidden h-px w-6 -translate-y-1/2 bg-bg-border sm:block"
-              />
-            )}
-
-            {/* Step number */}
-            <span className="mb-4 block text-4xl font-extrabold text-bg-border select-none">
-              {number}
-            </span>
-
-            {/* Icon */}
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-accent-green/10">
-              <Icon className="h-5 w-5 text-accent-green" />
+      {/* Sections */}
+      <div className="space-y-16">
+        {sections.map(({ number, icon: Icon, title, paragraphs }) => (
+          <section key={number}>
+            {/* Step marker */}
+            <div className="mb-5 flex items-center gap-4">
+              <span className="text-5xl font-extrabold leading-none text-bg-border select-none">
+                {number}
+              </span>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-green/10">
+                <Icon className="h-4.5 w-4.5 h-[18px] w-[18px] text-accent-green" />
+              </div>
             </div>
 
-            {/* Title */}
-            <h3 className="mb-2 text-base font-bold text-white">{title}</h3>
+            {/* Heading */}
+            <h2 className="mb-5 text-2xl font-bold text-white">{title}</h2>
 
-            {/* Description */}
-            <p className="text-sm leading-relaxed text-slate-400">
-              {description}
-            </p>
-          </div>
+            {/* Body */}
+            <div className="space-y-4">
+              {paragraphs.map((p, i) => (
+                <p key={i} className="text-base leading-relaxed text-slate-400">
+                  {p}
+                </p>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="mt-12 h-px bg-bg-border" />
+          </section>
         ))}
       </div>
-    </section>
+
+      {/* Footer note */}
+      <footer className="mt-14">
+        <p className="text-sm leading-relaxed text-slate-500">
+          Our analysis is statistical and based on historical data. No
+          prediction is guaranteed — sport is unpredictable by nature. Always
+          enjoy sport responsibly.
+        </p>
+      </footer>
+    </article>
   );
 }
