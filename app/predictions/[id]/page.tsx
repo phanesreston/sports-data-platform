@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
+import type { Sport } from "@/data/sampleOdds";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PredictionCard from "@/components/PredictionCard";
 
 interface Props {
   params: { id: string };
@@ -14,13 +14,64 @@ export function generateStaticParams() {
   return SAMPLE_ODDS.map((event) => ({ id: event.id }));
 }
 
+const SPORT_STYLES: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  football: { label: "Football", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  basketball: { label: "Basketball", color: "text-orange-400", bg: "bg-orange-400/10" },
+  tennis: { label: "Tennis", color: "text-yellow-400", bg: "bg-yellow-400/10" },
+  american_football: { label: "NFL", color: "text-blue-400", bg: "bg-blue-400/10" },
+  cricket: { label: "Cricket", color: "text-pink-400", bg: "bg-pink-400/10" },
+};
+
+const STAT_LABEL: Record<Sport, { for: string; against: string }> = {
+  football: { for: "scored", against: "conceded" },
+  basketball: { for: "pts scored", against: "pts allowed" },
+  tennis: { for: "sets won", against: "sets lost" },
+  american_football: { for: "pts scored", against: "pts allowed" },
+  cricket: { for: "run rate", against: "econ rate" },
+};
+
+function formatKickoff(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffM = Math.floor((diffMs % 3600000) / 60000);
+  if (diffH < 1) return `in ${diffM}m`;
+  if (diffH < 24) return `in ${diffH}h ${diffM}m`;
+  return `in ${Math.floor(diffH / 24)}d ${diffH % 24}h`;
+}
+
+function FormPills({ form }: { form: ("W" | "D" | "L")[] }) {
+  return (
+    <div className="flex gap-0.5">
+      {form.map((r, i) => (
+        <span
+          key={i}
+          className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
+            r === "W"
+              ? "bg-emerald-500/20 text-emerald-400"
+              : r === "D"
+              ? "bg-slate-600/30 text-slate-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
+          {r}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function PredictionDetailPage({ params }: Props) {
   const event = SAMPLE_ODDS.find((e) => e.id === params.id);
+  if (!event) notFound();
 
-  if (!event) {
-    notFound();
-  }
-
+  const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
+  const statLabel = STAT_LABEL[event.sport];
+  const totalH2H = event.h2h.homeWins + event.h2h.draws + event.h2h.awayWins;
   const hasDrawOdds = event.bookmakers.some((b) => b.draw != null);
 
   return (
@@ -28,21 +79,173 @@ export default function PredictionDetailPage({ params }: Props) {
       <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Back link */}
+          {/* Back */}
           <Link
             href="/"
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-white"
+            className="mb-8 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Predictions
           </Link>
 
-          {/* Full prediction card (non-linkable on detail page) */}
-          <PredictionCard event={event} asLink={false} />
+          {/* Match header */}
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs font-bold ${style.bg} ${style.color}`}
+                >
+                  {style.label}
+                </span>
+                <span className="text-xs text-slate-500">{event.league}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <Clock className="h-3 w-3" />
+                <span>{formatKickoff(event.commenceTime)}</span>
+              </div>
+            </div>
 
-          {/* Bookmaker odds comparison */}
+            <div className="flex items-center justify-between gap-4">
+              <span className="flex-1 text-xl font-extrabold leading-tight text-white">
+                {event.homeTeam}
+              </span>
+              <span className="shrink-0 rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-slate-400">
+                VS
+              </span>
+              <span className="flex-1 text-right text-xl font-extrabold leading-tight text-white">
+                {event.awayTeam}
+              </span>
+            </div>
+          </div>
+
+          {/* Team form + H2H */}
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Team Form (last 5)
+              </h2>
+              <span className="text-xs text-slate-600">
+                {statLabel.for} / {statLabel.against}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {/* Home */}
+              <div className="flex items-center gap-3">
+                <span className="w-28 shrink-0 truncate text-sm text-slate-300">
+                  {event.homeTeam}
+                </span>
+                <FormPills form={event.homeStats.form} />
+                <span className="ml-auto whitespace-nowrap text-sm">
+                  <span className="font-semibold text-emerald-400/80">
+                    {event.homeStats.avgScored.toFixed(1)}
+                  </span>
+                  <span className="text-slate-600"> / </span>
+                  <span className="font-semibold text-red-400/80">
+                    {event.homeStats.avgConceded.toFixed(1)}
+                  </span>
+                </span>
+              </div>
+              {/* Away */}
+              <div className="flex items-center gap-3">
+                <span className="w-28 shrink-0 truncate text-sm text-slate-300">
+                  {event.awayTeam}
+                </span>
+                <FormPills form={event.awayStats.form} />
+                <span className="ml-auto whitespace-nowrap text-sm">
+                  <span className="font-semibold text-emerald-400/80">
+                    {event.awayStats.avgScored.toFixed(1)}
+                  </span>
+                  <span className="text-slate-600"> / </span>
+                  <span className="font-semibold text-red-400/80">
+                    {event.awayStats.avgConceded.toFixed(1)}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            {/* H2H */}
+            <div className="mt-4 flex items-center gap-1.5 border-t border-bg-border pt-4 text-sm">
+              <span className="text-slate-500">H2H ({totalH2H}):</span>
+              <span className="font-semibold text-emerald-400">
+                {event.h2h.homeWins}W
+              </span>
+              {event.h2h.draws > 0 && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">{event.h2h.draws}D</span>
+                </>
+              )}
+              <span className="text-slate-600">·</span>
+              <span className="font-semibold text-red-400">
+                {event.h2h.awayWins}L
+              </span>
+              <span className="ml-1 text-slate-600">for {event.homeTeam}</span>
+            </div>
+          </div>
+
+          {/* Statistical predictions */}
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Statistical Predictions
+            </h2>
+            <div className="divide-y divide-bg-border">
+              {event.markets.map((market, i) => (
+                <div key={i} className="py-4 first:pt-0 last:pb-0">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-white">
+                      {market.name}
+                    </span>
+                    <span className="text-xs text-slate-600">
+                      Best odds: {market.bestOdds.toFixed(2)} @{" "}
+                      {market.bestBookmaker}
+                    </span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {market.options.map((opt, j) => (
+                      <div key={j} className="flex items-center gap-3">
+                        <span
+                          className={`w-36 shrink-0 truncate text-sm ${
+                            opt.pick
+                              ? "font-semibold text-white"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {opt.label}
+                        </span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-border">
+                          <div
+                            className={`h-full rounded-full ${
+                              opt.pick ? "bg-accent-green" : "bg-slate-600"
+                            }`}
+                            style={{ width: `${opt.probability}%` }}
+                          />
+                        </div>
+                        <span
+                          className={`w-9 shrink-0 text-right text-sm font-bold ${
+                            opt.pick ? "text-accent-green" : "text-slate-500"
+                          }`}
+                        >
+                          {opt.probability}%
+                        </span>
+                        {opt.pick ? (
+                          <span className="w-10 shrink-0 rounded bg-accent-green/10 px-1.5 py-0.5 text-center text-[10px] font-bold text-accent-green ring-1 ring-accent-green/20">
+                            PICK
+                          </span>
+                        ) : (
+                          <span className="w-10 shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Odds comparison */}
           {event.bookmakers.length > 0 && (
-            <div className="mt-6 rounded-2xl border border-bg-border bg-bg-card p-5">
+            <div className="rounded-2xl border border-bg-border bg-bg-card p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
                 Odds Comparison
               </h2>
@@ -55,7 +258,9 @@ export default function PredictionDetailPage({ params }: Props) {
                         {event.homeTeam}
                       </th>
                       {hasDrawOdds && (
-                        <th className="pb-3 pr-4 text-right font-medium">Draw</th>
+                        <th className="pb-3 pr-4 text-right font-medium">
+                          Draw
+                        </th>
                       )}
                       <th className="pb-3 text-right font-medium">
                         {event.awayTeam}
@@ -65,16 +270,16 @@ export default function PredictionDetailPage({ params }: Props) {
                   <tbody className="divide-y divide-bg-border">
                     {event.bookmakers.map((bk) => (
                       <tr key={bk.name}>
-                        <td className="py-2.5 pr-4 text-slate-300">{bk.name}</td>
-                        <td className="py-2.5 pr-4 text-right font-semibold text-white">
+                        <td className="py-3 pr-4 text-slate-300">{bk.name}</td>
+                        <td className="py-3 pr-4 text-right font-semibold text-white">
                           {bk.home.toFixed(2)}
                         </td>
                         {hasDrawOdds && (
-                          <td className="py-2.5 pr-4 text-right text-slate-400">
+                          <td className="py-3 pr-4 text-right text-slate-400">
                             {bk.draw != null ? bk.draw.toFixed(2) : "—"}
                           </td>
                         )}
-                        <td className="py-2.5 text-right font-semibold text-white">
+                        <td className="py-3 text-right font-semibold text-white">
                           {bk.away.toFixed(2)}
                         </td>
                       </tr>

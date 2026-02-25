@@ -66,7 +66,7 @@ export default function OddsFeed() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((event) => (
             <PredictionCard key={event.id} event={event} />
           ))}
