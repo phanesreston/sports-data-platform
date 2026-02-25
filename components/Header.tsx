@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Menu, X, Zap } from "lucide-react";
 
 const navLinks = [
-  { label: "Predictions", href: "#predictions" },
-  { label: "Sports", href: "#predictions" },
+  { label: "Predictions", href: "/predictions" },
+  { label: "Sports", href: "/predictions" },
   { label: "How It Works", href: "#how-it-works" },
 ];
 
@@ -44,7 +44,7 @@ export default function Header() {
             LIVE DATA
           </span>
           <a
-            href="#predictions"
+            href="/predictions"
             className="rounded-lg bg-accent-green px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
           >
             View Predictions
@@ -75,7 +75,7 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="#predictions"
+            href="/predictions"
             onClick={() => setMenuOpen(false)}
             className="mt-3 block rounded-lg bg-accent-green px-4 py-2 text-center text-sm font-semibold text-black"
           >

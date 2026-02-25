@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Clock } from "lucide-react";
 import type { OddsEvent, Market, MarketOption, Sport } from "@/data/sampleOdds";
 
@@ -130,17 +131,18 @@ function MarketSection({ market }: { market: Market }) {
 
 interface PredictionCardProps {
   event: OddsEvent;
+  asLink?: boolean;
 }
 
-export default function PredictionCard({ event }: PredictionCardProps) {
+export default function PredictionCard({ event, asLink = true }: PredictionCardProps) {
   const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
   const timeUntil = formatKickoff(event.commenceTime);
   const statLabel = STAT_LABEL[event.sport];
   const totalH2H =
     event.h2h.homeWins + event.h2h.draws + event.h2h.awayWins;
 
-  return (
-    <article className="flex flex-col rounded-2xl border border-bg-border bg-bg-card p-5 transition-all hover:border-slate-700">
+  const card = (
+    <article className={`flex flex-col rounded-2xl border border-bg-border bg-bg-card p-5 transition-all hover:border-slate-700${asLink ? " cursor-pointer" : ""}`}>
       {/* Top row: sport badge + time */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -252,4 +254,13 @@ export default function PredictionCard({ event }: PredictionCardProps) {
       </div>
     </article>
   );
+
+  if (asLink) {
+    return (
+      <Link href={`/predictions/${event.id}`} className="block">
+        {card}
+      </Link>
+    );
+  }
+  return card;
 }

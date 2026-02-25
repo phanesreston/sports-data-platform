@@ -46,7 +46,7 @@ export default function Hero() {
           {/* CTA buttons */}
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
-              href="#predictions"
+              href="/predictions"
               className="rounded-xl bg-accent-green px-8 py-3.5 text-base font-bold text-black shadow-lg shadow-accent-green/20 transition-all hover:bg-green-400 hover:shadow-accent-green/30"
             >
               Browse Predictions
