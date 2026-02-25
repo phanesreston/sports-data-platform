@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Clock, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
+import { getEntityHref } from "@/data/sampleTeams";
 
 const SPORT_STYLES: Record<
   string,
@@ -71,7 +73,23 @@ interface FeaturedCarouselProps {
   events: OddsEvent[];
 }
 
+function TeamNameLink({ name, align = "left" }: { name: string; align?: "left" | "right" }) {
+  const href = getEntityHref(name);
+  const cls = `text-xl font-extrabold leading-tight text-white transition-colors hover:text-accent-green sm:text-2xl ${
+    align === "right" ? "text-right" : ""
+  }`;
+  if (href) {
+    return (
+      <Link href={href} onClick={(e) => e.stopPropagation()} className={cls}>
+        {name}
+      </Link>
+    );
+  }
+  return <span className={`text-xl font-extrabold leading-tight text-white sm:text-2xl ${align === "right" ? "text-right block" : "block"}`}>{name}</span>;
+}
+
 export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
+  const router = useRouter();
   const [current, setCurrent] = useState(0);
   const [animKey, setAnimKey] = useState(0);
 
@@ -123,7 +141,10 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
       />
 
       {/* Slide content */}
-      <Link href={`/predictions/${event.id}`} className="block">
+      <div
+        onClick={() => router.push(`/predictions/${event.id}`)}
+        className="cursor-pointer"
+      >
         <div key={animKey} className="carousel-slide relative p-6 sm:p-8">
           {/* Sport badge + league + time */}
           <div className="flex items-center justify-between gap-3">
@@ -148,9 +169,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
           <div className="mt-6 flex items-center gap-4">
             {/* Home */}
             <div className="flex flex-1 flex-col gap-2.5">
-              <span className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
-                {event.homeTeam}
-              </span>
+              <TeamNameLink name={event.homeTeam} align="left" />
               <div className="flex gap-1">
                 {event.homeStats.form.map((r, i) => (
                   <FormDot key={i} result={r} />
@@ -168,9 +187,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
             {/* Away */}
             <div className="flex flex-1 flex-col items-end gap-2.5">
-              <span className="text-right text-xl font-extrabold leading-tight text-white sm:text-2xl">
-                {event.awayTeam}
-              </span>
+              <TeamNameLink name={event.awayTeam} align="right" />
               <div className="flex justify-end gap-1">
                 {event.awayStats.form.map((r, i) => (
                   <FormDot key={i} result={r} />
@@ -196,7 +213,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
             </div>
           )}
         </div>
-      </Link>
+      </div>
 
       {/* Controls bar */}
       {events.length > 1 && (
