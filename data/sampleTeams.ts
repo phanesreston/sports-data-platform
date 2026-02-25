@@ -519,7 +519,7 @@ export const SAMPLE_TEAMS: TeamProfile[] = [
         players: [
           { id: "p-dgreen", name: "Draymond Green", position: "PF", positionFull: "Power Forward", number: 23, nationality: "USA", age: 34, keyStats: [{ label: "APG", value: 5.8 }, { label: "RPG", value: 7.1 }, { label: "BPG", value: 0.9 }] },
           { id: "p-wiggins", name: "Andrew Wiggins", position: "SF", positionFull: "Small Forward", number: 22, nationality: "Canada", age: 29, keyStats: [{ label: "PPG", value: 16.2 }, { label: "RPG", value: 4.8 }] },
-          { id: "p-kuminga", name: "Jonathan Kuminga", position: "SF", positionFull: "Small Forward", number: 00, nationality: "DRC", age: 21, keyStats: [{ label: "PPG", value: 16.7 }, { label: "RPG", value: 4.6 }] },
+          { id: "p-kuminga", name: "Jonathan Kuminga", position: "SF", positionFull: "Small Forward", number: 0, nationality: "DRC", age: 21, keyStats: [{ label: "PPG", value: 16.7 }, { label: "RPG", value: 4.6 }] },
         ],
       },
       {
