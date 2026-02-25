@@ -33,10 +33,10 @@ export default function PredictionsPage() {
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-3xl font-extrabold text-white">
-                Predictions &amp; Markets
+                Predictions &amp; Analysis
               </h1>
               <p className="mt-2 text-slate-400">
-                Stats-powered predictions across multiple betting markets
+                Stats-powered analysis across multiple match outcomes
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">

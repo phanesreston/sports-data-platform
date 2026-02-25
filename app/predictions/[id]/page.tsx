@@ -44,7 +44,7 @@ export default function PredictionDetailPage({ params }: Props) {
           {event.bookmakers.length > 0 && (
             <div className="mt-6 rounded-2xl border border-bg-border bg-bg-card p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Bookmaker Odds Comparison
+                Odds Comparison
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

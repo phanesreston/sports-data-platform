@@ -17,12 +17,8 @@ export default function Footer() {
 
           {/* Disclaimer */}
           <p className="max-w-lg text-center text-xs text-slate-600 sm:text-left">
-            WeLikeSportz is for informational purposes only. Odds data is
-            provided for comparison. Please gamble responsibly.{" "}
-            <a href="#" className="underline hover:text-slate-400">
-              18+ only
-            </a>
-            .
+            WeLikeSportz provides data-driven sports analysis for informational
+            and entertainment purposes only. Always enjoy sport responsibly.
           </p>
 
           {/* Links */}

@@ -33,10 +33,10 @@ export default function OddsFeed() {
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-extrabold text-white">
-            Predictions &amp; Markets
+            Predictions &amp; Analysis
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Stats-powered predictions across multiple betting markets
+            Stats-powered analysis across multiple match outcomes
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">

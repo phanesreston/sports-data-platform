@@ -1,7 +1,7 @@
 import { BarChart2, Activity, TrendingUp } from "lucide-react";
 
 const stats = [
-  { icon: BarChart2, label: "Markets per match", value: "3+" },
+  { icon: BarChart2, label: "Predictions per match", value: "3+" },
   { icon: Activity, label: "Games of form tracked", value: "5" },
   { icon: TrendingUp, label: "Sports covered", value: "40+" },
 ];
@@ -33,14 +33,14 @@ export default function Hero() {
           {/* Headline */}
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl">
             Know the Stats.{" "}
-            <span className="text-accent-green">Back Your Pick.</span>
+            <span className="text-accent-green">Make Your Call.</span>
           </h1>
 
           {/* Subheadline */}
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-400 sm:text-xl">
             We analyse team form, head-to-head records, and historical data
-            across multiple markets — so you know the probability before you
-            place a bet.
+            across multiple outcomes — so you can make an informed decision
+            before every match.
           </p>
 
           {/* CTA buttons */}

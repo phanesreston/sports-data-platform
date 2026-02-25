@@ -117,7 +117,7 @@ function MarketSection({ market }: { market: Market }) {
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-white">{market.name}</span>
         <span className="text-[11px] text-slate-600">
-          Best: {market.bestOdds.toFixed(2)} @ {market.bestBookmaker}
+          Top odds: {market.bestOdds.toFixed(2)} @ {market.bestBookmaker}
         </span>
       </div>
       <div className="space-y-1.5">
