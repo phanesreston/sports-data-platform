@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, ChevronRight } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 
 const SPORT_STYLES: Record<
@@ -57,10 +57,6 @@ export default function PredictionCard({
   const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
   const timeUntil = formatKickoff(event.commenceTime);
 
-  const topPick = event.markets
-    .flatMap((m) => m.options.filter((o) => o.pick))
-    .sort((a, b) => b.probability - a.probability)[0];
-
   const card = (
     <article
       className={`group flex flex-col rounded-2xl border border-bg-border bg-bg-card p-4 transition-colors hover:border-slate-700${
@@ -105,33 +101,6 @@ export default function PredictionCard({
         </div>
       </div>
 
-      {/* Pick section */}
-      {topPick && (
-        <div className="mt-4 border-t border-bg-border pt-4">
-          <div className="mb-2.5 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <span className="block text-[11px] text-slate-600">Top pick</span>
-              <span className="block truncate text-sm font-semibold text-white">
-                {topPick.label}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <span className="text-sm font-bold text-accent-green">
-                {topPick.probability}%
-              </span>
-              <ChevronRight className="h-4 w-4 text-slate-600 transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </div>
-
-          {/* Probability bar */}
-          <div className="h-1 overflow-hidden rounded-full bg-bg-border">
-            <div
-              className="h-full rounded-full bg-accent-green/70"
-              style={{ width: `${topPick.probability}%` }}
-            />
-          </div>
-        </div>
-      )}
     </article>
   );
 
