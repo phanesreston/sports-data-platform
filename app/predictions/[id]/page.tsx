@@ -30,7 +30,7 @@ export default function PredictionDetailPage({ params }: Props) {
         <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Back link */}
           <Link
-            href="/predictions"
+            href="/"
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
