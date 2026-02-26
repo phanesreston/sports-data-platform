@@ -122,7 +122,8 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
   if (events.length === 0) return null;
 
-  const event = events[current];
+  const safeCurrent = Math.min(current, events.length - 1);
+  const event = events[safeCurrent];
   const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
 
   const topPick = event.markets
