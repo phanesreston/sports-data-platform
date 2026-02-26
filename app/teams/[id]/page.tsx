@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
 import { Clock, ChevronLeft, MapPin, Calendar, Users } from "lucide-react";
 import Header from "@/components/Header";
@@ -68,8 +67,8 @@ function PlayerCard({ player, sportColor }: { player: TeamPlayer; sportColor: st
   );
 }
 
-export default function TeamPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function TeamPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const team = SAMPLE_TEAMS.find((t) => t.id === id);
 
   if (!team) {

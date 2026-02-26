@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
 import { Clock, ChevronLeft, Trophy, TrendingUp } from "lucide-react";
 import Header from "@/components/Header";
@@ -44,8 +43,8 @@ function SectionHeader({ label, count }: { label: string; count?: number }) {
   );
 }
 
-export default function AthletePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function AthletePage({ params }: { params: { id: string } }) {
+  const { id } = params;
 
   // Try individual athlete first, then team player
   const individual = findAthlete(id);
