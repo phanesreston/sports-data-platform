@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 import { getEntityHref } from "@/data/sampleTeams";
+import { getLeagueHref } from "@/data/sampleLeagues";
 
 const SPORT_STYLES: Record<
   string,
@@ -82,7 +83,20 @@ export default function PredictionCard({ event }: PredictionCardProps) {
           <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${style.bg} ${style.color}`}>
             {style.label}
           </span>
-          <span className="text-xs text-slate-600">{event.league}</span>
+          {(() => {
+            const leagueHref = getLeagueHref(event.league);
+            return leagueHref ? (
+              <Link
+                href={leagueHref}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-slate-600 transition-colors hover:text-slate-400"
+              >
+                {event.league}
+              </Link>
+            ) : (
+              <span className="text-xs text-slate-600">{event.league}</span>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-1 text-xs text-slate-500">
           <Clock className="h-3 w-3" />

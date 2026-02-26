@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Clock, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 import { getEntityHref } from "@/data/sampleTeams";
+import { getLeagueHref } from "@/data/sampleLeagues";
 
 const SPORT_STYLES: Record<
   string,
@@ -155,7 +156,20 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
               >
                 {style.label}
               </span>
-              <span className="text-xs text-slate-500">{event.league}</span>
+              {(() => {
+                const leagueHref = getLeagueHref(event.league);
+                return leagueHref ? (
+                  <Link
+                    href={leagueHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                  >
+                    {event.league}
+                  </Link>
+                ) : (
+                  <span className="text-xs text-slate-500">{event.league}</span>
+                );
+              })()}
               <span className="rounded-full bg-accent-green/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-green">
                 Featured
               </span>
