@@ -32,6 +32,12 @@ export interface TopPerformerSection {
   entries: TopPerformer[];
 }
 
+export interface OverviewStat {
+  label: string;
+  value: string | number;
+  sub?: string;
+}
+
 export interface LeagueProfile {
   id: string;
   name: string;
@@ -41,6 +47,7 @@ export interface LeagueProfile {
   columnHeaders: string[];
   groups: StandingsGroup[];
   topPerformers?: TopPerformerSection[];
+  overview?: OverviewStat[];
 }
 
 export const LEAGUE_NAME_TO_ID: Record<string, string> = {
@@ -108,13 +115,23 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         label: "Top Assisters",
         unit: "Assists",
         entries: [
-          { name: "Kevin De Bruyne",   teamName: "Man City",  teamId: "team-man-city",  playerId: "p-debruyne",    value: 14 },
-          { name: "Mohamed Salah",     teamName: "Liverpool", teamId: "team-liverpool", playerId: "p-salah",       value: 12 },
-          { name: "Bukayo Saka",       teamName: "Arsenal",   teamId: "team-arsenal",   playerId: "p-saka",        value: 11 },
-          { name: "Declan Rice",       teamName: "Arsenal",   teamId: "team-arsenal",   playerId: "p-rice",        value: 8 },
-          { name: "Trent Alexander-Arnold", teamName: "Liverpool", teamId: "team-liverpool", playerId: "p-taa",   value: 10 },
+          { name: "Kevin De Bruyne",        teamName: "Man City",  teamId: "team-man-city",  playerId: "p-debruyne", value: 14 },
+          { name: "Mohamed Salah",          teamName: "Liverpool", teamId: "team-liverpool", playerId: "p-salah",    value: 12 },
+          { name: "Bukayo Saka",            teamName: "Arsenal",   teamId: "team-arsenal",   playerId: "p-saka",     value: 11 },
+          { name: "Trent Alexander-Arnold", teamName: "Liverpool", teamId: "team-liverpool", playerId: "p-taa",      value: 10 },
+          { name: "Declan Rice",            teamName: "Arsenal",   teamId: "team-arsenal",   playerId: "p-rice",     value: 8 },
         ],
       },
+    ],
+    overview: [
+      { label: "Total Goals",      value: "1,082", sub: "280 games played" },
+      { label: "Goals / Game",     value: "2.74" },
+      { label: "Season Progress",  value: "74%",   sub: "28 of 38 matchdays" },
+      { label: "Clean Sheets",     value: 84 },
+      { label: "Yellow Cards",     value: 924 },
+      { label: "Red Cards",        value: 42 },
+      { label: "Penalties Awarded",value: 48 },
+      { label: "Avg Attendance",   value: "40,214" },
     ],
   },
 
@@ -165,6 +182,16 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         ],
       },
     ],
+    overview: [
+      { label: "Total Goals",      value: "1,012", sub: "270 games played" },
+      { label: "Goals / Game",     value: "2.82" },
+      { label: "Season Progress",  value: "71%",   sub: "27 of 38 matchdays" },
+      { label: "Clean Sheets",     value: 71 },
+      { label: "Yellow Cards",     value: 1124 },
+      { label: "Red Cards",        value: 68 },
+      { label: "Penalties Awarded",value: 52 },
+      { label: "Avg Attendance",   value: "36,580" },
+    ],
   },
 
   // ─── NBA ─────────────────────────────────────────────────────────────────
@@ -179,27 +206,27 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
       {
         label: "Eastern Conference",
         rows: [
-          { position: 1, teamId: "team-celtics",  name: "Boston Celtics",        stats: [35, 14, ".714",  "—",  "19-5", "16-9",  "W3"], zone: "champions" },
-          { position: 2,                          name: "Cleveland Cavaliers",    stats: [34, 15, ".694",  "1",  "18-7", "16-8",  "W1"], zone: "champions" },
-          { position: 3,                          name: "New York Knicks",        stats: [31, 17, ".646",  "3.5","18-7", "13-10", "L1"], zone: "champions" },
-          { position: 4,                          name: "Orlando Magic",          stats: [29, 20, ".592",  "6",  "16-8", "13-12", "W2"], zone: "champions" },
-          { position: 5,                          name: "Indiana Pacers",         stats: [27, 21, ".563",  "7.5","14-9", "13-12", "W1"], zone: "playoff" },
-          { position: 6, teamId: "team-bucks",   name: "Milwaukee Bucks",        stats: [22, 27, ".449", "13",  "13-12","9-15",  "W2"], zone: "playoff" },
-          { position: 7,                          name: "Miami Heat",             stats: [21, 28, ".429", "14",  "12-13","9-15",  "L2"], zone: "playoff" },
-          { position: 8,                          name: "Philadelphia 76ers",     stats: [19, 30, ".388", "16",  "11-14","8-16",  "W1"], zone: "playoff" },
+          { position: 1, teamId: "team-celtics",  name: "Boston Celtics",         stats: [35, 14, ".714",  "—",  "19-5", "16-9",  "W3"], zone: "champions" },
+          { position: 2,                          name: "Cleveland Cavaliers",     stats: [34, 15, ".694",  "1",  "18-7", "16-8",  "W1"], zone: "champions" },
+          { position: 3,                          name: "New York Knicks",         stats: [31, 17, ".646",  "3.5","18-7", "13-10", "L1"], zone: "champions" },
+          { position: 4,                          name: "Orlando Magic",           stats: [29, 20, ".592",  "6",  "16-8", "13-12", "W2"], zone: "champions" },
+          { position: 5,                          name: "Indiana Pacers",          stats: [27, 21, ".563",  "7.5","14-9", "13-12", "W1"], zone: "playoff" },
+          { position: 6, teamId: "team-bucks",   name: "Milwaukee Bucks",         stats: [22, 27, ".449", "13",  "13-12","9-15",  "W2"], zone: "playoff" },
+          { position: 7,                          name: "Miami Heat",              stats: [21, 28, ".429", "14",  "12-13","9-15",  "L2"], zone: "playoff" },
+          { position: 8,                          name: "Philadelphia 76ers",      stats: [19, 30, ".388", "16",  "11-14","8-16",  "W1"], zone: "playoff" },
         ],
       },
       {
         label: "Western Conference",
         rows: [
-          { position: 1,                           name: "OKC Thunder",           stats: [37, 10, ".787",  "—",  "21-4", "16-6",  "W4"], zone: "champions" },
-          { position: 2,                           name: "Denver Nuggets",        stats: [34, 13, ".723",  "3",  "19-5", "15-8",  "W2"], zone: "champions" },
-          { position: 3,                           name: "Minnesota Timberwolves",stats: [33, 14, ".702",  "4",  "18-6", "15-8",  "L1"], zone: "champions" },
-          { position: 4,                           name: "LA Clippers",           stats: [30, 18, ".625",  "7.5","17-7", "13-11", "W1"], zone: "champions" },
-          { position: 5, teamId: "team-lakers",   name: "LA Lakers",             stats: [28, 21, ".571",  "9.5","16-8", "12-13", "L2"], zone: "playoff" },
+          { position: 1,                           name: "OKC Thunder",            stats: [37, 10, ".787",  "—",  "21-4", "16-6",  "W4"], zone: "champions" },
+          { position: 2,                           name: "Denver Nuggets",         stats: [34, 13, ".723",  "3",  "19-5", "15-8",  "W2"], zone: "champions" },
+          { position: 3,                           name: "Minnesota Timberwolves", stats: [33, 14, ".702",  "4",  "18-6", "15-8",  "L1"], zone: "champions" },
+          { position: 4,                           name: "LA Clippers",            stats: [30, 18, ".625",  "7.5","17-7", "13-11", "W1"], zone: "champions" },
+          { position: 5, teamId: "team-lakers",   name: "LA Lakers",              stats: [28, 21, ".571",  "9.5","16-8", "12-13", "L2"], zone: "playoff" },
           { position: 6, teamId: "team-warriors", name: "Golden State Warriors",  stats: [26, 23, ".531", "11.5","15-10","11-13", "W2"], zone: "playoff" },
-          { position: 7,                           name: "Phoenix Suns",          stats: [24, 24, ".500", "13.5","14-11","10-13", "L1"], zone: "playoff" },
-          { position: 8,                           name: "Sacramento Kings",      stats: [22, 26, ".458", "15.5","13-11","9-15",  "W1"], zone: "playoff" },
+          { position: 7,                           name: "Phoenix Suns",           stats: [24, 24, ".500", "13.5","14-11","10-13", "L1"], zone: "playoff" },
+          { position: 8,                           name: "Sacramento Kings",       stats: [22, 26, ".458", "15.5","13-11","9-15",  "W1"], zone: "playoff" },
         ],
       },
     ],
@@ -208,13 +235,23 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         label: "Points Per Game",
         unit: "PPG",
         entries: [
-          { name: "Giannis Antetokounmpo", teamName: "Milwaukee Bucks",    teamId: "team-bucks",    playerId: "p-giannis",   value: 30.4 },
-          { name: "Jayson Tatum",          teamName: "Boston Celtics",     teamId: "team-celtics",  playerId: "p-jtatum",    value: 26.9 },
-          { name: "Stephen Curry",         teamName: "Golden State Warriors", teamId: "team-warriors", playerId: "p-curry",  value: 26.8 },
-          { name: "LeBron James",          teamName: "LA Lakers",          teamId: "team-lakers",   playerId: "p-lebron",    value: 25.7 },
-          { name: "Jaylen Brown",          teamName: "Boston Celtics",     teamId: "team-celtics",  playerId: "p-jbrown",    value: 23.0 },
+          { name: "Giannis Antetokounmpo", teamName: "Milwaukee Bucks",       teamId: "team-bucks",    playerId: "p-giannis", value: 30.4 },
+          { name: "Jayson Tatum",          teamName: "Boston Celtics",        teamId: "team-celtics",  playerId: "p-jtatum",  value: 26.9 },
+          { name: "Stephen Curry",         teamName: "Golden State Warriors", teamId: "team-warriors", playerId: "p-curry",   value: 26.8 },
+          { name: "LeBron James",          teamName: "LA Lakers",             teamId: "team-lakers",   playerId: "p-lebron",  value: 25.7 },
+          { name: "Jaylen Brown",          teamName: "Boston Celtics",        teamId: "team-celtics",  playerId: "p-jbrown",  value: 23.0 },
         ],
       },
+    ],
+    overview: [
+      { label: "Games Played",    value: 815,     sub: "~47 per team" },
+      { label: "Avg Pts / Game",  value: "114.2", sub: "combined" },
+      { label: "Avg Margin",      value: "8.4 pts" },
+      { label: "Overtime Games",  value: 38 },
+      { label: "Triple-Doubles",  value: 142 },
+      { label: "40-Point Games",  value: 87 },
+      { label: "Best Win %",      value: ".787",  sub: "OKC Thunder" },
+      { label: "Season Progress", value: "57%",   sub: "of 82 games" },
     ],
   },
 
@@ -259,10 +296,10 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         label: "Passing Yards",
         unit: "Yds",
         entries: [
-          { name: "Patrick Mahomes", teamName: "Kansas City Chiefs",  teamId: "team-chiefs",  playerId: "p-mahomes", value: 3724 },
-          { name: "Josh Allen",      teamName: "Buffalo Bills",        teamId: "team-bills",   playerId: "p-jallen",  value: 3428 },
-          { name: "Brock Purdy",     teamName: "San Francisco 49ers",  teamId: "team-49ers",   playerId: "p-bpurdy",  value: 3156 },
-          { name: "Jalen Hurts",     teamName: "Philadelphia Eagles",  teamId: "team-eagles",  playerId: "p-jhurts",  value: 2974 },
+          { name: "Patrick Mahomes",     teamName: "Kansas City Chiefs",  teamId: "team-chiefs",  playerId: "p-mahomes",    value: 3724 },
+          { name: "Josh Allen",          teamName: "Buffalo Bills",       teamId: "team-bills",   playerId: "p-jallen",     value: 3428 },
+          { name: "Brock Purdy",         teamName: "San Francisco 49ers", teamId: "team-49ers",   playerId: "p-bpurdy",     value: 3156 },
+          { name: "Jalen Hurts",         teamName: "Philadelphia Eagles", teamId: "team-eagles",  playerId: "p-jhurts",     value: 2974 },
         ],
       },
       {
@@ -270,11 +307,21 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         unit: "Yds",
         entries: [
           { name: "Christian McCaffrey", teamName: "San Francisco 49ers", teamId: "team-49ers",  playerId: "p-cmccaffrey", value: 1062 },
-          { name: "James Cook",          teamName: "Buffalo Bills",        teamId: "team-bills",  playerId: "p-jcook",      value: 904 },
-          { name: "Isiah Pacheco",       teamName: "Kansas City Chiefs",   teamId: "team-chiefs", playerId: "p-ipacheco",   value: 842 },
-          { name: "D'Andre Swift",       teamName: "Philadelphia Eagles",  teamId: "team-eagles", playerId: "p-daswift",    value: 878 },
+          { name: "James Cook",          teamName: "Buffalo Bills",       teamId: "team-bills",  playerId: "p-jcook",      value: 904 },
+          { name: "D'Andre Swift",       teamName: "Philadelphia Eagles", teamId: "team-eagles", playerId: "p-daswift",    value: 878 },
+          { name: "Isiah Pacheco",       teamName: "Kansas City Chiefs",  teamId: "team-chiefs", playerId: "p-ipacheco",   value: 842 },
         ],
       },
+    ],
+    overview: [
+      { label: "Games Played",     value: 208,    sub: "of 272 regular season" },
+      { label: "Avg Pts / Game",   value: "24.1", sub: "per team" },
+      { label: "Total Touchdowns", value: 1204 },
+      { label: "Overtime Games",   value: 12 },
+      { label: "Shutouts",         value: 8 },
+      { label: "100-Yd Rushers",   value: 64 },
+      { label: "300-Yd Passers",   value: 82 },
+      { label: "Season Progress",  value: "76%",  sub: "13 of 17 weeks" },
     ],
   },
 
@@ -289,16 +336,16 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
     groups: [
       {
         rows: [
-          { position: 1,                         name: "Rajasthan Royals",       stats: [12, 8, 4, 0, 16, "+0.845"], zone: "champions" },
-          { position: 2,                         name: "Kolkata Knight Riders",  stats: [12, 8, 4, 0, 16, "+0.611"], zone: "champions" },
-          { position: 3, teamId: "team-mumbai",  name: "Mumbai Indians",         stats: [12, 7, 5, 0, 14, "+0.432"], zone: "champions" },
-          { position: 4,                         name: "Sunrisers Hyderabad",    stats: [12, 7, 5, 0, 14, "+0.212"], zone: "champions" },
-          { position: 5, teamId: "team-csk",     name: "Chennai Super Kings",    stats: [12, 6, 6, 0, 12, "+0.098"] },
-          { position: 6,                         name: "Delhi Capitals",         stats: [12, 5, 7, 0, 10, "-0.214"] },
-          { position: 7,                         name: "Lucknow Super Giants",   stats: [12, 4, 8, 0,  8, "-0.345"] },
-          { position: 8,                         name: "Punjab Kings",           stats: [12, 4, 8, 0,  8, "-0.432"] },
-          { position: 9,                         name: "Gujarat Titans",         stats: [12, 4, 8, 0,  8, "-0.521"] },
-          { position: 10,                        name: "Royal Challengers",      stats: [12, 3, 9, 0,  6, "-0.876"] },
+          { position: 1,                        name: "Rajasthan Royals",      stats: [12, 8, 4, 0, 16, "+0.845"], zone: "champions" },
+          { position: 2,                        name: "Kolkata Knight Riders", stats: [12, 8, 4, 0, 16, "+0.611"], zone: "champions" },
+          { position: 3, teamId: "team-mumbai", name: "Mumbai Indians",        stats: [12, 7, 5, 0, 14, "+0.432"], zone: "champions" },
+          { position: 4,                        name: "Sunrisers Hyderabad",   stats: [12, 7, 5, 0, 14, "+0.212"], zone: "champions" },
+          { position: 5, teamId: "team-csk",    name: "Chennai Super Kings",   stats: [12, 6, 6, 0, 12, "+0.098"] },
+          { position: 6,                        name: "Delhi Capitals",        stats: [12, 5, 7, 0, 10, "-0.214"] },
+          { position: 7,                        name: "Lucknow Super Giants",  stats: [12, 4, 8, 0,  8, "-0.345"] },
+          { position: 8,                        name: "Punjab Kings",          stats: [12, 4, 8, 0,  8, "-0.432"] },
+          { position: 9,                        name: "Gujarat Titans",        stats: [12, 4, 8, 0,  8, "-0.521"] },
+          { position: 10,                       name: "Royal Challengers",     stats: [12, 3, 9, 0,  6, "-0.876"] },
         ],
       },
     ],
@@ -307,24 +354,34 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
         label: "Leading Run Scorers",
         unit: "Runs",
         entries: [
-          { name: "Suryakumar Yadav",  teamName: "Mumbai Indians",    teamId: "team-mumbai", playerId: "p-sky",        value: 524 },
-          { name: "Ruturaj Gaikwad",   teamName: "Chennai Super Kings", teamId: "team-csk",  playerId: "p-rgaikwad",   value: 484 },
-          { name: "Rohit Sharma",      teamName: "Mumbai Indians",    teamId: "team-mumbai", playerId: "p-rohit",      value: 412 },
-          { name: "Devon Conway",      teamName: "Chennai Super Kings", teamId: "team-csk",  playerId: "p-dconway",    value: 396 },
-          { name: "Tilak Varma",       teamName: "Mumbai Indians",    teamId: "team-mumbai", playerId: "p-tvarma",     value: 304 },
+          { name: "Suryakumar Yadav", teamName: "Mumbai Indians",     teamId: "team-mumbai", playerId: "p-sky",       value: 524 },
+          { name: "Ruturaj Gaikwad",  teamName: "Chennai Super Kings",teamId: "team-csk",    playerId: "p-rgaikwad",  value: 484 },
+          { name: "Rohit Sharma",     teamName: "Mumbai Indians",     teamId: "team-mumbai", playerId: "p-rohit",     value: 412 },
+          { name: "Devon Conway",     teamName: "Chennai Super Kings",teamId: "team-csk",    playerId: "p-dconway",   value: 396 },
+          { name: "Tilak Varma",      teamName: "Mumbai Indians",     teamId: "team-mumbai", playerId: "p-tvarma",    value: 304 },
         ],
       },
       {
         label: "Leading Wicket Takers",
         unit: "Wkts",
         entries: [
-          { name: "Jasprit Bumrah",    teamName: "Mumbai Indians",    teamId: "team-mumbai", playerId: "p-bumrah",     value: 18 },
-          { name: "Deepak Chahar",     teamName: "Chennai Super Kings", teamId: "team-csk",  playerId: "p-dchahar",    value: 14 },
-          { name: "Ravindra Jadeja",   teamName: "Chennai Super Kings", teamId: "team-csk",  playerId: "p-rjadeja",    value: 12 },
-          { name: "Hardik Pandya",     teamName: "Mumbai Indians",    teamId: "team-mumbai", playerId: "p-hpandya",    value: 9 },
-          { name: "Tushar Deshpande",  teamName: "Chennai Super Kings", teamId: "team-csk",  playerId: "p-tdeshpande", value: 11 },
+          { name: "Jasprit Bumrah",   teamName: "Mumbai Indians",     teamId: "team-mumbai", playerId: "p-bumrah",    value: 18 },
+          { name: "Deepak Chahar",    teamName: "Chennai Super Kings",teamId: "team-csk",    playerId: "p-dchahar",   value: 14 },
+          { name: "Tushar Deshpande", teamName: "Chennai Super Kings",teamId: "team-csk",    playerId: "p-tdeshpande",value: 11 },
+          { name: "Ravindra Jadeja",  teamName: "Chennai Super Kings",teamId: "team-csk",    playerId: "p-rjadeja",   value: 12 },
+          { name: "Hardik Pandya",    teamName: "Mumbai Indians",     teamId: "team-mumbai", playerId: "p-hpandya",   value: 9 },
         ],
       },
+    ],
+    overview: [
+      { label: "Matches Played",  value: 60,       sub: "of 74 total" },
+      { label: "Total Runs",      value: "16,284" },
+      { label: "Sixes Hit",       value: 892 },
+      { label: "Fours Hit",       value: 2148 },
+      { label: "Wickets Taken",   value: 524 },
+      { label: "Highest Score",   value: "277/3",  sub: "SRH vs MI" },
+      { label: "Lowest Score",    value: "58 AO",  sub: "RCB vs KKR" },
+      { label: "Avg Run Rate",    value: "9.2",    sub: "runs per over" },
     ],
   },
 
@@ -339,18 +396,26 @@ export const SAMPLE_LEAGUES: LeagueProfile[] = [
     groups: [
       {
         rows: [
-          { position: 1, playerId: "athlete-sinner",   name: "Jannik Sinner",   stats: [1, 10740, 52,  9, "85%"], zone: "champions" },
-          { position: 2, playerId: "athlete-alcaraz",  name: "Carlos Alcaraz",  stats: [2,  9255, 48, 11, "81%"], zone: "champions" },
-          { position: 3, playerId: "athlete-djokovic", name: "Novak Djokovic",  stats: [3,  8780, 46, 10, "82%"] },
-          { position: 4, playerId: "athlete-medvedev", name: "Daniil Medvedev", stats: [4,  6545, 40, 14, "74%"] },
-          { position: 5,                               name: "Alexander Zverev",stats: [5,  6320, 38, 14, "73%"] },
-          { position: 6,                               name: "Andrey Rublev",   stats: [6,  4760, 36, 18, "67%"] },
-          { position: 7,                               name: "Hubert Hurkacz",  stats: [7,  4610, 34, 17, "67%"] },
-          { position: 8,                               name: "Casper Ruud",     stats: [8,  3840, 30, 18, "63%"] },
-          { position: 9,                               name: "Grigor Dimitrov", stats: [9,  3640, 28, 17, "62%"] },
-          { position: 10,                              name: "Taylor Fritz",    stats: [10, 3480, 27, 18, "60%"] },
+          { position:  1, playerId: "athlete-sinner",   name: "Jannik Sinner",    stats: [1, 10740, 52,  9, "85%"], zone: "champions" },
+          { position:  2, playerId: "athlete-alcaraz",  name: "Carlos Alcaraz",   stats: [2,  9255, 48, 11, "81%"], zone: "champions" },
+          { position:  3, playerId: "athlete-djokovic", name: "Novak Djokovic",   stats: [3,  8780, 46, 10, "82%"] },
+          { position:  4, playerId: "athlete-medvedev", name: "Daniil Medvedev",  stats: [4,  6545, 40, 14, "74%"] },
+          { position:  5,                               name: "Alexander Zverev", stats: [5,  6320, 38, 14, "73%"] },
+          { position:  6,                               name: "Andrey Rublev",    stats: [6,  4760, 36, 18, "67%"] },
+          { position:  7,                               name: "Hubert Hurkacz",   stats: [7,  4610, 34, 17, "67%"] },
+          { position:  8,                               name: "Casper Ruud",      stats: [8,  3840, 30, 18, "63%"] },
+          { position:  9,                               name: "Grigor Dimitrov",  stats: [9,  3640, 28, 17, "62%"] },
+          { position: 10,                               name: "Taylor Fritz",     stats: [10, 3480, 27, 18, "60%"] },
         ],
       },
+    ],
+    overview: [
+      { label: "Season Tournaments", value: 18,       sub: "Masters + Grand Slams" },
+      { label: "World No. 1",        value: "Sinner", sub: "10,740 pts" },
+      { label: "Most Titles",        value: "Sinner", sub: "4 titles in 2024" },
+      { label: "Best Win %",         value: "85%",    sub: "Sinner (52-9)" },
+      { label: "Longest Streak",     value: "W16",    sub: "Alcaraz" },
+      { label: "H2H Leader",         value: "5-4",    sub: "Sinner vs Alcaraz" },
     ],
   },
 ];

@@ -1,12 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Trophy } from "lucide-react";
+import { ChevronLeft, Trophy, Calendar, BarChart3, Star, List } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
-import { SAMPLE_LEAGUES, type StandingsRow, type Zone } from "@/data/sampleLeagues";
+import { SAMPLE_LEAGUES, type LeagueProfile, type StandingsRow, type Zone } from "@/data/sampleLeagues";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Tab = "standings" | "upcoming" | "stats" | "performers";
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "standings",  label: "Standings",      icon: <List className="h-3.5 w-3.5" /> },
+  { id: "upcoming",   label: "Upcoming",        icon: <Calendar className="h-3.5 w-3.5" /> },
+  { id: "stats",      label: "Stats",           icon: <BarChart3 className="h-3.5 w-3.5" /> },
+  { id: "performers", label: "Top Performers",  icon: <Star className="h-3.5 w-3.5" /> },
+];
+
+// ─── Sport styles ─────────────────────────────────────────────────────────────
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; sportHref: string }> = {
   football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10", sportHref: "/?sport=football" },
@@ -15,6 +29,8 @@ const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; s
   american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-400/10",    sportHref: "/?sport=american_football" },
   cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-400/10",    sportHref: "/?sport=cricket" },
 };
+
+// ─── Zone colours ─────────────────────────────────────────────────────────────
 
 const ZONE_BAR: Record<NonNullable<Zone>, string> = {
   champions:  "bg-accent-green",
@@ -30,15 +46,31 @@ const ZONE_LABEL: Record<NonNullable<Zone>, string> = {
   relegation: "Relegation zone",
 };
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionHeader({ label, count }: { label: string; count?: number }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
+      {count !== undefined && (
+        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">
+          {count}
+        </span>
+      )}
+      <div className="flex-1 border-t border-bg-border" />
+    </div>
+  );
+}
+
 function ZoneLegend({ zones }: { zones: NonNullable<Zone>[] }) {
-  const unique = [...new Set(zones)];
+  const unique = Array.from(new Set(zones));
   if (unique.length === 0) return null;
   return (
-    <div className="mt-3 flex flex-wrap gap-3">
+    <div className="mt-4 flex flex-wrap gap-4">
       {unique.map((z) => (
         <div key={z} className="flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${ZONE_BAR[z]}`} />
-          <span className="text-xs text-slate-600">{ZONE_LABEL[z]}</span>
+          <span className={`h-2.5 w-2.5 rounded-full ${ZONE_BAR[z as NonNullable<Zone>]}`} />
+          <span className="text-xs text-slate-500">{ZONE_LABEL[z as NonNullable<Zone>]}</span>
         </div>
       ))}
     </div>
@@ -62,13 +94,9 @@ function StandingsTable({
         <thead>
           <tr className="border-b border-bg-border text-[11px] font-bold uppercase tracking-wider text-slate-600">
             <th className="w-8 py-3 pl-4 text-center">#</th>
-            <th className="py-3 pl-3 text-left">
-              {isTennis ? "Player" : "Team"}
-            </th>
+            <th className="py-3 pl-3 text-left">{isTennis ? "Player" : "Team"}</th>
             {headers.map((h) => (
-              <th key={h} className="px-3 py-3 text-right">
-                {h}
-              </th>
+              <th key={h} className="px-3 py-3 text-right">{h}</th>
             ))}
             {!isTennis && <th className="py-3 pr-4 text-right">Form</th>}
           </tr>
@@ -100,10 +128,7 @@ function StandingsTable({
                 {/* Name */}
                 <td className="py-3 pl-3">
                   {href ? (
-                    <Link
-                      href={href}
-                      className="font-semibold text-white transition-colors hover:text-accent-green"
-                    >
+                    <Link href={href} className="font-semibold text-white transition-colors hover:text-accent-green">
                       {row.name}
                     </Link>
                   ) : (
@@ -148,21 +173,11 @@ function StandingsTable({
   );
 }
 
-function SectionHeader({ label, count }: { label: string; count?: number }) {
-  return (
-    <div className="mb-3 flex items-center gap-3">
-      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
-      {count !== undefined && (
-        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">
-          {count}
-        </span>
-      )}
-      <div className="flex-1 border-t border-bg-border" />
-    </div>
-  );
-}
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LeaguePage({ params }: { params: { id: string } }) {
+  const [activeTab, setActiveTab] = useState<Tab>("standings");
+
   const league = SAMPLE_LEAGUES.find((l) => l.id === params.id);
 
   if (!league) {
@@ -187,12 +202,17 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
   const allZones = league.groups
     .flatMap((g) => g.rows.map((r) => r.zone))
     .filter((z): z is NonNullable<Zone> => z != null);
+  const hasPerformers = (league.topPerformers?.length ?? 0) > 0;
+
+  // Visible tabs — hide "Top Performers" if no data
+  const visibleTabs = TABS.filter((t) => t.id !== "performers" || hasPerformers);
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+
           {/* Back nav */}
           <Link
             href={style.sportHref}
@@ -203,7 +223,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
           </Link>
 
           {/* Hero */}
-          <div className="mb-8 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+          <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
             <div className={`h-1.5 w-full ${style.bg.replace("/10", "")}`} />
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -230,14 +250,38 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Standings */}
-          <div className="mb-10">
-            <SectionHeader label="Standings" />
+          {/* Tab navigation */}
+          <div className="mb-8 border-b border-bg-border">
+            <div className="scrollbar-none -mb-px flex gap-1 overflow-x-auto">
+              {visibleTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                    activeTab === tab.id
+                      ? "border-accent-green text-white"
+                      : "border-transparent text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {tab.id === "upcoming" && fixtures.length > 0 && (
+                    <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                      {fixtures.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Standings tab ─────────────────────────────────────────────── */}
+          {activeTab === "standings" && (
             <div className="space-y-6">
               {league.groups.map((group, gi) => (
                 <div key={gi}>
                   {group.label && (
-                    <h3 className="mb-2 text-sm font-bold text-slate-400">{group.label}</h3>
+                    <h3 className="mb-3 text-sm font-bold text-slate-400">{group.label}</h3>
                   )}
                   <StandingsTable
                     rows={group.rows}
@@ -246,16 +290,69 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                   />
                 </div>
               ))}
+              <ZoneLegend zones={allZones} />
             </div>
-            <ZoneLegend zones={allZones} />
-          </div>
+          )}
 
-          {/* Top performers */}
-          {league.topPerformers && league.topPerformers.length > 0 && (
-            <div className="mb-10">
+          {/* ── Upcoming tab ──────────────────────────────────────────────── */}
+          {activeTab === "upcoming" && (
+            <div>
+              {fixtures.length > 0 ? (
+                <>
+                  <SectionHeader label="Upcoming Fixtures" count={fixtures.length} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {fixtures.map((event) => (
+                      <PredictionCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
+                  <Calendar className="mb-3 h-10 w-10 text-slate-700" />
+                  <p className="text-sm font-semibold text-slate-500">No upcoming fixtures</p>
+                  <p className="mt-1 text-xs text-slate-600">Check back closer to the next matchday</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Stats tab ─────────────────────────────────────────────────── */}
+          {activeTab === "stats" && (
+            <div className="space-y-8">
+              {/* Overview stat cards */}
+              {league.overview && league.overview.length > 0 && (
+                <div>
+                  <SectionHeader label="Season Overview" />
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {league.overview.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="rounded-xl border border-bg-border bg-bg-card p-4"
+                      >
+                        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                          {stat.label}
+                        </div>
+                        <div className="text-xl font-extrabold text-white">{stat.value}</div>
+                        {stat.sub && (
+                          <div className="mt-0.5 text-[11px] text-slate-600">{stat.sub}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Derived insights from standings */}
+              <LeagueInsights league={league} />
+            </div>
+          )}
+
+          {/* ── Top performers tab ────────────────────────────────────────── */}
+          {activeTab === "performers" && hasPerformers && (
+            <div>
               <SectionHeader label="Top Performers" />
               <div className="grid gap-6 sm:grid-cols-2">
-                {league.topPerformers.map((section) => (
+                {league.topPerformers!.map((section) => (
                   <div
                     key={section.label}
                     className="overflow-hidden rounded-xl border border-bg-border bg-bg-card"
@@ -263,6 +360,9 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                     <div className="border-b border-bg-border px-4 py-3">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
                         {section.label}
+                        <span className="ml-2 font-normal text-slate-600 normal-case tracking-normal">
+                          — {section.unit}
+                        </span>
                       </h3>
                     </div>
                     <div>
@@ -272,47 +372,59 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                           : entry.teamId
                           ? `/teams/${entry.teamId}`
                           : null;
+                        const maxVal = Number(section.entries[0].value);
+                        const pct = maxVal > 0 ? Math.round((Number(entry.value) / maxVal) * 100) : 0;
+
                         return (
                           <div
                             key={i}
-                            className={`flex items-center justify-between gap-3 px-4 py-3 ${
-                              i !== 0 ? "border-t border-bg-border" : ""
-                            }`}
+                            className={`px-4 py-3 ${i !== 0 ? "border-t border-bg-border" : ""}`}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="w-5 text-center text-xs font-bold text-slate-600">
-                                {i + 1}
-                              </span>
-                              <div className="min-w-0">
-                                {href ? (
-                                  <Link
-                                    href={href}
-                                    className="block truncate text-sm font-semibold text-white transition-colors hover:text-accent-green"
-                                  >
-                                    {entry.name}
-                                  </Link>
-                                ) : (
-                                  <span className="block truncate text-sm font-semibold text-white">
-                                    {entry.name}
-                                  </span>
-                                )}
-                                {entry.teamId ? (
-                                  <Link
-                                    href={`/teams/${entry.teamId}`}
-                                    className="text-xs text-slate-500 transition-colors hover:text-slate-300"
-                                  >
-                                    {entry.teamName}
-                                  </Link>
-                                ) : (
-                                  <span className="text-xs text-slate-500">{entry.teamName}</span>
-                                )}
+                            <div className="mb-1.5 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-600">
+                                  {i + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  {href ? (
+                                    <Link
+                                      href={href}
+                                      className="block truncate text-sm font-semibold text-white transition-colors hover:text-accent-green"
+                                    >
+                                      {entry.name}
+                                    </Link>
+                                  ) : (
+                                    <span className="block truncate text-sm font-semibold text-white">
+                                      {entry.name}
+                                    </span>
+                                  )}
+                                  {entry.teamName && (
+                                    entry.teamId ? (
+                                      <Link
+                                        href={`/teams/${entry.teamId}`}
+                                        className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                                      >
+                                        {entry.teamName}
+                                      </Link>
+                                    ) : (
+                                      <span className="text-xs text-slate-500">{entry.teamName}</span>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <span className="text-sm font-extrabold text-accent-green">
+                                  {entry.value}
+                                </span>
+                                <span className="ml-1 text-xs text-slate-600">{section.unit}</span>
                               </div>
                             </div>
-                            <div className="shrink-0 text-right">
-                              <span className="text-sm font-extrabold text-accent-green">
-                                {entry.value}
-                              </span>
-                              <span className="ml-1 text-xs text-slate-600">{section.unit}</span>
+                            {/* Progress bar */}
+                            <div className="ml-8 h-1 overflow-hidden rounded-full bg-bg-border">
+                              <div
+                                className="h-full rounded-full bg-accent-green/60 transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
                           </div>
                         );
@@ -324,20 +436,163 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {/* Upcoming fixtures */}
-          {fixtures.length > 0 && (
-            <div>
-              <SectionHeader label="Upcoming Fixtures" count={fixtures.length} />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {fixtures.map((event) => (
-                  <PredictionCard key={event.id} event={event} />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </main>
       <Footer />
+    </div>
+  );
+}
+
+// ─── League Insights (computed from standings) ───────────────────────────────
+
+function LeagueInsights({ league }: { league: LeagueProfile }) {
+  const sport = league.sport;
+  const allRows = league.groups.flatMap((g) => g.rows);
+
+  if (allRows.length === 0) return null;
+
+  // Football: headers = ["P","W","D","L","GF","GA","GD","Pts"]
+  if (sport === "football") {
+    const sorted = [...allRows].sort((a, b) => Number(b.stats[7]) - Number(a.stats[7]));
+    const bestAttack = [...allRows].sort((a, b) => Number(b.stats[4]) - Number(a.stats[4]))[0];
+    const bestDefense = [...allRows].sort((a, b) => Number(a.stats[5]) - Number(b.stats[5]))[0];
+    const topScorer = allRows[0];
+    const bottom = allRows[allRows.length - 1];
+
+    return (
+      <div>
+        <SectionHeader label="League Insights" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InsightCard title="Current Leader" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[7]} pts`} detail={`${sorted[0].stats[1]}W · ${sorted[0].stats[2]}D · ${sorted[0].stats[3]}L`} color="text-accent-green" />
+          <InsightCard title="Best Attack" teamHref={bestAttack.teamId ? `/teams/${bestAttack.teamId}` : null} name={bestAttack.name} value={`${bestAttack.stats[4]} goals`} detail="most scored" color="text-orange-400" />
+          <InsightCard title="Best Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} conceded`} detail="fewest against" color="text-blue-400" />
+          <InsightCard title="Bottom of Table" teamHref={bottom.teamId ? `/teams/${bottom.teamId}` : null} name={bottom.name} value={`${bottom.stats[7]} pts`} detail={`${bottom.stats[1]}W · ${bottom.stats[2]}D · ${bottom.stats[3]}L`} color="text-red-400" />
+        </div>
+      </div>
+    );
+  }
+
+  // Basketball: headers = ["W","L","PCT","GB","Home","Away","Streak"]
+  if (sport === "basketball") {
+    const allConf = league.groups.map((g) => ({
+      label: g.label ?? "Conference",
+      leader: g.rows[0],
+    }));
+    const bestPct = [...allRows].sort((a, b) =>
+      Number(String(b.stats[2]).replace(".", "0.")) - Number(String(a.stats[2]).replace(".", "0."))
+    )[0];
+    const worstPct = [...allRows].sort((a, b) =>
+      Number(String(a.stats[2]).replace(".", "0.")) - Number(String(b.stats[2]).replace(".", "0."))
+    )[0];
+
+    return (
+      <div>
+        <SectionHeader label="League Insights" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {allConf.map((c) => (
+            <InsightCard key={c.label} title={`${c.label} Leader`} teamHref={c.leader.teamId ? `/teams/${c.leader.teamId}` : null} name={c.leader.name} value={`${c.leader.stats[0]}-${c.leader.stats[1]}`} detail={`${c.leader.stats[2]} win %`} color="text-accent-green" />
+          ))}
+          <InsightCard title="Best Win %" teamHref={bestPct.teamId ? `/teams/${bestPct.teamId}` : null} name={bestPct.name} value={`${bestPct.stats[2]}`} detail={`${bestPct.stats[0]}W - ${bestPct.stats[1]}L`} color="text-orange-400" />
+          <InsightCard title="Needs Improvement" teamHref={worstPct.teamId ? `/teams/${worstPct.teamId}` : null} name={worstPct.name} value={`${worstPct.stats[2]}`} detail={`${worstPct.stats[0]}W - ${worstPct.stats[1]}L`} color="text-red-400" />
+        </div>
+      </div>
+    );
+  }
+
+  // NFL: headers = ["W","L","T","PCT","PF","PA","Diff"]
+  if (sport === "american_football") {
+    const allConf = league.groups.map((g) => ({
+      label: g.label ?? "Conference",
+      leader: g.rows[0],
+    }));
+    const bestOffense = [...allRows].sort((a, b) => Number(b.stats[4]) - Number(a.stats[4]))[0];
+    const bestDefense = [...allRows].sort((a, b) => Number(a.stats[5]) - Number(b.stats[5]))[0];
+
+    return (
+      <div>
+        <SectionHeader label="League Insights" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {allConf.map((c) => (
+            <InsightCard key={c.label} title={`${c.label} Leader`} teamHref={c.leader.teamId ? `/teams/${c.leader.teamId}` : null} name={c.leader.name} value={`${c.leader.stats[0]}-${c.leader.stats[1]}`} detail={`${c.leader.stats[3]} win %`} color="text-accent-green" />
+          ))}
+          <InsightCard title="Top Offense" teamHref={bestOffense.teamId ? `/teams/${bestOffense.teamId}` : null} name={bestOffense.name} value={`${bestOffense.stats[4]} pts`} detail="most points scored" color="text-orange-400" />
+          <InsightCard title="Top Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} pts`} detail="fewest points allowed" color="text-blue-400" />
+        </div>
+      </div>
+    );
+  }
+
+  // Cricket: headers = ["M","W","L","NR","Pts","NRR"]
+  if (sport === "cricket") {
+    const sorted = [...allRows].sort((a, b) => Number(b.stats[4]) - Number(a.stats[4]));
+    const bestNRR = [...allRows].sort((a, b) =>
+      Number(String(b.stats[5]).replace("+", "")) - Number(String(a.stats[5]).replace("+", ""))
+    )[0];
+
+    return (
+      <div>
+        <SectionHeader label="League Insights" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InsightCard title="Points Leader" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[4]} pts`} detail={`${sorted[0].stats[1]}W · ${sorted[0].stats[2]}L`} color="text-accent-green" />
+          <InsightCard title="Best NRR" teamHref={bestNRR.teamId ? `/teams/${bestNRR.teamId}` : null} name={bestNRR.name} value={`${bestNRR.stats[5]}`} detail="net run rate" color="text-orange-400" />
+          <InsightCard title="Most Wins" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[1]} wins`} detail={`from ${sorted[0].stats[0]} matches`} color="text-yellow-400" />
+          <InsightCard title="Qualification Zone" name={`Top ${Math.ceil(allRows.length / 2.5)} advance`} value="Playoff" detail="to knockout stage" color="text-blue-400" />
+        </div>
+      </div>
+    );
+  }
+
+  // Tennis: headers = ["Ranking","Points","W","L","Win %"]
+  if (sport === "tennis") {
+    const no1 = allRows[0];
+    const mostWins = [...allRows].sort((a, b) => Number(b.stats[2]) - Number(a.stats[2]))[0];
+    const bestWinPct = [...allRows].sort((a, b) =>
+      parseInt(String(b.stats[4])) - parseInt(String(a.stats[4]))
+    )[0];
+
+    return (
+      <div>
+        <SectionHeader label="League Insights" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InsightCard title="World No. 1" teamHref={no1.playerId ? `/athletes/${no1.playerId}` : null} name={no1.name} value={`${no1.stats[1]} pts`} detail="ATP ranking points" color="text-accent-green" />
+          <InsightCard title="Most Wins" teamHref={mostWins.playerId ? `/athletes/${mostWins.playerId}` : null} name={mostWins.name} value={`${mostWins.stats[2]} wins`} detail={`${mostWins.stats[3]} losses`} color="text-orange-400" />
+          <InsightCard title="Best Win %" teamHref={bestWinPct.playerId ? `/athletes/${bestWinPct.playerId}` : null} name={bestWinPct.name} value={String(bestWinPct.stats[4])} detail={`${bestWinPct.stats[2]}W - ${bestWinPct.stats[3]}L`} color="text-yellow-400" />
+          <InsightCard title="Points Gap" name={`${allRows[0]?.name} vs #2`} value={`${Number(allRows[0]?.stats[1]) - Number(allRows[1]?.stats[1])} pts`} detail="lead at top" color="text-blue-400" />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function InsightCard({
+  title,
+  name,
+  value,
+  detail,
+  color,
+  teamHref,
+}: {
+  title: string;
+  name: string;
+  value: string;
+  detail: string;
+  color: string;
+  teamHref?: string | null;
+}) {
+  return (
+    <div className="rounded-xl border border-bg-border bg-bg-card p-4">
+      <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{title}</div>
+      {teamHref ? (
+        <Link href={teamHref} className="block text-sm font-semibold text-white transition-colors hover:text-accent-green">
+          {name}
+        </Link>
+      ) : (
+        <div className="text-sm font-semibold text-white">{name}</div>
+      )}
+      <div className={`mt-1 text-lg font-extrabold ${color}`}>{value}</div>
+      <div className="mt-0.5 text-xs text-slate-600">{detail}</div>
     </div>
   );
 }
