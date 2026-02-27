@@ -1,12 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Clock, ChevronLeft, MapPin, Calendar, Users } from "lucide-react";
+import { Clock, ChevronLeft, MapPin, Calendar, Users, BarChart3, Newspaper, List } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
+import NewsFeed from "@/components/NewsFeed";
 import { SAMPLE_TEAMS, type TeamPlayer } from "@/data/sampleTeams";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Tab = "overview" | "squad" | "fixtures" | "results" | "news";
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "overview",  label: "Overview",  icon: <BarChart3 className="h-3.5 w-3.5" /> },
+  { id: "squad",     label: "Squad",     icon: <Users className="h-3.5 w-3.5" /> },
+  { id: "fixtures",  label: "Fixtures",  icon: <Calendar className="h-3.5 w-3.5" /> },
+  { id: "results",   label: "Results",   icon: <List className="h-3.5 w-3.5" /> },
+  { id: "news",      label: "News",      icon: <Newspaper className="h-3.5 w-3.5" /> },
+];
+
+// ─── Sport styles ─────────────────────────────────────────────────────────────
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; sportHref: string }> = {
   football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10", sportHref: "/?sport=football" },
@@ -17,10 +33,32 @@ const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; s
 };
 
 const RESULT_STYLES = {
-  W: { dot: "bg-emerald-500/70", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
-  D: { dot: "bg-slate-600",      badge: "bg-slate-700/50 text-slate-400 border-slate-600/20" },
-  L: { dot: "bg-red-500/70",     badge: "bg-red-500/15 text-red-400 border-red-500/20" },
+  W: { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
+  D: { badge: "bg-slate-700/50 text-slate-400 border-slate-600/20" },
+  L: { badge: "bg-red-500/15 text-red-400 border-red-500/20" },
 };
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionHeader({ label, count }: { label: string; count?: number }) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
+      {count !== undefined && (
+        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">{count}</span>
+      )}
+      <div className="flex-1 border-t border-bg-border" />
+    </div>
+  );
+}
+
+function ResultBadge({ result }: { result: "W" | "D" | "L" }) {
+  return (
+    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold border ${RESULT_STYLES[result].badge}`}>
+      {result}
+    </span>
+  );
+}
 
 function InitialsAvatar({ name, color }: { name: string; color: string }) {
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
@@ -40,7 +78,7 @@ function PlayerCard({ player, sportColor }: { player: TeamPlayer; sportColor: st
       <InitialsAvatar name={player.name} color={sportColor} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-sm font-semibold text-white group-hover:text-accent-green transition-colors truncate">
+          <span className="truncate text-sm font-semibold text-white transition-colors group-hover:text-accent-green">
             {player.name}
           </span>
           <span className="shrink-0 rounded bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
@@ -67,9 +105,12 @@ function PlayerCard({ player, sportColor }: { player: TeamPlayer; sportColor: st
   );
 }
 
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function TeamPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  const team = SAMPLE_TEAMS.find((t) => t.id === id);
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  const team = SAMPLE_TEAMS.find((t) => t.id === params.id);
 
   if (!team) {
     return (
@@ -89,7 +130,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   }
 
   const style = SPORT_STYLES[team.sport] ?? SPORT_STYLES.football;
-
   const upcomingFixtures = SAMPLE_ODDS.filter(
     (e) => e.homeTeam === team.name || e.awayTeam === team.name
   );
@@ -99,6 +139,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+
           {/* Back nav */}
           <Link
             href={style.sportHref}
@@ -108,13 +149,13 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             {style.label}
           </Link>
 
-          {/* Hero card */}
+          {/* Hero */}
           <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
             <div className={`h-1.5 w-full ${style.bg.replace("/10", "")}`} />
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="mb-3 flex items-center gap-2">
                     <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.color}`}>
                       {style.label}
                     </span>
@@ -138,7 +179,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                 </div>
                 {/* Form */}
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs text-slate-600 uppercase tracking-widest">Form</span>
+                  <span className="text-xs uppercase tracking-widest text-slate-600">Form</span>
                   <div className="flex gap-1.5">
                     {team.form.map((r, i) => (
                       <span
@@ -154,27 +195,97 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Season stats grid */}
-          <div className="mb-8">
-            <SectionHeader label="Season Stats" />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {team.seasonStats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-center">
-                  <div className="text-xl font-extrabold text-white">{stat.value}</div>
-                  <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
-                </div>
+          {/* Tab navigation */}
+          <div className="mb-8 border-b border-bg-border">
+            <div className="scrollbar-none -mb-px flex gap-1 overflow-x-auto">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                    activeTab === tab.id
+                      ? "border-accent-green text-white"
+                      : "border-transparent text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {tab.id === "fixtures" && upcomingFixtures.length > 0 && (
+                    <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                      {upcomingFixtures.length}
+                    </span>
+                  )}
+                  {tab.id === "results" && team.pastResults.length > 0 && (
+                    <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                      {team.pastResults.length}
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Squad */}
-          <div className="mb-8">
-            <SectionHeader label="Current Squad" />
-            <div className="space-y-5">
+          {/* ── Overview tab ───────────────────────────────────────────────── */}
+          {activeTab === "overview" && (
+            <div className="space-y-8">
+              <div>
+                <SectionHeader label="Season Stats" />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {team.seasonStats.map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center">
+                      <div className="text-xl font-extrabold text-white">{stat.value}</div>
+                      <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick squad preview */}
+              <div>
+                <SectionHeader label="Key Players" />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {team.squad.flatMap((g) => g.players).slice(0, 4).map((player) => (
+                    <PlayerCard key={player.id} player={player} sportColor={style.color} />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setActiveTab("squad")}
+                  className="mt-3 text-xs font-semibold text-accent-green hover:underline"
+                >
+                  View full squad →
+                </button>
+              </div>
+
+              {/* Upcoming preview */}
+              {upcomingFixtures.length > 0 && (
+                <div>
+                  <SectionHeader label="Next Fixture" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <PredictionCard event={upcomingFixtures[0]} />
+                  </div>
+                  {upcomingFixtures.length > 1 && (
+                    <button
+                      onClick={() => setActiveTab("fixtures")}
+                      className="mt-3 text-xs font-semibold text-accent-green hover:underline"
+                    >
+                      View all {upcomingFixtures.length} fixtures →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Squad tab ──────────────────────────────────────────────────── */}
+          {activeTab === "squad" && (
+            <div className="space-y-6">
               {team.squad.map((group) => (
                 <div key={group.label}>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-600">
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-600">
                     {group.label}
+                    <span className="ml-2 font-normal text-slate-700 normal-case tracking-normal">
+                      ({group.players.length})
+                    </span>
                   </h3>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {group.players.map((player) => (
@@ -184,72 +295,75 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                 </div>
               ))}
             </div>
-          </div>
+          )}
 
-          {/* Upcoming fixtures */}
-          {upcomingFixtures.length > 0 && (
-            <div className="mb-8">
-              <SectionHeader label="Upcoming Fixtures" count={upcomingFixtures.length} />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {upcomingFixtures.map((event) => (
-                  <PredictionCard key={event.id} event={event} />
+          {/* ── Fixtures tab ───────────────────────────────────────────────── */}
+          {activeTab === "fixtures" && (
+            <div>
+              {upcomingFixtures.length > 0 ? (
+                <>
+                  <SectionHeader label="Upcoming Fixtures" count={upcomingFixtures.length} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {upcomingFixtures.map((event) => (
+                      <PredictionCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
+                  <Calendar className="mb-3 h-10 w-10 text-slate-700" />
+                  <p className="text-sm font-semibold text-slate-500">No upcoming fixtures</p>
+                  <p className="mt-1 text-xs text-slate-600">Check back closer to the next matchday</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Results tab ────────────────────────────────────────────────── */}
+          {activeTab === "results" && (
+            <div>
+              <SectionHeader label="Recent Results" count={team.pastResults.length} />
+              <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+                {team.pastResults.map((result, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-3 px-5 py-3.5 ${
+                      i !== 0 ? "border-t border-bg-border" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ResultBadge result={result.result} />
+                      <div>
+                        <span className="text-sm font-semibold text-white">
+                          {result.home ? "vs" : "@"} {result.opponent}
+                        </span>
+                        <div className="text-[11px] text-slate-600">{result.competition}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-white">{result.score}</span>
+                      <span className="flex items-center gap-1 text-xs text-slate-600">
+                        <Clock className="h-3 w-3" />
+                        {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Past results */}
-          <div>
-            <SectionHeader label="Recent Results" count={team.pastResults.length} />
-            <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-              {team.pastResults.map((result, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between gap-3 px-5 py-3.5 ${
-                    i !== 0 ? "border-t border-bg-border" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold border ${RESULT_STYLES[result.result].badge}`}
-                    >
-                      {result.result}
-                    </span>
-                    <div>
-                      <span className="text-sm font-semibold text-white">
-                        {result.home ? "vs" : "@"} {result.opponent}
-                      </span>
-                      <div className="text-[11px] text-slate-600">{result.competition}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-sm font-bold text-white">{result.score}</span>
-                    <span className="flex items-center gap-1 text-xs text-slate-600">
-                      <Clock className="h-3 w-3" />
-                      {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                    </span>
-                  </div>
-                </div>
-              ))}
+          {/* ── News tab ───────────────────────────────────────────────────── */}
+          {activeTab === "news" && (
+            <div>
+              <SectionHeader label="Latest News" />
+              <NewsFeed tags={[team.name, team.league]} />
             </div>
-          </div>
+          )}
+
         </div>
       </main>
       <Footer />
-    </div>
-  );
-}
-
-function SectionHeader({ label, count }: { label: string; count?: number }) {
-  return (
-    <div className="mb-3 flex items-center gap-3">
-      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
-      {count !== undefined && (
-        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">
-          {count}
-        </span>
-      )}
-      <div className="flex-1 border-t border-bg-border" />
     </div>
   );
 }

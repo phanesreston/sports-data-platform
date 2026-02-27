@@ -1,13 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Clock, ChevronLeft, Trophy, TrendingUp } from "lucide-react";
+import { Clock, ChevronLeft, Trophy, TrendingUp, BarChart3, Calendar, List, Newspaper } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
+import NewsFeed from "@/components/NewsFeed";
 import { findAthlete, findTeamPlayer } from "@/data/sampleAthletes";
 import { SAMPLE_TEAMS } from "@/data/sampleTeams";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Tab = "overview" | "fixtures" | "results" | "news";
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "overview",  label: "Overview",  icon: <BarChart3 className="h-3.5 w-3.5" /> },
+  { id: "fixtures",  label: "Fixtures",  icon: <Calendar className="h-3.5 w-3.5" /> },
+  { id: "results",   label: "Results",   icon: <List className="h-3.5 w-3.5" /> },
+  { id: "news",      label: "News",      icon: <Newspaper className="h-3.5 w-3.5" /> },
+];
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; sportHref: string }> = {
   football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10", sportHref: "/?sport=football" },
@@ -23,17 +38,11 @@ const RESULT_STYLES = {
   L: { badge: "bg-red-500/15 text-red-400 border-red-500/20" },
 };
 
-function FormBadge({ result }: { result: "W" | "L" | "D" }) {
-  return (
-    <span className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold border ${RESULT_STYLES[result].badge}`}>
-      {result}
-    </span>
-  );
-}
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 function SectionHeader({ label, count }: { label: string; count?: number }) {
   return (
-    <div className="mb-3 flex items-center gap-3">
+    <div className="mb-4 flex items-center gap-3">
       <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
       {count !== undefined && (
         <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">{count}</span>
@@ -43,10 +52,63 @@ function SectionHeader({ label, count }: { label: string; count?: number }) {
   );
 }
 
-export default function AthletePage({ params }: { params: { id: string } }) {
-  const { id } = params;
+function FormBadge({ result }: { result: "W" | "L" | "D" }) {
+  return (
+    <span className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold border ${RESULT_STYLES[result].badge}`}>
+      {result}
+    </span>
+  );
+}
 
-  // Try individual athlete first, then team player
+function TabNav({
+  activeTab,
+  setActiveTab,
+  fixtureCount,
+  resultCount,
+}: {
+  activeTab: Tab;
+  setActiveTab: (t: Tab) => void;
+  fixtureCount: number;
+  resultCount: number;
+}) {
+  return (
+    <div className="mb-8 border-b border-bg-border">
+      <div className="scrollbar-none -mb-px flex gap-1 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+              activeTab === tab.id
+                ? "border-accent-green text-white"
+                : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+            {tab.id === "fixtures" && fixtureCount > 0 && (
+              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                {fixtureCount}
+              </span>
+            )}
+            {tab.id === "results" && resultCount > 0 && (
+              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                {resultCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export default function AthletePage({ params }: { params: { id: string } }) {
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  const { id } = params;
   const individual = findAthlete(id);
   const teamPlayer = !individual ? findTeamPlayer(id) : null;
 
@@ -67,7 +129,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
     );
   }
 
-  // ── Individual athlete (tennis etc.) ─────────────────────────────────────
+  // ── Individual athlete (tennis etc.) ──────────────────────────────────────
   if (individual) {
     const style = SPORT_STYLES[individual.sport] ?? SPORT_STYLES.tennis;
     const upcomingMatches = SAMPLE_ODDS.filter(
@@ -79,6 +141,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
         <Header />
         <main className="flex-1">
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+
             <Link href={style.sportHref} className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-300">
               <ChevronLeft className="h-4 w-4" />
               {style.label}
@@ -90,7 +153,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
               <div className="p-6 sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="mb-3 flex items-center gap-2">
                       <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.color}`}>
                         {style.label}
                       </span>
@@ -111,9 +174,8 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">{individual.bio}</p>
                     )}
                   </div>
-                  {/* Form */}
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs text-slate-600 uppercase tracking-widest">Form</span>
+                    <span className="text-xs uppercase tracking-widest text-slate-600">Form</span>
                     <div className="flex gap-1.5">
                       {individual.form.map((r, i) => <FormBadge key={i} result={r} />)}
                     </div>
@@ -122,58 +184,101 @@ export default function AthletePage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Key stats */}
-            <div className="mb-8">
-              <SectionHeader label="Career Stats" />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {individual.keyStats.map((stat) => (
-                  <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-center">
-                    <div className="text-xl font-extrabold text-white">{stat.value}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Tabs */}
+            <TabNav
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              fixtureCount={upcomingMatches.length}
+              resultCount={individual.pastResults.length}
+            />
 
-            {/* Upcoming */}
-            {upcomingMatches.length > 0 && (
-              <div className="mb-8">
-                <SectionHeader label="Upcoming Matches" count={upcomingMatches.length} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {upcomingMatches.map((e) => <PredictionCard key={e.id} event={e} />)}
+            {/* Overview */}
+            {activeTab === "overview" && (
+              <div className="space-y-8">
+                <div>
+                  <SectionHeader label="Career Stats" />
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {individual.keyStats.map((stat) => (
+                      <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center">
+                        <div className="text-xl font-extrabold text-white">{stat.value}</div>
+                        <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {upcomingMatches.length > 0 && (
+                  <div>
+                    <SectionHeader label="Next Match" />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <PredictionCard event={upcomingMatches[0]} />
+                    </div>
+                    {upcomingMatches.length > 1 && (
+                      <button onClick={() => setActiveTab("fixtures")} className="mt-3 text-xs font-semibold text-accent-green hover:underline">
+                        View all {upcomingMatches.length} fixtures →
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fixtures */}
+            {activeTab === "fixtures" && (
+              <div>
+                {upcomingMatches.length > 0 ? (
+                  <>
+                    <SectionHeader label="Upcoming Matches" count={upcomingMatches.length} />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {upcomingMatches.map((e) => <PredictionCard key={e.id} event={e} />)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
+                    <Calendar className="mb-3 h-10 w-10 text-slate-700" />
+                    <p className="text-sm font-semibold text-slate-500">No upcoming matches</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Results */}
+            {activeTab === "results" && (
+              <div>
+                <SectionHeader label="Recent Results" count={individual.pastResults.length} />
+                <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+                  {individual.pastResults.map((result, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between gap-3 px-5 py-3.5 ${i !== 0 ? "border-t border-bg-border" : ""}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <FormBadge result={result.result} />
+                        <div>
+                          <span className="text-sm font-semibold text-white">vs {result.opponent}</span>
+                          <div className="text-[11px] text-slate-600">{result.competition}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-sm font-bold text-white">{result.score}</span>
+                        <span className="flex items-center gap-1 text-xs text-slate-600">
+                          <Clock className="h-3 w-3" />
+                          {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Past results */}
-            <div>
-              <SectionHeader label="Recent Results" count={individual.pastResults.length} />
-              <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-                {individual.pastResults.map((result, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between gap-3 px-5 py-3.5 ${i !== 0 ? "border-t border-bg-border" : ""}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <FormBadge result={result.result} />
-                      <div>
-                        <span className="text-sm font-semibold text-white">
-                          vs {result.opponent}
-                        </span>
-                        <div className="text-[11px] text-slate-600">{result.competition}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm font-bold text-white">{result.score}</span>
-                      <span className="flex items-center gap-1 text-xs text-slate-600">
-                        <Clock className="h-3 w-3" />
-                        {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+            {/* News */}
+            {activeTab === "news" && (
+              <div>
+                <SectionHeader label="Latest News" />
+                <NewsFeed tags={[individual.fullName, individual.name, individual.league]} />
               </div>
-            </div>
+            )}
+
           </div>
         </main>
         <Footer />
@@ -181,13 +286,10 @@ export default function AthletePage({ params }: { params: { id: string } }) {
     );
   }
 
-  // ── Team player ───────────────────────────────────────────────────────────
+  // ── Team player ────────────────────────────────────────────────────────────
   const player = teamPlayer!;
   const style = SPORT_STYLES[player.sport] ?? SPORT_STYLES.football;
-
-  // Get the parent team for form + results
   const parentTeam = SAMPLE_TEAMS.find((t) => t.id === player.teamId)!;
-
   const upcomingFixtures = SAMPLE_ODDS.filter(
     (e) => e.homeTeam === player.teamName || e.awayTeam === player.teamName
   );
@@ -197,7 +299,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
       <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Back to team */}
+
           <Link
             href={`/teams/${player.teamId}`}
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-300"
@@ -212,7 +314,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.color}`}>
                       {style.label}
                     </span>
@@ -238,9 +340,8 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     <span>Age {player.age}</span>
                   </div>
                 </div>
-                {/* Team form */}
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs text-slate-600 uppercase tracking-widest">Team Form</span>
+                  <span className="text-xs uppercase tracking-widest text-slate-600">Team Form</span>
                   <div className="flex gap-1.5">
                     {parentTeam.form.map((r, i) => <FormBadge key={i} result={r} />)}
                   </div>
@@ -249,58 +350,103 @@ export default function AthletePage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Player stats */}
-          <div className="mb-8">
-            <SectionHeader label={`${new Date().getFullYear()} Stats`} />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {player.keyStats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-center">
-                  <div className="text-xl font-extrabold text-white">{stat.value}</div>
-                  <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Tabs */}
+          <TabNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            fixtureCount={upcomingFixtures.length}
+            resultCount={parentTeam.pastResults.length}
+          />
 
-          {/* Upcoming fixtures */}
-          {upcomingFixtures.length > 0 && (
-            <div className="mb-8">
-              <SectionHeader label="Upcoming Fixtures" count={upcomingFixtures.length} />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {upcomingFixtures.map((e) => <PredictionCard key={e.id} event={e} />)}
+          {/* Overview */}
+          {activeTab === "overview" && (
+            <div className="space-y-8">
+              <div>
+                <SectionHeader label={`${new Date().getFullYear()} Stats`} />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {player.keyStats.map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center">
+                      <div className="text-xl font-extrabold text-white">{stat.value}</div>
+                      <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {upcomingFixtures.length > 0 && (
+                <div>
+                  <SectionHeader label="Next Fixture" />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <PredictionCard event={upcomingFixtures[0]} />
+                  </div>
+                  {upcomingFixtures.length > 1 && (
+                    <button onClick={() => setActiveTab("fixtures")} className="mt-3 text-xs font-semibold text-accent-green hover:underline">
+                      View all {upcomingFixtures.length} fixtures →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Fixtures */}
+          {activeTab === "fixtures" && (
+            <div>
+              {upcomingFixtures.length > 0 ? (
+                <>
+                  <SectionHeader label="Upcoming Fixtures" count={upcomingFixtures.length} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {upcomingFixtures.map((e) => <PredictionCard key={e.id} event={e} />)}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
+                  <Calendar className="mb-3 h-10 w-10 text-slate-700" />
+                  <p className="text-sm font-semibold text-slate-500">No upcoming fixtures</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results */}
+          {activeTab === "results" && (
+            <div>
+              <SectionHeader label="Team Recent Results" count={parentTeam.pastResults.length} />
+              <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+                {parentTeam.pastResults.map((result, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-3 px-5 py-3.5 ${i !== 0 ? "border-t border-bg-border" : ""}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <FormBadge result={result.result} />
+                      <div>
+                        <span className="text-sm font-semibold text-white">
+                          {result.home ? "vs" : "@"} {result.opponent}
+                        </span>
+                        <div className="text-[11px] text-slate-600">{result.competition}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-white">{result.score}</span>
+                      <span className="flex items-center gap-1 text-xs text-slate-600">
+                        <Clock className="h-3 w-3" />
+                        {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Team recent results */}
-          <div>
-            <SectionHeader label="Team Recent Results" count={parentTeam.pastResults.length} />
-            <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-              {parentTeam.pastResults.map((result, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between gap-3 px-5 py-3.5 ${i !== 0 ? "border-t border-bg-border" : ""}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <FormBadge result={result.result} />
-                    <div>
-                      <span className="text-sm font-semibold text-white">
-                        {result.home ? "vs" : "@"} {result.opponent}
-                      </span>
-                      <div className="text-[11px] text-slate-600">{result.competition}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-sm font-bold text-white">{result.score}</span>
-                    <span className="flex items-center gap-1 text-xs text-slate-600">
-                      <Clock className="h-3 w-3" />
-                      {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                    </span>
-                  </div>
-                </div>
-              ))}
+          {/* News */}
+          {activeTab === "news" && (
+            <div>
+              <SectionHeader label="Latest News" />
+              <NewsFeed tags={[player.name, player.teamName]} />
             </div>
-          </div>
+          )}
+
         </div>
       </main>
       <Footer />
