@@ -36,42 +36,46 @@ const navLinks = [
 function SportTabs() {
   const searchParams = useSearchParams();
   const activeSport = searchParams.get("sport") ?? "all";
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const [overflowStart, setOverflowStart] = useState(SPORT_TABS.length);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Recalculate which tabs fit whenever the container resizes
   useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    const container = containerRef.current;
+    const measure = measureRef.current;
+    if (!container || !measure) return;
 
     const recalc = () => {
-      const wrapperRight = wrapper.getBoundingClientRect().right;
-      const tabs = Array.from(
-        wrapper.querySelectorAll<HTMLElement>("[data-sport-tab]"),
+      const available = container.clientWidth;
+      const measureTabs = Array.from(
+        measure.querySelectorAll<HTMLElement>("[data-measure-tab]"),
       );
-      if (!tabs.length) return;
+      const moreEl = measure.querySelector<HTMLElement>("[data-measure-more]");
+      const moreW = (moreEl?.offsetWidth ?? MORE_BTN_PX) + 2; // +2 for gap
 
-      // If everything fits without a More button, show all
-      if (tabs[tabs.length - 1].getBoundingClientRect().right <= wrapperRight) {
-        setOverflowStart(SPORT_TABS.length);
-        return;
-      }
-
-      // Find the first tab whose right edge would leave no room for the More button
-      const threshold = wrapperRight - MORE_BTN_PX;
-      let first = SPORT_TABS.length;
-      for (let i = 0; i < tabs.length; i++) {
-        if (tabs[i].getBoundingClientRect().right > threshold) {
-          first = i;
+      let used = 0;
+      let count = 0;
+      for (let i = 0; i < measureTabs.length; i++) {
+        const tabW = measureTabs[i].offsetWidth + 2; // +2 for gap-0.5
+        // Reserve More-button space unless we're checking the very last tab
+        const needsMore = i < measureTabs.length - 1;
+        if (used + tabW + (needsMore ? moreW : 0) <= available) {
+          used += tabW;
+          count++;
+        } else {
           break;
         }
       }
-      setOverflowStart(Math.max(1, first));
+
+      // When overflow is present show one fewer tab so the bar never looks crammed
+      setOverflowStart(
+        count < SPORT_TABS.length ? Math.max(1, count - 1) : SPORT_TABS.length,
+      );
     };
 
     const ro = new ResizeObserver(recalc);
-    ro.observe(wrapper);
+    ro.observe(container);
     recalc();
     return () => ro.disconnect();
   }, []);
@@ -89,16 +93,54 @@ function SportTabs() {
   const activeInOverflow = overflowTabs.some((t) => t.value === activeSport);
 
   return (
-    <div ref={wrapperRef} className="relative flex items-center overflow-hidden pb-0.5">
-      {/* All tabs live in the DOM — overflow ones are clipped by the wrapper */}
-      <div className="flex items-center gap-0.5">
-        {SPORT_TABS.map((tab) => {
+    <>
+      {/*
+       * Off-screen measurement strip — fixed so it has no impact on layout.
+       * All tabs + the More button are rendered here at their natural size so
+       * we can measure widths without touching the visible container.
+       */}
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className="flex items-center gap-0.5"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: "-9999px",
+          visibility: "hidden",
+          pointerEvents: "none",
+        }}
+      >
+        {SPORT_TABS.map((tab) => (
+          <span
+            key={tab.value}
+            data-measure-tab
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold"
+          >
+            <span>{tab.emoji}</span>
+            <span>{tab.label}</span>
+          </span>
+        ))}
+        <span
+          data-measure-more
+          className="flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold"
+        >
+          More
+          <ChevronDown className="h-3.5 w-3.5" />
+        </span>
+      </div>
+
+      {/*
+       * Visible strip — no overflow:hidden so the dropdown can escape below.
+       * Only the tabs that fit are rendered; the More button follows in flow.
+       */}
+      <div ref={containerRef} className="flex items-center gap-0.5 pb-0.5">
+        {SPORT_TABS.slice(0, overflowStart).map((tab) => {
           const isActive = activeSport === tab.value;
           return (
             <Link
               key={tab.value}
               href={tab.href}
-              data-sport-tab={tab.value}
               className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
                 isActive
                   ? "bg-accent-green/15 text-accent-green"
@@ -110,59 +152,52 @@ function SportTabs() {
             </Link>
           );
         })}
-      </div>
 
-      {/* "More" button — absolutely pinned to the right edge */}
-      <div
-        className={`absolute right-0 flex items-center transition-opacity duration-150 ${
-          hasOverflow ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        {/* Soft fade so the last visible tab doesn't get hard-clipped */}
-        <div className="h-8 w-6 bg-gradient-to-r from-transparent to-bg-surface" />
-        <div className="relative bg-bg-surface pl-0.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDropdownOpen((o) => !o);
-            }}
-            className={`flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
-              activeInOverflow
-                ? "bg-accent-green/15 text-accent-green"
-                : "text-gray-500 hover:bg-bg-border hover:text-gray-800"
-            }`}
-          >
-            More
-            <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+        {hasOverflow && (
+          <div className="relative shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdownOpen((o) => !o);
+              }}
+              className={`flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+                activeInOverflow
+                  ? "bg-accent-green/15 text-accent-green"
+                  : "text-gray-500 hover:bg-bg-border hover:text-gray-800"
+              }`}
+            >
+              More
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
 
-          {dropdownOpen && (
-            <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border border-bg-border bg-bg-surface py-1 shadow-lg">
-              {overflowTabs.map((tab) => {
-                const isActive = activeSport === tab.value;
-                return (
-                  <Link
-                    key={tab.value}
-                    href={tab.href}
-                    onClick={() => setDropdownOpen(false)}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-accent-green/10 text-accent-green"
-                        : "text-gray-600 hover:bg-bg-border hover:text-gray-900"
-                    }`}
-                  >
-                    <span>{tab.emoji}</span>
-                    <span>{tab.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border border-bg-border bg-bg-surface py-1 shadow-lg">
+                {overflowTabs.map((tab) => {
+                  const isActive = activeSport === tab.value;
+                  return (
+                    <Link
+                      key={tab.value}
+                      href={tab.href}
+                      onClick={() => setDropdownOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-accent-green/10 text-accent-green"
+                          : "text-gray-600 hover:bg-bg-border hover:text-gray-900"
+                      }`}
+                    >
+                      <span>{tab.emoji}</span>
+                      <span>{tab.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
