@@ -9,11 +9,11 @@ import { SAMPLE_ATHLETES } from "@/data/sampleAthletes";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
 
 const SPORT_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-400/10" },
-  tennis:            { label: "Tennis",     color: "text-yellow-400",  bg: "bg-yellow-400/10" },
-  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-400/10" },
-  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-400/10" },
+  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50" },
+  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50" },
+  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50" },
+  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50" },
+  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50" },
 };
 
 interface SearchResult {
@@ -176,7 +176,7 @@ export default function SearchModal({ onClose }: Props) {
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center bg-bg-base/80 px-4 pt-[10vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-start justify-center bg-gray-900/50 px-4 pt-[10vh] backdrop-blur-sm"
       onClick={onClose}
     >
       {/* Panel */}
@@ -186,21 +186,21 @@ export default function SearchModal({ onClose }: Props) {
       >
         {/* Search input row */}
         <div className="flex items-center gap-3 border-b border-bg-border px-4 py-3">
-          <Search className="h-4 w-4 shrink-0 text-slate-500" />
+          <Search className="h-4 w-4 shrink-0 text-gray-400" />
           <input
             ref={inputRef}
             type="text"
             placeholder="Search teams, players, fixtures…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
           />
           {query ? (
-            <button onClick={() => setQuery("")} className="text-slate-600 hover:text-slate-400 transition-colors">
+            <button onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600 transition-colors">
               <X className="h-4 w-4" />
             </button>
           ) : null}
-          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-slate-600 sm:inline">
+          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-gray-400 sm:inline">
             esc
           </kbd>
         </div>
@@ -209,12 +209,12 @@ export default function SearchModal({ onClose }: Props) {
         <div className="max-h-[60vh] overflow-y-auto">
           {query.length < 2 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Search className="h-7 w-7 text-slate-700" />
-              <p className="text-sm text-slate-600">Search teams, players and fixtures</p>
+              <Search className="h-7 w-7 text-gray-300" />
+              <p className="text-sm text-gray-400">Search teams, players and fixtures</p>
             </div>
           ) : results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-slate-500">No results for <span className="text-white">"{query}"</span></p>
+              <p className="text-sm text-gray-400">No results for <span className="text-gray-800">&ldquo;{query}&rdquo;</span></p>
             </div>
           ) : (
             <div className="p-2">
@@ -224,8 +224,8 @@ export default function SearchModal({ onClose }: Props) {
                   <div key={key} className="mb-1">
                     {/* Group label */}
                     <div className="flex items-center gap-2 px-3 py-1.5">
-                      <Icon className="h-3 w-3 text-slate-600" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                      <Icon className="h-3 w-3 text-gray-400" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
                         {label}
                       </span>
                     </div>
@@ -241,7 +241,7 @@ export default function SearchModal({ onClose }: Props) {
                           onClick={onClose}
                           onMouseEnter={() => setActiveIdx(idx)}
                           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
-                            isActive ? "bg-bg-card" : "hover:bg-bg-card/60"
+                            isActive ? "bg-bg-base" : "hover:bg-bg-base/60"
                           }`}
                         >
                           {badge && (
@@ -250,11 +250,11 @@ export default function SearchModal({ onClose }: Props) {
                             </span>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-white">{result.title}</p>
-                            <p className="truncate text-xs text-slate-500">{result.subtitle}</p>
+                            <p className="truncate text-sm font-semibold text-gray-800">{result.title}</p>
+                            <p className="truncate text-xs text-gray-400">{result.subtitle}</p>
                           </div>
                           {isActive && (
-                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-slate-600">
+                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-gray-400">
                               ↵
                             </kbd>
                           )}
@@ -270,7 +270,7 @@ export default function SearchModal({ onClose }: Props) {
 
         {/* Footer hints */}
         {results.length > 0 && (
-          <div className="flex items-center gap-4 border-t border-bg-border px-4 py-2 text-[10px] text-slate-700">
+          <div className="flex items-center gap-4 border-t border-bg-border px-4 py-2 text-[10px] text-gray-400">
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↑↓</kbd> navigate</span>
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↵</kbd> open</span>
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">esc</kbd> close</span>

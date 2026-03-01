@@ -14,33 +14,33 @@ const SPORT_STYLES: Record<
 > = {
   football: {
     label: "Football",
-    color: "text-emerald-400",
-    bg: "bg-emerald-400/10",
-    glow: "from-emerald-900/20",
+    color: "text-emerald-700",
+    bg: "bg-emerald-50",
+    glow: "from-emerald-50",
   },
   basketball: {
     label: "Basketball",
-    color: "text-orange-400",
-    bg: "bg-orange-400/10",
-    glow: "from-orange-900/20",
+    color: "text-orange-700",
+    bg: "bg-orange-50",
+    glow: "from-orange-50",
   },
   tennis: {
     label: "Tennis",
-    color: "text-yellow-400",
-    bg: "bg-yellow-400/10",
-    glow: "from-yellow-900/20",
+    color: "text-amber-700",
+    bg: "bg-amber-50",
+    glow: "from-amber-50",
   },
   american_football: {
     label: "NFL",
-    color: "text-blue-400",
-    bg: "bg-blue-400/10",
-    glow: "from-blue-900/20",
+    color: "text-blue-700",
+    bg: "bg-blue-50",
+    glow: "from-blue-50",
   },
   cricket: {
     label: "Cricket",
-    color: "text-pink-400",
-    bg: "bg-pink-400/10",
-    glow: "from-pink-900/20",
+    color: "text-pink-700",
+    bg: "bg-pink-50",
+    glow: "from-pink-50",
   },
 };
 
@@ -61,10 +61,10 @@ function FormDot({ result }: { result: "W" | "D" | "L" }) {
     <span
       className={`h-2.5 w-2.5 rounded-full ${
         result === "W"
-          ? "bg-emerald-500/70"
+          ? "bg-emerald-500"
           : result === "D"
-          ? "bg-slate-600"
-          : "bg-red-500/70"
+          ? "bg-gray-300"
+          : "bg-red-400"
       }`}
     />
   );
@@ -76,7 +76,7 @@ interface FeaturedCarouselProps {
 
 function TeamNameLink({ name, align = "left" }: { name: string; align?: "left" | "right" }) {
   const href = getEntityHref(name);
-  const cls = `text-xl font-extrabold leading-tight text-white transition-colors hover:text-accent-green sm:text-2xl ${
+  const cls = `text-xl font-extrabold leading-tight text-gray-900 transition-colors hover:text-accent-green sm:text-2xl ${
     align === "right" ? "text-right" : ""
   }`;
   if (href) {
@@ -86,7 +86,7 @@ function TeamNameLink({ name, align = "left" }: { name: string; align?: "left" |
       </Link>
     );
   }
-  return <span className={`text-xl font-extrabold leading-tight text-white sm:text-2xl ${align === "right" ? "text-right block" : "block"}`}>{name}</span>;
+  return <span className={`text-xl font-extrabold leading-tight text-gray-900 sm:text-2xl ${align === "right" ? "text-right block" : "block"}`}>{name}</span>;
 }
 
 export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
@@ -136,10 +136,10 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
   );
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-      {/* Gradient glow based on sport */}
+    <div className="relative overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+      {/* Subtle sport tint */}
       <div
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.glow} to-transparent`}
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${style.glow} to-transparent opacity-40`}
       />
 
       {/* Slide content */}
@@ -162,19 +162,19 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
                   <Link
                     href={leagueHref}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                    className="text-xs text-gray-400 transition-colors hover:text-gray-600"
                   >
                     {event.league}
                   </Link>
                 ) : (
-                  <span className="text-xs text-slate-500">{event.league}</span>
+                  <span className="text-xs text-gray-400">{event.league}</span>
                 );
               })()}
               <span className="rounded-full bg-accent-green/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-green">
                 Featured
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex shrink-0 items-center gap-1.5 text-xs text-gray-400">
               <Clock className="h-3.5 w-3.5" />
               <span>{formatKickoff(event.commenceTime)}</span>
             </div>
@@ -194,10 +194,10 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
             {/* VS */}
             <div className="flex shrink-0 flex-col items-center gap-1">
-              <span className="rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-slate-500">
+              <span className="rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-gray-500">
                 VS
               </span>
-              <span className="text-[10px] text-slate-700">last 5</span>
+              <span className="text-[10px] text-gray-300">last 5</span>
             </div>
 
             {/* Away */}
@@ -213,16 +213,16 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
           {/* Top pick row */}
           {topPick && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-bg-border/60 pt-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-bg-border pt-4">
               <div className="flex items-center gap-2 text-sm">
                 <TrendingUp className="h-4 w-4 shrink-0 text-accent-green" />
-                <span className="text-slate-400">Top pick:</span>
-                <span className="font-semibold text-white">{topPick.label}</span>
+                <span className="text-gray-400">Top pick:</span>
+                <span className="font-semibold text-gray-800">{topPick.label}</span>
                 <span className="font-bold text-accent-green">
                   {topPick.probability}%
                 </span>
               </div>
-              <span className="hidden text-xs text-slate-600 sm:block">
+              <span className="hidden text-xs text-gray-400 sm:block">
                 Best odds: {bestBookmaker.home.toFixed(2)} @ {bestBookmaker.name}
               </span>
             </div>
@@ -232,7 +232,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
       {/* Controls bar */}
       {events.length > 1 && (
-        <div className="flex items-center justify-between border-t border-bg-border/50 px-6 py-3 sm:px-8">
+        <div className="flex items-center justify-between border-t border-bg-border px-6 py-3 sm:px-8">
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
             {events.map((_, i) => (
@@ -243,7 +243,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
                 className={`rounded-full transition-all duration-300 ${
                   i === current
                     ? "h-2 w-4 bg-accent-green"
-                    : "h-2 w-2 bg-bg-border hover:bg-slate-600"
+                    : "h-2 w-2 bg-bg-border hover:bg-gray-300"
                 }`}
               />
             ))}
@@ -254,14 +254,14 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
             <button
               onClick={prev}
               aria-label="Previous"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-slate-500 transition-colors hover:border-slate-600 hover:text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-700"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={next}
               aria-label="Next"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-slate-500 transition-colors hover:border-slate-600 hover:text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-700"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

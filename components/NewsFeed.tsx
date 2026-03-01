@@ -4,12 +4,12 @@ import { Newspaper } from "lucide-react";
 import { getNewsForTags, type NewsCategory } from "@/data/sampleNews";
 
 const CATEGORY_STYLES: Record<NewsCategory, { label: string; color: string; bg: string }> = {
-  transfer: { label: "Transfer", color: "text-purple-400",  bg: "bg-purple-400/10" },
-  injury:   { label: "Injury",   color: "text-red-400",     bg: "bg-red-400/10" },
-  match:    { label: "Match",    color: "text-blue-400",    bg: "bg-blue-400/10" },
-  preview:  { label: "Preview",  color: "text-indigo-400",  bg: "bg-indigo-400/10" },
-  analysis: { label: "Analysis", color: "text-cyan-400",    bg: "bg-cyan-400/10" },
-  general:  { label: "News",     color: "text-slate-400",   bg: "bg-slate-700/50" },
+  transfer: { label: "Transfer", color: "text-purple-700", bg: "bg-purple-50" },
+  injury:   { label: "Injury",   color: "text-red-700",    bg: "bg-red-50" },
+  match:    { label: "Match",    color: "text-blue-700",   bg: "bg-blue-50" },
+  preview:  { label: "Preview",  color: "text-indigo-700", bg: "bg-indigo-50" },
+  analysis: { label: "Analysis", color: "text-cyan-700",   bg: "bg-cyan-50" },
+  general:  { label: "News",     color: "text-gray-600",   bg: "bg-gray-100" },
 };
 
 function timeAgo(iso: string): string {
@@ -27,10 +27,10 @@ export default function NewsFeed({ tags }: { tags: string[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
-        <Newspaper className="mb-3 h-10 w-10 text-slate-700" />
-        <p className="text-sm font-semibold text-slate-500">No news yet</p>
-        <p className="mt-1 text-xs text-slate-600">Check back soon for the latest updates</p>
+      <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
+        <Newspaper className="mb-3 h-10 w-10 text-gray-300" />
+        <p className="text-sm font-semibold text-gray-400">No news yet</p>
+        <p className="mt-1 text-xs text-gray-300">Check back soon for the latest updates</p>
       </div>
     );
   }
@@ -42,17 +42,17 @@ export default function NewsFeed({ tags }: { tags: string[] }) {
         return (
           <article
             key={item.id}
-            className="rounded-xl border border-bg-border bg-bg-card p-4 transition-colors hover:border-slate-700"
+            className="rounded-xl border border-bg-border bg-bg-card p-4 shadow-sm transition-colors hover:border-gray-300"
           >
             <div className="mb-2 flex items-center gap-2">
               <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${cat.bg} ${cat.color}`}>
                 {cat.label}
               </span>
-              <span className="text-xs text-slate-600">{item.source}</span>
-              <span className="ml-auto shrink-0 text-xs text-slate-600">{timeAgo(item.publishedAt)}</span>
+              <span className="text-xs text-gray-400">{item.source}</span>
+              <span className="ml-auto shrink-0 text-xs text-gray-400">{timeAgo(item.publishedAt)}</span>
             </div>
-            <h3 className="text-sm font-semibold leading-snug text-white">{item.headline}</h3>
-            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">{item.summary}</p>
+            <h3 className="text-sm font-semibold leading-snug text-gray-800">{item.headline}</h3>
+            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-gray-400">{item.summary}</p>
           </article>
         );
       })}

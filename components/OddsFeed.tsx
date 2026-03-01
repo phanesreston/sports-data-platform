@@ -32,14 +32,14 @@ export default function OddsFeed() {
       {/* Section header */}
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-extrabold text-white">
+          <h2 className="text-2xl font-extrabold text-gray-900">
             Predictions &amp; Analysis
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-gray-400">
             Stats-powered analysis across multiple match outcomes
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-gray-400">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-green" />
@@ -59,9 +59,9 @@ export default function OddsFeed() {
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
           <span className="text-4xl">🔍</span>
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-gray-400">
             No events found for this sport.
           </p>
         </div>

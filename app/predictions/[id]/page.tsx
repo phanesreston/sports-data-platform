@@ -18,11 +18,11 @@ const SPORT_STYLES: Record<
   string,
   { label: string; color: string; bg: string }
 > = {
-  football: { label: "Football", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  basketball: { label: "Basketball", color: "text-orange-400", bg: "bg-orange-400/10" },
-  tennis: { label: "Tennis", color: "text-yellow-400", bg: "bg-yellow-400/10" },
-  american_football: { label: "NFL", color: "text-blue-400", bg: "bg-blue-400/10" },
-  cricket: { label: "Cricket", color: "text-pink-400", bg: "bg-pink-400/10" },
+  football: { label: "Football", color: "text-emerald-700", bg: "bg-emerald-50" },
+  basketball: { label: "Basketball", color: "text-orange-700", bg: "bg-orange-50" },
+  tennis: { label: "Tennis", color: "text-amber-700", bg: "bg-amber-50" },
+  american_football: { label: "NFL", color: "text-blue-700", bg: "bg-blue-50" },
+  cricket: { label: "Cricket", color: "text-pink-700", bg: "bg-pink-50" },
 };
 
 const STAT_LABEL: Record<Sport, { for: string; against: string }> = {
@@ -52,10 +52,10 @@ function FormPills({ form }: { form: ("W" | "D" | "L")[] }) {
           key={i}
           className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
             r === "W"
-              ? "bg-emerald-500/20 text-emerald-400"
+              ? "bg-emerald-100 text-emerald-700"
               : r === "D"
-              ? "bg-slate-600/30 text-slate-400"
-              : "bg-red-500/20 text-red-400"
+              ? "bg-gray-100 text-gray-500"
+              : "bg-red-100 text-red-700"
           }`}
         >
           {r}
@@ -82,14 +82,14 @@ export default function PredictionDetailPage({ params }: Props) {
           {/* Back */}
           <Link
             href="/"
-            className="mb-8 inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-white"
+            className="mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Predictions
           </Link>
 
           {/* Match header */}
-          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-6">
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
@@ -97,34 +97,34 @@ export default function PredictionDetailPage({ params }: Props) {
                 >
                   {style.label}
                 </span>
-                <span className="text-xs text-slate-500">{event.league}</span>
+                <span className="text-xs text-gray-400">{event.league}</span>
               </div>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
+              <div className="flex items-center gap-1 text-xs text-gray-400">
                 <Clock className="h-3 w-3" />
                 <span>{formatKickoff(event.commenceTime)}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <span className="flex-1 text-xl font-extrabold leading-tight text-white">
+              <span className="flex-1 text-xl font-extrabold leading-tight text-gray-900">
                 {event.homeTeam}
               </span>
-              <span className="shrink-0 rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-slate-400">
+              <span className="shrink-0 rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-gray-500">
                 VS
               </span>
-              <span className="flex-1 text-right text-xl font-extrabold leading-tight text-white">
+              <span className="flex-1 text-right text-xl font-extrabold leading-tight text-gray-900">
                 {event.awayTeam}
               </span>
             </div>
           </div>
 
           {/* Team form + H2H */}
-          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5">
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
                 Team Form (last 5)
               </h2>
-              <span className="text-xs text-slate-600">
+              <span className="text-xs text-gray-400">
                 {statLabel.for} / {statLabel.against}
               </span>
             </div>
@@ -132,32 +132,32 @@ export default function PredictionDetailPage({ params }: Props) {
             <div className="space-y-3">
               {/* Home */}
               <div className="flex items-center gap-3">
-                <span className="w-28 shrink-0 truncate text-sm text-slate-300">
+                <span className="w-28 shrink-0 truncate text-sm text-gray-700">
                   {event.homeTeam}
                 </span>
                 <FormPills form={event.homeStats.form} />
                 <span className="ml-auto whitespace-nowrap text-sm">
-                  <span className="font-semibold text-emerald-400/80">
+                  <span className="font-semibold text-emerald-600">
                     {event.homeStats.avgScored.toFixed(1)}
                   </span>
-                  <span className="text-slate-600"> / </span>
-                  <span className="font-semibold text-red-400/80">
+                  <span className="text-gray-300"> / </span>
+                  <span className="font-semibold text-red-600">
                     {event.homeStats.avgConceded.toFixed(1)}
                   </span>
                 </span>
               </div>
               {/* Away */}
               <div className="flex items-center gap-3">
-                <span className="w-28 shrink-0 truncate text-sm text-slate-300">
+                <span className="w-28 shrink-0 truncate text-sm text-gray-700">
                   {event.awayTeam}
                 </span>
                 <FormPills form={event.awayStats.form} />
                 <span className="ml-auto whitespace-nowrap text-sm">
-                  <span className="font-semibold text-emerald-400/80">
+                  <span className="font-semibold text-emerald-600">
                     {event.awayStats.avgScored.toFixed(1)}
                   </span>
-                  <span className="text-slate-600"> / </span>
-                  <span className="font-semibold text-red-400/80">
+                  <span className="text-gray-300"> / </span>
+                  <span className="font-semibold text-red-600">
                     {event.awayStats.avgConceded.toFixed(1)}
                   </span>
                 </span>
@@ -166,37 +166,37 @@ export default function PredictionDetailPage({ params }: Props) {
 
             {/* H2H */}
             <div className="mt-4 flex items-center gap-1.5 border-t border-bg-border pt-4 text-sm">
-              <span className="text-slate-500">H2H ({totalH2H}):</span>
-              <span className="font-semibold text-emerald-400">
+              <span className="text-gray-400">H2H ({totalH2H}):</span>
+              <span className="font-semibold text-emerald-600">
                 {event.h2h.homeWins}W
               </span>
               {event.h2h.draws > 0 && (
                 <>
-                  <span className="text-slate-600">·</span>
-                  <span className="text-slate-400">{event.h2h.draws}D</span>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-gray-500">{event.h2h.draws}D</span>
                 </>
               )}
-              <span className="text-slate-600">·</span>
-              <span className="font-semibold text-red-400">
+              <span className="text-gray-300">·</span>
+              <span className="font-semibold text-red-600">
                 {event.h2h.awayWins}L
               </span>
-              <span className="ml-1 text-slate-600">for {event.homeTeam}</span>
+              <span className="ml-1 text-gray-400">for {event.homeTeam}</span>
             </div>
           </div>
 
           {/* Statistical predictions */}
-          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5">
-            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
+            <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-gray-400">
               Statistical Predictions
             </h2>
             <div className="divide-y divide-bg-border">
               {event.markets.map((market, i) => (
                 <div key={i} className="py-4 first:pt-0 last:pb-0">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-sm font-semibold text-gray-800">
                       {market.name}
                     </span>
-                    <span className="text-xs text-slate-600">
+                    <span className="text-xs text-gray-400">
                       Best odds: {market.bestOdds.toFixed(2)} @{" "}
                       {market.bestBookmaker}
                     </span>
@@ -207,8 +207,8 @@ export default function PredictionDetailPage({ params }: Props) {
                         <span
                           className={`w-36 shrink-0 truncate text-sm ${
                             opt.pick
-                              ? "font-semibold text-white"
-                              : "text-slate-400"
+                              ? "font-semibold text-gray-800"
+                              : "text-gray-400"
                           }`}
                         >
                           {opt.label}
@@ -216,14 +216,14 @@ export default function PredictionDetailPage({ params }: Props) {
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-border">
                           <div
                             className={`h-full rounded-full ${
-                              opt.pick ? "bg-accent-green" : "bg-slate-600"
+                              opt.pick ? "bg-accent-green" : "bg-gray-200"
                             }`}
                             style={{ width: `${opt.probability}%` }}
                           />
                         </div>
                         <span
                           className={`w-9 shrink-0 text-right text-sm font-bold ${
-                            opt.pick ? "text-accent-green" : "text-slate-500"
+                            opt.pick ? "text-accent-green" : "text-gray-400"
                           }`}
                         >
                           {opt.probability}%
@@ -245,14 +245,14 @@ export default function PredictionDetailPage({ params }: Props) {
 
           {/* Odds comparison */}
           {event.bookmakers.length > 0 && (
-            <div className="rounded-2xl border border-bg-border bg-bg-card p-5">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <div className="rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-400">
                 Odds Comparison
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-bg-border text-left text-xs text-slate-500">
+                    <tr className="border-b border-bg-border text-left text-xs text-gray-400">
                       <th className="pb-3 pr-4 font-medium">Bookmaker</th>
                       <th className="pb-3 pr-4 text-right font-medium">
                         {event.homeTeam}
@@ -270,16 +270,16 @@ export default function PredictionDetailPage({ params }: Props) {
                   <tbody className="divide-y divide-bg-border">
                     {event.bookmakers.map((bk) => (
                       <tr key={bk.name}>
-                        <td className="py-3 pr-4 text-slate-300">{bk.name}</td>
-                        <td className="py-3 pr-4 text-right font-semibold text-white">
+                        <td className="py-3 pr-4 text-gray-600">{bk.name}</td>
+                        <td className="py-3 pr-4 text-right font-semibold text-gray-800">
                           {bk.home.toFixed(2)}
                         </td>
                         {hasDrawOdds && (
-                          <td className="py-3 pr-4 text-right text-slate-400">
+                          <td className="py-3 pr-4 text-right text-gray-500">
                             {bk.draw != null ? bk.draw.toFixed(2) : "—"}
                           </td>
                         )}
-                        <td className="py-3 text-right font-semibold text-white">
+                        <td className="py-3 text-right font-semibold text-gray-800">
                           {bk.away.toFixed(2)}
                         </td>
                       </tr>

@@ -11,11 +11,11 @@ const SPORT_STYLES: Record<
   string,
   { label: string; color: string; bg: string }
 > = {
-  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-400/10" },
-  tennis:            { label: "Tennis",     color: "text-yellow-400",  bg: "bg-yellow-400/10" },
-  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-400/10" },
-  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-400/10" },
+  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50" },
+  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50" },
+  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50" },
+  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50" },
+  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50" },
 };
 
 function formatKickoff(isoString: string): string {
@@ -37,7 +37,7 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
         <span
           key={i}
           className={`h-2 w-2 rounded-full ${
-            r === "W" ? "bg-emerald-500/60" : r === "D" ? "bg-slate-600" : "bg-red-500/60"
+            r === "W" ? "bg-emerald-500" : r === "D" ? "bg-gray-300" : "bg-red-400"
           }`}
         />
       ))}
@@ -48,7 +48,7 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
 /** Renders a team/athlete name as a link if a page exists for it, otherwise plain text */
 function TeamName({ name, align = "left" }: { name: string; align?: "left" | "right" }) {
   const href = getEntityHref(name);
-  const base = `text-sm font-bold leading-snug text-white ${align === "right" ? "text-right block w-full" : "block"}`;
+  const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right block w-full" : "block"}`;
   if (href) {
     return (
       <Link
@@ -75,7 +75,7 @@ export default function PredictionCard({ event }: PredictionCardProps) {
   return (
     <article
       onClick={() => router.push(`/predictions/${event.id}`)}
-      className="group flex cursor-pointer flex-col rounded-2xl border border-bg-border bg-bg-card p-4 transition-colors hover:border-slate-700"
+      className="group flex cursor-pointer flex-col rounded-2xl border border-bg-border bg-bg-card p-4 shadow-sm transition-all hover:border-gray-300 hover:shadow-md"
     >
       {/* Sport + league + time */}
       <div className="flex items-center justify-between">
@@ -89,16 +89,16 @@ export default function PredictionCard({ event }: PredictionCardProps) {
               <Link
                 href={leagueHref}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xs text-slate-600 transition-colors hover:text-slate-400"
+                className="text-xs text-gray-400 transition-colors hover:text-gray-600"
               >
                 {event.league}
               </Link>
             ) : (
-              <span className="text-xs text-slate-600">{event.league}</span>
+              <span className="text-xs text-gray-400">{event.league}</span>
             );
           })()}
         </div>
-        <div className="flex items-center gap-1 text-xs text-slate-500">
+        <div className="flex items-center gap-1 text-xs text-gray-400">
           <Clock className="h-3 w-3" />
           <span>{timeUntil}</span>
         </div>
@@ -110,7 +110,7 @@ export default function PredictionCard({ event }: PredictionCardProps) {
           <div className="flex-1">
             <TeamName name={event.homeTeam} align="left" />
           </div>
-          <span className="shrink-0 rounded-lg bg-bg-border px-2.5 py-1 text-xs font-semibold text-slate-500">
+          <span className="shrink-0 rounded-lg bg-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500">
             VS
           </span>
           <div className="flex-1">
@@ -121,7 +121,7 @@ export default function PredictionCard({ event }: PredictionCardProps) {
         {/* Form dots row */}
         <div className="flex items-center justify-between">
           <FormDots form={event.homeStats.form} />
-          <span className="text-[10px] text-slate-700">last 5</span>
+          <span className="text-[10px] text-gray-300">last 5</span>
           <FormDots form={event.awayStats.form} />
         </div>
       </div>

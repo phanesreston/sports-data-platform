@@ -38,10 +38,10 @@ export default function HowItWorks() {
         <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent-purple">
           About the platform
         </p>
-        <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl">
+        <h1 className="text-4xl font-extrabold leading-tight text-gray-900 sm:text-5xl">
           How It Works
         </h1>
-        <p className="mt-5 text-lg leading-relaxed text-slate-400">
+        <p className="mt-5 text-lg leading-relaxed text-gray-500">
           WeLikeSportz turns raw match data into clear, probability-based
           predictions. Here&apos;s exactly what we do and how we do it — no
           black box, no jargon.
@@ -54,21 +54,21 @@ export default function HowItWorks() {
           <section key={number}>
             {/* Step marker */}
             <div className="mb-5 flex items-center gap-4">
-              <span className="text-5xl font-extrabold leading-none text-bg-border select-none">
+              <span className="text-5xl font-extrabold leading-none text-gray-200 select-none">
                 {number}
               </span>
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-green/10">
-                <Icon className="h-4.5 w-4.5 h-[18px] w-[18px] text-accent-green" />
+                <Icon className="h-[18px] w-[18px] text-accent-green" />
               </div>
             </div>
 
             {/* Heading */}
-            <h2 className="mb-5 text-2xl font-bold text-white">{title}</h2>
+            <h2 className="mb-5 text-2xl font-bold text-gray-900">{title}</h2>
 
             {/* Body */}
             <div className="space-y-4">
               {paragraphs.map((p, i) => (
-                <p key={i} className="text-base leading-relaxed text-slate-400">
+                <p key={i} className="text-base leading-relaxed text-gray-500">
                   {p}
                 </p>
               ))}
@@ -82,7 +82,7 @@ export default function HowItWorks() {
 
       {/* Footer note */}
       <footer className="mt-14">
-        <p className="text-sm leading-relaxed text-slate-500">
+        <p className="text-sm leading-relaxed text-gray-400">
           Our analysis is statistical and based on historical data. No
           prediction is guaranteed — sport is unpredictable by nature. Always
           enjoy sport responsibly.

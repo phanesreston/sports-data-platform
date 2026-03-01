@@ -23,11 +23,11 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 // ─── Sport styles ─────────────────────────────────────────────────────────────
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; sportHref: string }> = {
-  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10", sportHref: "/?sport=football" },
-  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-400/10",  sportHref: "/?sport=basketball" },
-  tennis:            { label: "Tennis",     color: "text-yellow-400",  bg: "bg-yellow-400/10",  sportHref: "/?sport=tennis" },
-  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-400/10",    sportHref: "/?sport=american_football" },
-  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-400/10",    sportHref: "/?sport=cricket" },
+  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50", sportHref: "/?sport=football" },
+  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50",  sportHref: "/?sport=basketball" },
+  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50",   sportHref: "/?sport=tennis" },
+  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50",    sportHref: "/?sport=american_football" },
+  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50",    sportHref: "/?sport=cricket" },
 };
 
 // ─── Zone colours ─────────────────────────────────────────────────────────────
@@ -51,9 +51,9 @@ const ZONE_LABEL: Record<NonNullable<Zone>, string> = {
 function SectionHeader({ label, count }: { label: string; count?: number }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</span>
       {count !== undefined && (
-        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">
+        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-gray-400">
           {count}
         </span>
       )}
@@ -70,7 +70,7 @@ function ZoneLegend({ zones }: { zones: NonNullable<Zone>[] }) {
       {unique.map((z) => (
         <div key={z} className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-full ${ZONE_BAR[z as NonNullable<Zone>]}`} />
-          <span className="text-xs text-slate-500">{ZONE_LABEL[z as NonNullable<Zone>]}</span>
+          <span className="text-xs text-gray-400">{ZONE_LABEL[z as NonNullable<Zone>]}</span>
         </div>
       ))}
     </div>
@@ -89,10 +89,10 @@ function StandingsTable({
   const isTennis = sport === "tennis";
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-bg-border bg-bg-card">
+    <div className="overflow-x-auto rounded-xl border border-bg-border bg-bg-card shadow-sm">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-bg-border text-[11px] font-bold uppercase tracking-wider text-slate-600">
+          <tr className="border-b border-bg-border text-[11px] font-bold uppercase tracking-wider text-gray-400">
             <th className="w-8 py-3 pl-4 text-center">#</th>
             <th className="py-3 pl-3 text-left">{isTennis ? "Player" : "Team"}</th>
             {headers.map((h) => (
@@ -114,7 +114,7 @@ function StandingsTable({
               <tr
                 key={i}
                 className={`border-b border-bg-border/50 transition-colors last:border-0 ${
-                  href ? "hover:bg-bg-border/30" : ""
+                  href ? "hover:bg-bg-base" : ""
                 }`}
               >
                 {/* Position + zone bar */}
@@ -122,23 +122,23 @@ function StandingsTable({
                   {zoneBar && (
                     <span className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r ${zoneBar}`} />
                   )}
-                  <span className="text-xs font-bold text-slate-600">{row.position}</span>
+                  <span className="text-xs font-bold text-gray-400">{row.position}</span>
                 </td>
 
                 {/* Name */}
                 <td className="py-3 pl-3">
                   {href ? (
-                    <Link href={href} className="font-semibold text-white transition-colors hover:text-accent-green">
+                    <Link href={href} className="font-semibold text-gray-800 transition-colors hover:text-accent-green">
                       {row.name}
                     </Link>
                   ) : (
-                    <span className="font-semibold text-white">{row.name}</span>
+                    <span className="font-semibold text-gray-800">{row.name}</span>
                   )}
                 </td>
 
                 {/* Stats */}
                 {row.stats.map((val, j) => (
-                  <td key={j} className="px-3 py-3 text-right font-mono text-xs text-slate-400">
+                  <td key={j} className="px-3 py-3 text-right font-mono text-xs text-gray-500">
                     {val}
                   </td>
                 ))}
@@ -152,10 +152,10 @@ function StandingsTable({
                           key={fi}
                           className={`flex h-4 w-4 items-center justify-center rounded text-[9px] font-bold ${
                             r === "W"
-                              ? "bg-emerald-500/20 text-emerald-400"
+                              ? "bg-emerald-100 text-emerald-700"
                               : r === "D"
-                              ? "bg-slate-700 text-slate-500"
-                              : "bg-red-500/20 text-red-400"
+                              ? "bg-gray-100 text-gray-500"
+                              : "bg-red-100 text-red-700"
                           }`}
                         >
                           {r}
@@ -186,7 +186,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
         <Header />
         <main className="flex flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">League not found</p>
+            <p className="text-2xl font-bold text-gray-900">League not found</p>
             <Link href="/" className="mt-4 inline-block text-sm text-accent-green hover:underline">
               ← Back to predictions
             </Link>
@@ -217,15 +217,15 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
           {/* Back nav */}
           <Link
             href={style.sportHref}
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-300"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700"
           >
             <ChevronLeft className="h-4 w-4" />
             {style.label}
           </Link>
 
           {/* Hero */}
-          <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-            <div className={`h-1.5 w-full ${style.bg.replace("/10", "")}`} />
+          <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+            <div className={`h-1.5 w-full ${style.bg.replace("50", "200")}`} />
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -233,16 +233,16 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                     <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.color}`}>
                       {style.label}
                     </span>
-                    <span className="text-sm text-slate-500">{league.country}</span>
+                    <span className="text-sm text-gray-400">{league.country}</span>
                   </div>
-                  <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{league.name}</h1>
-                  <p className="mt-2 text-sm text-slate-500">{league.season} Season</p>
+                  <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">{league.name}</h1>
+                  <p className="mt-2 text-sm text-gray-400">{league.season} Season</p>
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-bg-border bg-bg-border/50 px-4 py-3">
+                <div className="flex items-center gap-2 rounded-xl border border-bg-border bg-bg-base px-4 py-3">
                   <Trophy className="h-4 w-4 text-accent-green" />
                   <div>
-                    <div className="text-xs text-slate-600">Teams / Players</div>
-                    <div className="font-bold text-white">
+                    <div className="text-xs text-gray-400">Teams / Players</div>
+                    <div className="font-bold text-gray-900">
                       {league.groups.reduce((sum, g) => sum + g.rows.length, 0)}
                     </div>
                   </div>
@@ -260,14 +260,14 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
                     activeTab === tab.id
-                      ? "border-accent-green text-white"
-                      : "border-transparent text-slate-500 hover:text-slate-300"
+                      ? "border-accent-green text-accent-green"
+                      : "border-transparent text-gray-400 hover:text-gray-700"
                   }`}
                 >
                   {tab.icon}
                   {tab.label}
                   {tab.id === "upcoming" && fixtures.length > 0 && (
-                    <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                    <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-gray-400">
                       {fixtures.length}
                     </span>
                   )}
@@ -282,7 +282,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
               {league.groups.map((group, gi) => (
                 <div key={gi}>
                   {group.label && (
-                    <h3 className="mb-3 text-sm font-bold text-slate-400">{group.label}</h3>
+                    <h3 className="mb-3 text-sm font-bold text-gray-500">{group.label}</h3>
                   )}
                   <StandingsTable
                     rows={group.rows}
@@ -308,10 +308,10 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
-                  <Calendar className="mb-3 h-10 w-10 text-slate-700" />
-                  <p className="text-sm font-semibold text-slate-500">No upcoming fixtures</p>
-                  <p className="mt-1 text-xs text-slate-600">Check back closer to the next matchday</p>
+                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
+                  <Calendar className="mb-3 h-10 w-10 text-gray-300" />
+                  <p className="text-sm font-semibold text-gray-400">No upcoming fixtures</p>
+                  <p className="mt-1 text-xs text-gray-300">Check back closer to the next matchday</p>
                 </div>
               )}
             </div>
@@ -328,14 +328,14 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                     {league.overview.map((stat) => (
                       <div
                         key={stat.label}
-                        className="rounded-xl border border-bg-border bg-bg-card p-4"
+                        className="rounded-xl border border-bg-border bg-bg-card p-4 shadow-sm"
                       >
-                        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">
                           {stat.label}
                         </div>
-                        <div className="text-xl font-extrabold text-white">{stat.value}</div>
+                        <div className="text-xl font-extrabold text-gray-900">{stat.value}</div>
                         {stat.sub && (
-                          <div className="mt-0.5 text-[11px] text-slate-600">{stat.sub}</div>
+                          <div className="mt-0.5 text-[11px] text-gray-400">{stat.sub}</div>
                         )}
                       </div>
                     ))}
@@ -356,12 +356,12 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                 {league.topPerformers!.map((section) => (
                   <div
                     key={section.label}
-                    className="overflow-hidden rounded-xl border border-bg-border bg-bg-card"
+                    className="overflow-hidden rounded-xl border border-bg-border bg-bg-card shadow-sm"
                   >
                     <div className="border-b border-bg-border px-4 py-3">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">
                         {section.label}
-                        <span className="ml-2 font-normal text-slate-600 normal-case tracking-normal">
+                        <span className="ml-2 font-normal text-gray-300 normal-case tracking-normal">
                           — {section.unit}
                         </span>
                       </h3>
@@ -383,19 +383,19 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                           >
                             <div className="mb-1.5 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-600">
+                                <span className="w-5 shrink-0 text-center text-xs font-bold text-gray-400">
                                   {i + 1}
                                 </span>
                                 <div className="min-w-0">
                                   {href ? (
                                     <Link
                                       href={href}
-                                      className="block truncate text-sm font-semibold text-white transition-colors hover:text-accent-green"
+                                      className="block truncate text-sm font-semibold text-gray-800 transition-colors hover:text-accent-green"
                                     >
                                       {entry.name}
                                     </Link>
                                   ) : (
-                                    <span className="block truncate text-sm font-semibold text-white">
+                                    <span className="block truncate text-sm font-semibold text-gray-800">
                                       {entry.name}
                                     </span>
                                   )}
@@ -403,12 +403,12 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                                     entry.teamId ? (
                                       <Link
                                         href={`/teams/${entry.teamId}`}
-                                        className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                                        className="text-xs text-gray-400 transition-colors hover:text-gray-600"
                                       >
                                         {entry.teamName}
                                       </Link>
                                     ) : (
-                                      <span className="text-xs text-slate-500">{entry.teamName}</span>
+                                      <span className="text-xs text-gray-400">{entry.teamName}</span>
                                     )
                                   )}
                                 </div>
@@ -417,7 +417,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                                 <span className="text-sm font-extrabold text-accent-green">
                                   {entry.value}
                                 </span>
-                                <span className="ml-1 text-xs text-slate-600">{section.unit}</span>
+                                <span className="ml-1 text-xs text-gray-400">{section.unit}</span>
                               </div>
                             </div>
                             {/* Progress bar */}
@@ -457,7 +457,6 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
     const sorted = [...allRows].sort((a, b) => Number(b.stats[7]) - Number(a.stats[7]));
     const bestAttack = [...allRows].sort((a, b) => Number(b.stats[4]) - Number(a.stats[4]))[0];
     const bestDefense = [...allRows].sort((a, b) => Number(a.stats[5]) - Number(b.stats[5]))[0];
-    const topScorer = allRows[0];
     const bottom = allRows[allRows.length - 1];
 
     return (
@@ -465,9 +464,9 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
         <SectionHeader label="League Insights" />
         <div className="grid gap-4 sm:grid-cols-2">
           <InsightCard title="Current Leader" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[7]} pts`} detail={`${sorted[0].stats[1]}W · ${sorted[0].stats[2]}D · ${sorted[0].stats[3]}L`} color="text-accent-green" />
-          <InsightCard title="Best Attack" teamHref={bestAttack.teamId ? `/teams/${bestAttack.teamId}` : null} name={bestAttack.name} value={`${bestAttack.stats[4]} goals`} detail="most scored" color="text-orange-400" />
-          <InsightCard title="Best Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} conceded`} detail="fewest against" color="text-blue-400" />
-          <InsightCard title="Bottom of Table" teamHref={bottom.teamId ? `/teams/${bottom.teamId}` : null} name={bottom.name} value={`${bottom.stats[7]} pts`} detail={`${bottom.stats[1]}W · ${bottom.stats[2]}D · ${bottom.stats[3]}L`} color="text-red-400" />
+          <InsightCard title="Best Attack" teamHref={bestAttack.teamId ? `/teams/${bestAttack.teamId}` : null} name={bestAttack.name} value={`${bestAttack.stats[4]} goals`} detail="most scored" color="text-orange-500" />
+          <InsightCard title="Best Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} conceded`} detail="fewest against" color="text-blue-500" />
+          <InsightCard title="Bottom of Table" teamHref={bottom.teamId ? `/teams/${bottom.teamId}` : null} name={bottom.name} value={`${bottom.stats[7]} pts`} detail={`${bottom.stats[1]}W · ${bottom.stats[2]}D · ${bottom.stats[3]}L`} color="text-red-500" />
         </div>
       </div>
     );
@@ -493,8 +492,8 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
           {allConf.map((c) => (
             <InsightCard key={c.label} title={`${c.label} Leader`} teamHref={c.leader.teamId ? `/teams/${c.leader.teamId}` : null} name={c.leader.name} value={`${c.leader.stats[0]}-${c.leader.stats[1]}`} detail={`${c.leader.stats[2]} win %`} color="text-accent-green" />
           ))}
-          <InsightCard title="Best Win %" teamHref={bestPct.teamId ? `/teams/${bestPct.teamId}` : null} name={bestPct.name} value={`${bestPct.stats[2]}`} detail={`${bestPct.stats[0]}W - ${bestPct.stats[1]}L`} color="text-orange-400" />
-          <InsightCard title="Needs Improvement" teamHref={worstPct.teamId ? `/teams/${worstPct.teamId}` : null} name={worstPct.name} value={`${worstPct.stats[2]}`} detail={`${worstPct.stats[0]}W - ${worstPct.stats[1]}L`} color="text-red-400" />
+          <InsightCard title="Best Win %" teamHref={bestPct.teamId ? `/teams/${bestPct.teamId}` : null} name={bestPct.name} value={`${bestPct.stats[2]}`} detail={`${bestPct.stats[0]}W - ${bestPct.stats[1]}L`} color="text-orange-500" />
+          <InsightCard title="Needs Improvement" teamHref={worstPct.teamId ? `/teams/${worstPct.teamId}` : null} name={worstPct.name} value={`${worstPct.stats[2]}`} detail={`${worstPct.stats[0]}W - ${worstPct.stats[1]}L`} color="text-red-500" />
         </div>
       </div>
     );
@@ -516,8 +515,8 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
           {allConf.map((c) => (
             <InsightCard key={c.label} title={`${c.label} Leader`} teamHref={c.leader.teamId ? `/teams/${c.leader.teamId}` : null} name={c.leader.name} value={`${c.leader.stats[0]}-${c.leader.stats[1]}`} detail={`${c.leader.stats[3]} win %`} color="text-accent-green" />
           ))}
-          <InsightCard title="Top Offense" teamHref={bestOffense.teamId ? `/teams/${bestOffense.teamId}` : null} name={bestOffense.name} value={`${bestOffense.stats[4]} pts`} detail="most points scored" color="text-orange-400" />
-          <InsightCard title="Top Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} pts`} detail="fewest points allowed" color="text-blue-400" />
+          <InsightCard title="Top Offense" teamHref={bestOffense.teamId ? `/teams/${bestOffense.teamId}` : null} name={bestOffense.name} value={`${bestOffense.stats[4]} pts`} detail="most points scored" color="text-orange-500" />
+          <InsightCard title="Top Defense" teamHref={bestDefense.teamId ? `/teams/${bestDefense.teamId}` : null} name={bestDefense.name} value={`${bestDefense.stats[5]} pts`} detail="fewest points allowed" color="text-blue-500" />
         </div>
       </div>
     );
@@ -535,9 +534,9 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
         <SectionHeader label="League Insights" />
         <div className="grid gap-4 sm:grid-cols-2">
           <InsightCard title="Points Leader" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[4]} pts`} detail={`${sorted[0].stats[1]}W · ${sorted[0].stats[2]}L`} color="text-accent-green" />
-          <InsightCard title="Best NRR" teamHref={bestNRR.teamId ? `/teams/${bestNRR.teamId}` : null} name={bestNRR.name} value={`${bestNRR.stats[5]}`} detail="net run rate" color="text-orange-400" />
-          <InsightCard title="Most Wins" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[1]} wins`} detail={`from ${sorted[0].stats[0]} matches`} color="text-yellow-400" />
-          <InsightCard title="Qualification Zone" name={`Top ${Math.ceil(allRows.length / 2.5)} advance`} value="Playoff" detail="to knockout stage" color="text-blue-400" />
+          <InsightCard title="Best NRR" teamHref={bestNRR.teamId ? `/teams/${bestNRR.teamId}` : null} name={bestNRR.name} value={`${bestNRR.stats[5]}`} detail="net run rate" color="text-orange-500" />
+          <InsightCard title="Most Wins" teamHref={sorted[0].teamId ? `/teams/${sorted[0].teamId}` : null} name={sorted[0].name} value={`${sorted[0].stats[1]} wins`} detail={`from ${sorted[0].stats[0]} matches`} color="text-amber-600" />
+          <InsightCard title="Qualification Zone" name={`Top ${Math.ceil(allRows.length / 2.5)} advance`} value="Playoff" detail="to knockout stage" color="text-blue-500" />
         </div>
       </div>
     );
@@ -556,9 +555,9 @@ function LeagueInsights({ league }: { league: LeagueProfile }) {
         <SectionHeader label="League Insights" />
         <div className="grid gap-4 sm:grid-cols-2">
           <InsightCard title="World No. 1" teamHref={no1.playerId ? `/athletes/${no1.playerId}` : null} name={no1.name} value={`${no1.stats[1]} pts`} detail="ATP ranking points" color="text-accent-green" />
-          <InsightCard title="Most Wins" teamHref={mostWins.playerId ? `/athletes/${mostWins.playerId}` : null} name={mostWins.name} value={`${mostWins.stats[2]} wins`} detail={`${mostWins.stats[3]} losses`} color="text-orange-400" />
-          <InsightCard title="Best Win %" teamHref={bestWinPct.playerId ? `/athletes/${bestWinPct.playerId}` : null} name={bestWinPct.name} value={String(bestWinPct.stats[4])} detail={`${bestWinPct.stats[2]}W - ${bestWinPct.stats[3]}L`} color="text-yellow-400" />
-          <InsightCard title="Points Gap" name={`${allRows[0]?.name} vs #2`} value={`${Number(allRows[0]?.stats[1]) - Number(allRows[1]?.stats[1])} pts`} detail="lead at top" color="text-blue-400" />
+          <InsightCard title="Most Wins" teamHref={mostWins.playerId ? `/athletes/${mostWins.playerId}` : null} name={mostWins.name} value={`${mostWins.stats[2]} wins`} detail={`${mostWins.stats[3]} losses`} color="text-orange-500" />
+          <InsightCard title="Best Win %" teamHref={bestWinPct.playerId ? `/athletes/${bestWinPct.playerId}` : null} name={bestWinPct.name} value={String(bestWinPct.stats[4])} detail={`${bestWinPct.stats[2]}W - ${bestWinPct.stats[3]}L`} color="text-amber-600" />
+          <InsightCard title="Points Gap" name={`${allRows[0]?.name} vs #2`} value={`${Number(allRows[0]?.stats[1]) - Number(allRows[1]?.stats[1])} pts`} detail="lead at top" color="text-blue-500" />
         </div>
       </div>
     );
@@ -583,17 +582,17 @@ function InsightCard({
   teamHref?: string | null;
 }) {
   return (
-    <div className="rounded-xl border border-bg-border bg-bg-card p-4">
-      <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{title}</div>
+    <div className="rounded-xl border border-bg-border bg-bg-card p-4 shadow-sm">
+      <div className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">{title}</div>
       {teamHref ? (
-        <Link href={teamHref} className="block text-sm font-semibold text-white transition-colors hover:text-accent-green">
+        <Link href={teamHref} className="block text-sm font-semibold text-gray-800 transition-colors hover:text-accent-green">
           {name}
         </Link>
       ) : (
-        <div className="text-sm font-semibold text-white">{name}</div>
+        <div className="text-sm font-semibold text-gray-800">{name}</div>
       )}
       <div className={`mt-1 text-lg font-extrabold ${color}`}>{value}</div>
-      <div className="mt-0.5 text-xs text-slate-600">{detail}</div>
+      <div className="mt-0.5 text-xs text-gray-400">{detail}</div>
     </div>
   );
 }

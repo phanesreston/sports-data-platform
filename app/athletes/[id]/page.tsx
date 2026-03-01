@@ -23,17 +23,17 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; sportHref: string }> = {
-  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-400/10", sportHref: "/?sport=football" },
-  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-400/10",  sportHref: "/?sport=basketball" },
-  tennis:            { label: "Tennis",     color: "text-yellow-400",  bg: "bg-yellow-400/10",  sportHref: "/?sport=tennis" },
-  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-400/10",    sportHref: "/?sport=american_football" },
-  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-400/10",    sportHref: "/?sport=cricket" },
+  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50", sportHref: "/?sport=football" },
+  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50",  sportHref: "/?sport=basketball" },
+  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50",   sportHref: "/?sport=tennis" },
+  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50",    sportHref: "/?sport=american_football" },
+  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50",    sportHref: "/?sport=cricket" },
 };
 
 const RESULT_STYLES = {
-  W: { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
-  D: { badge: "bg-slate-700/50 text-slate-400 border-slate-600/20" },
-  L: { badge: "bg-red-500/15 text-red-400 border-red-500/20" },
+  W: { badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  D: { badge: "bg-gray-100 text-gray-600 border-gray-200" },
+  L: { badge: "bg-red-50 text-red-700 border-red-200" },
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -41,9 +41,9 @@ const RESULT_STYLES = {
 function SectionHeader({ label, count }: { label: string; count?: number }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</span>
       {count !== undefined && (
-        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-slate-600">{count}</span>
+        <span className="rounded-full bg-bg-border px-2 py-0.5 text-[10px] font-bold text-gray-400">{count}</span>
       )}
       <div className="flex-1 border-t border-bg-border" />
     </div>
@@ -78,19 +78,19 @@ function TabNav({
             onClick={() => setActiveTab(tab.id)}
             className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
               activeTab === tab.id
-                ? "border-accent-green text-white"
-                : "border-transparent text-slate-500 hover:text-slate-300"
+                ? "border-accent-green text-accent-green"
+                : "border-transparent text-gray-400 hover:text-gray-700"
             }`}
           >
             {tab.icon}
             {tab.label}
             {tab.id === "fixtures" && fixtureCount > 0 && (
-              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-gray-400">
                 {fixtureCount}
               </span>
             )}
             {tab.id === "results" && resultCount > 0 && (
-              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+              <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-gray-400">
                 {resultCount}
               </span>
             )}
@@ -116,7 +116,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
         <Header />
         <main className="flex flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">Athlete not found</p>
+            <p className="text-2xl font-bold text-gray-900">Athlete not found</p>
             <Link href="/" className="mt-4 inline-block text-sm text-accent-green hover:underline">
               ← Back to predictions
             </Link>
@@ -140,14 +140,14 @@ export default function AthletePage({ params }: { params: { id: string } }) {
         <main className="flex-1">
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
 
-            <Link href={style.sportHref} className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-300">
+            <Link href={style.sportHref} className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700">
               <ChevronLeft className="h-4 w-4" />
               {style.label}
             </Link>
 
             {/* Hero */}
-            <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-              <div className={`h-1.5 w-full ${style.bg.replace("/10", "")}`} />
+            <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+              <div className={`h-1.5 w-full ${style.bg.replace("50", "200")}`} />
               <div className="p-6 sm:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -155,25 +155,25 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${style.bg} ${style.color}`}>
                         {style.label}
                       </span>
-                      <span className="text-sm text-slate-500">{individual.league}</span>
+                      <span className="text-sm text-gray-400">{individual.league}</span>
                       {individual.ranking <= 10 && (
                         <span className="flex items-center gap-1 rounded-full bg-accent-green/10 px-2.5 py-0.5 text-xs font-bold text-accent-green">
                           <Trophy className="h-3 w-3" /> Ranked #{individual.ranking}
                         </span>
                       )}
                     </div>
-                    <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{individual.fullName}</h1>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                    <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">{individual.fullName}</h1>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
                       <span>{individual.flag} {individual.nationality}</span>
                       <span>·</span>
                       <span>Age {individual.age}</span>
                     </div>
                     {individual.bio && (
-                      <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-400">{individual.bio}</p>
+                      <p className="mt-4 max-w-xl text-sm leading-relaxed text-gray-500">{individual.bio}</p>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs uppercase tracking-widest text-slate-600">Form</span>
+                    <span className="text-xs uppercase tracking-widest text-gray-400">Form</span>
                     <div className="flex gap-1.5">
                       {individual.form.map((r, i) => <FormBadge key={i} result={r} />)}
                     </div>
@@ -197,9 +197,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                   <SectionHeader label="Career Stats" />
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {individual.keyStats.map((stat) => (
-                      <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center">
-                        <div className="text-xl font-extrabold text-white">{stat.value}</div>
-                        <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                      <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center shadow-sm">
+                        <div className="text-xl font-extrabold text-gray-900">{stat.value}</div>
+                        <div className="mt-0.5 text-xs text-gray-400">{stat.label}</div>
                       </div>
                     ))}
                   </div>
@@ -231,9 +231,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
-                    <Calendar className="mb-3 h-10 w-10 text-slate-700" />
-                    <p className="text-sm font-semibold text-slate-500">No upcoming matches</p>
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
+                    <Calendar className="mb-3 h-10 w-10 text-gray-300" />
+                    <p className="text-sm font-semibold text-gray-400">No upcoming matches</p>
                   </div>
                 )}
               </div>
@@ -243,7 +243,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
             {activeTab === "results" && (
               <div>
                 <SectionHeader label="Recent Results" count={individual.pastResults.length} />
-                <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+                <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
                   {individual.pastResults.map((result, i) => (
                     <div
                       key={i}
@@ -252,13 +252,13 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       <div className="flex items-center gap-3">
                         <FormBadge result={result.result} />
                         <div>
-                          <span className="text-sm font-semibold text-white">vs {result.opponent}</span>
-                          <div className="text-[11px] text-slate-600">{result.competition}</div>
+                          <span className="text-sm font-semibold text-gray-800">vs {result.opponent}</span>
+                          <div className="text-[11px] text-gray-400">{result.competition}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm font-bold text-white">{result.score}</span>
-                        <span className="flex items-center gap-1 text-xs text-slate-600">
+                        <span className="font-mono text-sm font-bold text-gray-800">{result.score}</span>
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
                           <Clock className="h-3 w-3" />
                           {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                         </span>
@@ -292,15 +292,15 @@ export default function AthletePage({ params }: { params: { id: string } }) {
 
           <Link
             href={`/teams/${player.teamId}`}
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-300"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-700"
           >
             <ChevronLeft className="h-4 w-4" />
             {player.teamName}
           </Link>
 
           {/* Hero */}
-          <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
-            <div className={`h-1.5 w-full ${style.bg.replace("/10", "")}`} />
+          <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+            <div className={`h-1.5 w-full ${style.bg.replace("50", "200")}`} />
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -310,16 +310,16 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     </span>
                     <Link
                       href={`/teams/${player.teamId}`}
-                      className="rounded-md border border-bg-border bg-bg-border px-2.5 py-1 text-xs font-semibold text-slate-400 transition-colors hover:text-white"
+                      className="rounded-md border border-bg-border bg-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500 transition-colors hover:text-gray-800"
                     >
                       {player.teamName}
                     </Link>
-                    <span className="rounded-md bg-bg-border px-2 py-1 text-xs font-bold text-slate-500">
+                    <span className="rounded-md bg-bg-border px-2 py-1 text-xs font-bold text-gray-400">
                       #{player.number}
                     </span>
                   </div>
-                  <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{player.name}</h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                  <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">{player.name}</h1>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
                     <span className="flex items-center gap-1">
                       <TrendingUp className="h-3.5 w-3.5" />
                       {player.positionFull}
@@ -331,7 +331,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs uppercase tracking-widest text-slate-600">Team Form</span>
+                  <span className="text-xs uppercase tracking-widest text-gray-400">Team Form</span>
                   <div className="flex gap-1.5">
                     {parentTeam.form.map((r, i) => <FormBadge key={i} result={r} />)}
                   </div>
@@ -355,9 +355,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                 <SectionHeader label={`${new Date().getFullYear()} Stats`} />
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {player.keyStats.map((stat) => (
-                    <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center">
-                      <div className="text-xl font-extrabold text-white">{stat.value}</div>
-                      <div className="mt-0.5 text-xs text-slate-500">{stat.label}</div>
+                    <div key={stat.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center shadow-sm">
+                      <div className="text-xl font-extrabold text-gray-900">{stat.value}</div>
+                      <div className="mt-0.5 text-xs text-gray-400">{stat.label}</div>
                     </div>
                   ))}
                 </div>
@@ -389,9 +389,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center">
-                  <Calendar className="mb-3 h-10 w-10 text-slate-700" />
-                  <p className="text-sm font-semibold text-slate-500">No upcoming fixtures</p>
+                <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
+                  <Calendar className="mb-3 h-10 w-10 text-gray-300" />
+                  <p className="text-sm font-semibold text-gray-400">No upcoming fixtures</p>
                 </div>
               )}
             </div>
@@ -401,7 +401,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
           {activeTab === "results" && (
             <div>
               <SectionHeader label="Team Recent Results" count={parentTeam.pastResults.length} />
-              <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card">
+              <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
                 {parentTeam.pastResults.map((result, i) => (
                   <div
                     key={i}
@@ -410,15 +410,15 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     <div className="flex items-center gap-3">
                       <FormBadge result={result.result} />
                       <div>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-gray-800">
                           {result.home ? "vs" : "@"} {result.opponent}
                         </span>
-                        <div className="text-[11px] text-slate-600">{result.competition}</div>
+                        <div className="text-[11px] text-gray-400">{result.competition}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm font-bold text-white">{result.score}</span>
-                      <span className="flex items-center gap-1 text-xs text-slate-600">
+                      <span className="font-mono text-sm font-bold text-gray-800">{result.score}</span>
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
                         <Clock className="h-3 w-3" />
                         {new Date(result.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                       </span>

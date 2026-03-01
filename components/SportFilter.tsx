@@ -41,8 +41,8 @@ export default function SportFilter({
               flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all
               ${
                 isActive
-                  ? "border-accent-green bg-accent-green/10 text-accent-green shadow-sm shadow-accent-green/10"
-                  : "border-bg-border bg-bg-card text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                  ? "border-accent-green bg-accent-green/10 text-accent-green shadow-sm"
+                  : "border-bg-border bg-bg-card text-gray-500 hover:border-gray-300 hover:text-gray-800"
               }
             `}
           >
@@ -53,7 +53,7 @@ export default function SportFilter({
                 className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
                   isActive
                     ? "bg-accent-green text-white"
-                    : "bg-bg-border text-slate-500"
+                    : "bg-bg-border text-gray-500"
                 }`}
               >
                 {count}
