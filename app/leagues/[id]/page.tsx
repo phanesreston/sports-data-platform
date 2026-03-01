@@ -2,24 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Trophy, Calendar, BarChart3, Star, List, Newspaper } from "lucide-react";
+import { ChevronLeft, Trophy, Calendar, BarChart3, Star, List } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
-import NewsFeed from "@/components/NewsFeed";
 import { SAMPLE_LEAGUES, type LeagueProfile, type StandingsRow, type Zone } from "@/data/sampleLeagues";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = "standings" | "upcoming" | "stats" | "performers" | "news";
+type Tab = "standings" | "upcoming" | "stats" | "performers";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "standings",  label: "Standings",      icon: <List className="h-3.5 w-3.5" /> },
   { id: "upcoming",   label: "Upcoming",        icon: <Calendar className="h-3.5 w-3.5" /> },
   { id: "stats",      label: "Stats",           icon: <BarChart3 className="h-3.5 w-3.5" /> },
   { id: "performers", label: "Top Performers",  icon: <Star className="h-3.5 w-3.5" /> },
-  { id: "news",       label: "News",            icon: <Newspaper className="h-3.5 w-3.5" /> },
 ];
 
 // ─── Sport styles ─────────────────────────────────────────────────────────────
@@ -436,14 +434,6 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* ── News tab ──────────────────────────────────────────────────── */}
-          {activeTab === "news" && (
-            <div>
-              <SectionHeader label="Latest News" />
-              <NewsFeed tags={[league.name]} />
             </div>
           )}
 

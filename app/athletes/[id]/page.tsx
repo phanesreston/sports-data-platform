@@ -2,24 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Clock, ChevronLeft, Trophy, TrendingUp, BarChart3, Calendar, List, Newspaper } from "lucide-react";
+import { Clock, ChevronLeft, Trophy, TrendingUp, BarChart3, Calendar, List } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
-import NewsFeed from "@/components/NewsFeed";
 import { findAthlete, findTeamPlayer } from "@/data/sampleAthletes";
 import { SAMPLE_TEAMS } from "@/data/sampleTeams";
 import { SAMPLE_ODDS } from "@/data/sampleOdds";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "fixtures" | "results" | "news";
+type Tab = "overview" | "fixtures" | "results";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "overview",  label: "Overview",  icon: <BarChart3 className="h-3.5 w-3.5" /> },
   { id: "fixtures",  label: "Fixtures",  icon: <Calendar className="h-3.5 w-3.5" /> },
   { id: "results",   label: "Results",   icon: <List className="h-3.5 w-3.5" /> },
-  { id: "news",      label: "News",      icon: <Newspaper className="h-3.5 w-3.5" /> },
 ];
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -271,14 +269,6 @@ export default function AthletePage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            {/* News */}
-            {activeTab === "news" && (
-              <div>
-                <SectionHeader label="Latest News" />
-                <NewsFeed tags={[individual.fullName, individual.name, individual.league]} />
-              </div>
-            )}
-
           </div>
         </main>
         <Footer />
@@ -436,14 +426,6 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* News */}
-          {activeTab === "news" && (
-            <div>
-              <SectionHeader label="Latest News" />
-              <NewsFeed tags={[player.name, player.teamName]} />
             </div>
           )}
 
