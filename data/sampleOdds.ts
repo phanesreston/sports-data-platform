@@ -1,9 +1,19 @@
 export type Sport =
   | "football"
-  | "basketball"
-  | "tennis"
+  | "nba"
   | "american_football"
-  | "cricket";
+  | "formula1"
+  | "basketball"
+  | "cricket"
+  | "rugby"
+  | "baseball"
+  | "afl"
+  | "tennis"
+  | "hockey"
+  | "mma"
+  | "volleyball"
+  | "handball"
+  | "horse_racing";
 
 export interface Bookmaker {
   name: string;
@@ -1474,6 +1484,861 @@ export const SAMPLE_ODDS: OddsEvent[] = [
         ],
         bestOdds: 1.94,
         bestBookmaker: "William Hill",
+      },
+    ],
+  },
+
+  // ── NBA ──────────────────────────────────────────────────────────────
+  {
+    id: "evt-032",
+    sport: "nba",
+    league: "NBA Playoffs",
+    featured: true,
+    homeTeam: "LA Lakers",
+    awayTeam: "Boston Celtics",
+    commenceTime: new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.05, away: 1.83 },
+      { name: "DraftKings", home: 2.1, away: 1.8 },
+      { name: "FanDuel", home: 2.08, away: 1.82 },
+    ],
+    homeStats: { form: ["W", "L", "W", "W", "L"], avgScored: 112.4, avgConceded: 109.1 },
+    awayStats: { form: ["W", "W", "W", "L", "W"], avgScored: 116.2, avgConceded: 107.8 },
+    h2h: { homeWins: 3, draws: 0, awayWins: 7 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "LA Lakers", probability: 44, pick: false },
+          { label: "Boston Celtics", probability: 56, pick: true },
+        ],
+        bestOdds: 2.1,
+        bestBookmaker: "DraftKings",
+      },
+      {
+        name: "Spread (-5.5 Celtics)",
+        options: [
+          { label: "Lakers +5.5", probability: 47, pick: false },
+          { label: "Celtics -5.5", probability: 53, pick: true },
+        ],
+        bestOdds: 1.91,
+        bestBookmaker: "FanDuel",
+      },
+      {
+        name: "Total Points Over/Under 224.5",
+        options: [
+          { label: "Over 224.5", probability: 55, pick: true },
+          { label: "Under 224.5", probability: 45, pick: false },
+        ],
+        bestOdds: 1.87,
+        bestBookmaker: "Bet365",
+      },
+    ],
+  },
+  {
+    id: "evt-033",
+    sport: "nba",
+    league: "NBA",
+    homeTeam: "Golden State Warriors",
+    awayTeam: "Miami Heat",
+    commenceTime: new Date(Date.now() + 30 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.72, away: 2.14 },
+      { name: "DraftKings", home: 1.75, away: 2.1 },
+      { name: "FanDuel", home: 1.74, away: 2.12 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 118.6, avgConceded: 111.2 },
+    awayStats: { form: ["L", "W", "L", "L", "W"], avgScored: 108.9, avgConceded: 113.4 },
+    h2h: { homeWins: 6, draws: 0, awayWins: 4 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "Warriors Win", probability: 62, pick: true },
+          { label: "Heat Win", probability: 38, pick: false },
+        ],
+        bestOdds: 1.75,
+        bestBookmaker: "DraftKings",
+      },
+      {
+        name: "Total Points Over/Under 219.5",
+        options: [
+          { label: "Over 219.5", probability: 52, pick: true },
+          { label: "Under 219.5", probability: 48, pick: false },
+        ],
+        bestOdds: 1.88,
+        bestBookmaker: "FanDuel",
+      },
+    ],
+  },
+
+  // ── AFL ───────────────────────────────────────────────────────────────
+  {
+    id: "evt-034",
+    sport: "afl",
+    league: "AFL Premiership",
+    featured: true,
+    homeTeam: "Collingwood Magpies",
+    awayTeam: "Richmond Tigers",
+    commenceTime: new Date(Date.now() + 14 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Sportsbet", home: 1.88, away: 2.0 },
+      { name: "TAB", home: 1.85, away: 2.05 },
+      { name: "Ladbrokes", home: 1.9, away: 1.98 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 96.4, avgConceded: 85.2 },
+    awayStats: { form: ["W", "L", "W", "L", "W"], avgScored: 91.8, avgConceded: 89.6 },
+    h2h: { homeWins: 5, draws: 1, awayWins: 4 },
+    markets: [
+      {
+        name: "Match Winner",
+        options: [
+          { label: "Collingwood Win", probability: 55, pick: true },
+          { label: "Richmond Win", probability: 45, pick: false },
+        ],
+        bestOdds: 1.9,
+        bestBookmaker: "Ladbrokes",
+      },
+      {
+        name: "Line (-8.5 Collingwood)",
+        options: [
+          { label: "Collingwood -8.5", probability: 48, pick: false },
+          { label: "Richmond +8.5", probability: 52, pick: true },
+        ],
+        bestOdds: 1.92,
+        bestBookmaker: "TAB",
+      },
+      {
+        name: "Total Score Over/Under 176.5",
+        options: [
+          { label: "Over 176.5", probability: 57, pick: true },
+          { label: "Under 176.5", probability: 43, pick: false },
+        ],
+        bestOdds: 1.84,
+        bestBookmaker: "Sportsbet",
+      },
+    ],
+  },
+  {
+    id: "evt-035",
+    sport: "afl",
+    league: "AFL Premiership",
+    homeTeam: "Geelong Cats",
+    awayTeam: "Melbourne Demons",
+    commenceTime: new Date(Date.now() + 38 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Sportsbet", home: 1.65, away: 2.28 },
+      { name: "TAB", home: 1.62, away: 2.32 },
+      { name: "Ladbrokes", home: 1.68, away: 2.25 },
+    ],
+    homeStats: { form: ["W", "W", "W", "L", "W"], avgScored: 102.1, avgConceded: 82.7 },
+    awayStats: { form: ["L", "W", "L", "W", "L"], avgScored: 88.4, avgConceded: 94.3 },
+    h2h: { homeWins: 7, draws: 0, awayWins: 3 },
+    markets: [
+      {
+        name: "Match Winner",
+        options: [
+          { label: "Geelong Win", probability: 66, pick: true },
+          { label: "Melbourne Win", probability: 34, pick: false },
+        ],
+        bestOdds: 1.68,
+        bestBookmaker: "Ladbrokes",
+      },
+      {
+        name: "Total Score Over/Under 170.5",
+        options: [
+          { label: "Over 170.5", probability: 54, pick: true },
+          { label: "Under 170.5", probability: 46, pick: false },
+        ],
+        bestOdds: 1.86,
+        bestBookmaker: "TAB",
+      },
+    ],
+  },
+
+  // ── Baseball ──────────────────────────────────────────────────────────
+  {
+    id: "evt-036",
+    sport: "baseball",
+    league: "MLB",
+    featured: true,
+    homeTeam: "New York Yankees",
+    awayTeam: "Boston Red Sox",
+    commenceTime: new Date(Date.now() + 9 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 1.77, away: 2.08 },
+      { name: "FanDuel", home: 1.75, away: 2.1 },
+      { name: "Bet365", home: 1.78, away: 2.06 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 5.2, avgConceded: 3.9 },
+    awayStats: { form: ["L", "W", "L", "L", "W"], avgScored: 4.1, avgConceded: 4.7 },
+    h2h: { homeWins: 9, draws: 0, awayWins: 6 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "Yankees Win", probability: 61, pick: true },
+          { label: "Red Sox Win", probability: 39, pick: false },
+        ],
+        bestOdds: 1.78,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Run Line (-1.5 Yankees)",
+        options: [
+          { label: "Yankees -1.5", probability: 48, pick: false },
+          { label: "Red Sox +1.5", probability: 52, pick: true },
+        ],
+        bestOdds: 1.89,
+        bestBookmaker: "DraftKings",
+      },
+      {
+        name: "Total Runs Over/Under 9.5",
+        options: [
+          { label: "Over 9.5", probability: 53, pick: true },
+          { label: "Under 9.5", probability: 47, pick: false },
+        ],
+        bestOdds: 1.85,
+        bestBookmaker: "FanDuel",
+      },
+    ],
+  },
+  {
+    id: "evt-037",
+    sport: "baseball",
+    league: "MLB",
+    homeTeam: "Los Angeles Dodgers",
+    awayTeam: "Chicago Cubs",
+    commenceTime: new Date(Date.now() + 33 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 1.58, away: 2.44 },
+      { name: "FanDuel", home: 1.56, away: 2.48 },
+      { name: "Bet365", home: 1.6, away: 2.42 },
+    ],
+    homeStats: { form: ["W", "W", "W", "W", "L"], avgScored: 6.1, avgConceded: 3.4 },
+    awayStats: { form: ["L", "L", "W", "L", "W"], avgScored: 3.8, avgConceded: 5.2 },
+    h2h: { homeWins: 8, draws: 0, awayWins: 2 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "Dodgers Win", probability: 68, pick: true },
+          { label: "Cubs Win", probability: 32, pick: false },
+        ],
+        bestOdds: 1.6,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Total Runs Over/Under 8.5",
+        options: [
+          { label: "Over 8.5", probability: 51, pick: true },
+          { label: "Under 8.5", probability: 49, pick: false },
+        ],
+        bestOdds: 1.9,
+        bestBookmaker: "DraftKings",
+      },
+    ],
+  },
+
+  // ── Formula 1 ─────────────────────────────────────────────────────────
+  {
+    id: "evt-038",
+    sport: "formula1",
+    league: "Formula 1 — Monaco Grand Prix",
+    featured: true,
+    homeTeam: "Max Verstappen (Red Bull)",
+    awayTeam: "Lewis Hamilton (Ferrari)",
+    commenceTime: new Date(Date.now() + 20 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.5, away: 3.2 },
+      { name: "William Hill", home: 2.45, away: 3.3 },
+      { name: "Betfair", home: 2.55, away: 3.15 },
+    ],
+    homeStats: { form: ["W", "W", "W", "L", "W"], avgScored: 24.8, avgConceded: 18.2 },
+    awayStats: { form: ["L", "W", "W", "W", "L"], avgScored: 20.4, avgConceded: 19.6 },
+    h2h: { homeWins: 6, draws: 0, awayWins: 4 },
+    markets: [
+      {
+        name: "Race Winner",
+        options: [
+          { label: "Verstappen", probability: 42, pick: true },
+          { label: "Hamilton", probability: 31, pick: false },
+          { label: "Field", probability: 27, pick: false },
+        ],
+        bestOdds: 2.55,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Podium Finish — Verstappen",
+        options: [
+          { label: "Yes", probability: 74, pick: true },
+          { label: "No", probability: 26, pick: false },
+        ],
+        bestOdds: 1.35,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Fastest Lap",
+        options: [
+          { label: "Verstappen", probability: 38, pick: true },
+          { label: "Hamilton", probability: 28, pick: false },
+          { label: "Other", probability: 34, pick: false },
+        ],
+        bestOdds: 2.6,
+        bestBookmaker: "William Hill",
+      },
+    ],
+  },
+  {
+    id: "evt-039",
+    sport: "formula1",
+    league: "Formula 1 — British Grand Prix",
+    homeTeam: "Lando Norris (McLaren)",
+    awayTeam: "Charles Leclerc (Ferrari)",
+    commenceTime: new Date(Date.now() + 68 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.8, away: 3.5 },
+      { name: "William Hill", home: 2.75, away: 3.6 },
+      { name: "Betfair", home: 2.85, away: 3.45 },
+    ],
+    homeStats: { form: ["W", "L", "W", "W", "W"], avgScored: 22.1, avgConceded: 17.4 },
+    awayStats: { form: ["W", "W", "L", "L", "W"], avgScored: 19.6, avgConceded: 20.2 },
+    h2h: { homeWins: 3, draws: 0, awayWins: 3 },
+    markets: [
+      {
+        name: "Race Winner",
+        options: [
+          { label: "Norris", probability: 37, pick: true },
+          { label: "Leclerc", probability: 29, pick: false },
+          { label: "Field", probability: 34, pick: false },
+        ],
+        bestOdds: 2.85,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Podium Finish — Norris",
+        options: [
+          { label: "Yes", probability: 69, pick: true },
+          { label: "No", probability: 31, pick: false },
+        ],
+        bestOdds: 1.42,
+        bestBookmaker: "Bet365",
+      },
+    ],
+  },
+
+  // ── Handball ──────────────────────────────────────────────────────────
+  {
+    id: "evt-040",
+    sport: "handball",
+    league: "EHF Champions League",
+    featured: true,
+    homeTeam: "Paris Saint-Germain",
+    awayTeam: "FC Barcelona",
+    commenceTime: new Date(Date.now() + 8 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.2, draw: 6.0, away: 1.7 },
+      { name: "William Hill", home: 2.25, draw: 5.8, away: 1.68 },
+      { name: "Betfair", home: 2.28, draw: 6.2, away: 1.72 },
+    ],
+    homeStats: { form: ["W", "L", "W", "W", "L"], avgScored: 31.4, avgConceded: 29.8 },
+    awayStats: { form: ["W", "W", "W", "L", "W"], avgScored: 34.2, avgConceded: 27.6 },
+    h2h: { homeWins: 3, draws: 1, awayWins: 6 },
+    markets: [
+      {
+        name: "Match Result",
+        options: [
+          { label: "PSG Win", probability: 38, pick: false },
+          { label: "Draw", probability: 8, pick: false },
+          { label: "Barcelona Win", probability: 54, pick: true },
+        ],
+        bestOdds: 1.72,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Total Goals Over/Under 60.5",
+        options: [
+          { label: "Over 60.5", probability: 62, pick: true },
+          { label: "Under 60.5", probability: 38, pick: false },
+        ],
+        bestOdds: 1.75,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Half-Time Result",
+        options: [
+          { label: "PSG Lead", probability: 36, pick: false },
+          { label: "Draw", probability: 22, pick: false },
+          { label: "Barcelona Lead", probability: 42, pick: true },
+        ],
+        bestOdds: 2.1,
+        bestBookmaker: "William Hill",
+      },
+    ],
+  },
+  {
+    id: "evt-041",
+    sport: "handball",
+    league: "EHF Champions League",
+    homeTeam: "THW Kiel",
+    awayTeam: "Telekom Veszprém",
+    commenceTime: new Date(Date.now() + 52 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.78, draw: 6.5, away: 2.1 },
+      { name: "William Hill", home: 1.75, draw: 6.8, away: 2.15 },
+      { name: "Betfair", home: 1.8, draw: 6.4, away: 2.08 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 33.6, avgConceded: 28.9 },
+    awayStats: { form: ["L", "W", "W", "L", "W"], avgScored: 30.8, avgConceded: 30.2 },
+    h2h: { homeWins: 5, draws: 1, awayWins: 4 },
+    markets: [
+      {
+        name: "Match Result",
+        options: [
+          { label: "Kiel Win", probability: 58, pick: true },
+          { label: "Draw", probability: 6, pick: false },
+          { label: "Veszprém Win", probability: 36, pick: false },
+        ],
+        bestOdds: 1.8,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Total Goals Over/Under 62.5",
+        options: [
+          { label: "Over 62.5", probability: 55, pick: true },
+          { label: "Under 62.5", probability: 45, pick: false },
+        ],
+        bestOdds: 1.82,
+        bestBookmaker: "Bet365",
+      },
+    ],
+  },
+
+  // ── Hockey (NHL) ──────────────────────────────────────────────────────
+  {
+    id: "evt-042",
+    sport: "hockey",
+    league: "NHL Playoffs",
+    featured: true,
+    homeTeam: "Toronto Maple Leafs",
+    awayTeam: "Boston Bruins",
+    commenceTime: new Date(Date.now() + 11 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 2.15, away: 1.78 },
+      { name: "FanDuel", home: 2.12, away: 1.8 },
+      { name: "Bet365", home: 2.18, away: 1.76 },
+    ],
+    homeStats: { form: ["L", "W", "W", "L", "W"], avgScored: 3.2, avgConceded: 2.9 },
+    awayStats: { form: ["W", "W", "L", "W", "W"], avgScored: 3.7, avgConceded: 2.5 },
+    h2h: { homeWins: 4, draws: 0, awayWins: 6 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "Toronto Win", probability: 44, pick: false },
+          { label: "Boston Win", probability: 56, pick: true },
+        ],
+        bestOdds: 2.18,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Puck Line (-1.5 Boston)",
+        options: [
+          { label: "Toronto +1.5", probability: 62, pick: true },
+          { label: "Boston -1.5", probability: 38, pick: false },
+        ],
+        bestOdds: 1.65,
+        bestBookmaker: "DraftKings",
+      },
+      {
+        name: "Total Goals Over/Under 5.5",
+        options: [
+          { label: "Over 5.5", probability: 52, pick: true },
+          { label: "Under 5.5", probability: 48, pick: false },
+        ],
+        bestOdds: 1.87,
+        bestBookmaker: "FanDuel",
+      },
+    ],
+  },
+  {
+    id: "evt-043",
+    sport: "hockey",
+    league: "NHL",
+    homeTeam: "Edmonton Oilers",
+    awayTeam: "Colorado Avalanche",
+    commenceTime: new Date(Date.now() + 35 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 1.85, away: 1.98 },
+      { name: "FanDuel", home: 1.83, away: 2.0 },
+      { name: "Bet365", home: 1.87, away: 1.96 },
+    ],
+    homeStats: { form: ["W", "W", "W", "L", "W"], avgScored: 3.9, avgConceded: 3.1 },
+    awayStats: { form: ["W", "L", "W", "W", "L"], avgScored: 3.5, avgConceded: 3.3 },
+    h2h: { homeWins: 5, draws: 0, awayWins: 5 },
+    markets: [
+      {
+        name: "Moneyline",
+        options: [
+          { label: "Edmonton Win", probability: 53, pick: true },
+          { label: "Colorado Win", probability: 47, pick: false },
+        ],
+        bestOdds: 1.87,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Total Goals Over/Under 6.5",
+        options: [
+          { label: "Over 6.5", probability: 58, pick: true },
+          { label: "Under 6.5", probability: 42, pick: false },
+        ],
+        bestOdds: 1.82,
+        bestBookmaker: "DraftKings",
+      },
+    ],
+  },
+
+  // ── MMA ───────────────────────────────────────────────────────────────
+  {
+    id: "evt-044",
+    sport: "mma",
+    league: "UFC — Heavyweight Championship",
+    featured: true,
+    homeTeam: "Jon Jones",
+    awayTeam: "Tom Aspinall",
+    commenceTime: new Date(Date.now() + 120 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 1.67, away: 2.2 },
+      { name: "FanDuel", home: 1.65, away: 2.25 },
+      { name: "Bet365", home: 1.7, away: 2.18 },
+    ],
+    homeStats: { form: ["W", "W", "W", "W", "W"], avgScored: 0.0, avgConceded: 0.0 },
+    awayStats: { form: ["W", "W", "W", "L", "W"], avgScored: 0.0, avgConceded: 0.0 },
+    h2h: { homeWins: 0, draws: 0, awayWins: 0 },
+    markets: [
+      {
+        name: "Fight Winner",
+        options: [
+          { label: "Jon Jones", probability: 62, pick: true },
+          { label: "Tom Aspinall", probability: 38, pick: false },
+        ],
+        bestOdds: 1.7,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Method of Victory",
+        options: [
+          { label: "Jones by KO/TKO", probability: 34, pick: false },
+          { label: "Jones by Decision", probability: 28, pick: false },
+          { label: "Aspinall by KO/TKO", probability: 28, pick: true },
+          { label: "Aspinall by Decision", probability: 10, pick: false },
+        ],
+        bestOdds: 2.8,
+        bestBookmaker: "DraftKings",
+      },
+      {
+        name: "Fight Goes Distance",
+        options: [
+          { label: "Yes", probability: 38, pick: false },
+          { label: "No", probability: 62, pick: true },
+        ],
+        bestOdds: 1.55,
+        bestBookmaker: "FanDuel",
+      },
+    ],
+  },
+  {
+    id: "evt-045",
+    sport: "mma",
+    league: "UFC — Light Heavyweight",
+    homeTeam: "Alex Pereira",
+    awayTeam: "Jamahal Hill",
+    commenceTime: new Date(Date.now() + 144 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "DraftKings", home: 1.45, away: 2.8 },
+      { name: "FanDuel", home: 1.43, away: 2.85 },
+      { name: "Bet365", home: 1.47, away: 2.75 },
+    ],
+    homeStats: { form: ["W", "W", "W", "W", "L"], avgScored: 0.0, avgConceded: 0.0 },
+    awayStats: { form: ["L", "W", "L", "W", "W"], avgScored: 0.0, avgConceded: 0.0 },
+    h2h: { homeWins: 1, draws: 0, awayWins: 1 },
+    markets: [
+      {
+        name: "Fight Winner",
+        options: [
+          { label: "Alex Pereira", probability: 72, pick: true },
+          { label: "Jamahal Hill", probability: 28, pick: false },
+        ],
+        bestOdds: 1.47,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Fight Goes Distance",
+        options: [
+          { label: "Yes", probability: 32, pick: false },
+          { label: "No", probability: 68, pick: true },
+        ],
+        bestOdds: 1.48,
+        bestBookmaker: "DraftKings",
+      },
+    ],
+  },
+
+  // ── Rugby ─────────────────────────────────────────────────────────────
+  {
+    id: "evt-046",
+    sport: "rugby",
+    league: "Rugby World Cup",
+    featured: true,
+    homeTeam: "New Zealand All Blacks",
+    awayTeam: "England",
+    commenceTime: new Date(Date.now() + 44 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.62, draw: 18.0, away: 2.3 },
+      { name: "William Hill", home: 1.6, draw: 17.0, away: 2.35 },
+      { name: "Betfair", home: 1.64, draw: 19.0, away: 2.28 },
+    ],
+    homeStats: { form: ["W", "W", "W", "W", "L"], avgScored: 38.4, avgConceded: 18.2 },
+    awayStats: { form: ["W", "L", "W", "W", "W"], avgScored: 28.6, avgConceded: 22.4 },
+    h2h: { homeWins: 8, draws: 0, awayWins: 2 },
+    markets: [
+      {
+        name: "Match Result",
+        options: [
+          { label: "All Blacks Win", probability: 66, pick: true },
+          { label: "Draw", probability: 2, pick: false },
+          { label: "England Win", probability: 32, pick: false },
+        ],
+        bestOdds: 1.64,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Handicap (-12.5 All Blacks)",
+        options: [
+          { label: "All Blacks -12.5", probability: 52, pick: true },
+          { label: "England +12.5", probability: 48, pick: false },
+        ],
+        bestOdds: 1.88,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Total Points Over/Under 54.5",
+        options: [
+          { label: "Over 54.5", probability: 60, pick: true },
+          { label: "Under 54.5", probability: 40, pick: false },
+        ],
+        bestOdds: 1.79,
+        bestBookmaker: "William Hill",
+      },
+    ],
+  },
+  {
+    id: "evt-047",
+    sport: "rugby",
+    league: "Six Nations",
+    homeTeam: "South Africa Springboks",
+    awayTeam: "France",
+    commenceTime: new Date(Date.now() + 70 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.75, draw: 20.0, away: 2.1 },
+      { name: "William Hill", home: 1.72, draw: 21.0, away: 2.15 },
+      { name: "Betfair", home: 1.78, draw: 19.0, away: 2.08 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 34.8, avgConceded: 20.6 },
+    awayStats: { form: ["W", "L", "W", "W", "L"], avgScored: 30.2, avgConceded: 24.8 },
+    h2h: { homeWins: 6, draws: 0, awayWins: 4 },
+    markets: [
+      {
+        name: "Match Result",
+        options: [
+          { label: "South Africa Win", probability: 59, pick: true },
+          { label: "Draw", probability: 2, pick: false },
+          { label: "France Win", probability: 39, pick: false },
+        ],
+        bestOdds: 1.78,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Total Points Over/Under 50.5",
+        options: [
+          { label: "Over 50.5", probability: 57, pick: true },
+          { label: "Under 50.5", probability: 43, pick: false },
+        ],
+        bestOdds: 1.83,
+        bestBookmaker: "Bet365",
+      },
+    ],
+  },
+
+  // ── Volleyball ────────────────────────────────────────────────────────
+  {
+    id: "evt-048",
+    sport: "volleyball",
+    league: "FIVB Nations League",
+    featured: true,
+    homeTeam: "Brazil",
+    awayTeam: "Italy",
+    commenceTime: new Date(Date.now() + 16 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.7, away: 2.15 },
+      { name: "William Hill", home: 1.68, away: 2.18 },
+      { name: "Betfair", home: 1.72, away: 2.12 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 3.2, avgConceded: 1.8 },
+    awayStats: { form: ["W", "L", "W", "W", "L"], avgScored: 2.8, avgConceded: 2.2 },
+    h2h: { homeWins: 7, draws: 0, awayWins: 3 },
+    markets: [
+      {
+        name: "Match Winner",
+        options: [
+          { label: "Brazil Win", probability: 62, pick: true },
+          { label: "Italy Win", probability: 38, pick: false },
+        ],
+        bestOdds: 1.72,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Total Sets Over/Under 3.5",
+        options: [
+          { label: "Over 3.5", probability: 48, pick: false },
+          { label: "Under 3.5", probability: 52, pick: true },
+        ],
+        bestOdds: 1.83,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Correct Score",
+        options: [
+          { label: "Brazil 3-0", probability: 28, pick: false },
+          { label: "Brazil 3-1", probability: 22, pick: false },
+          { label: "Brazil 3-2", probability: 12, pick: false },
+          { label: "Italy Win", probability: 38, pick: true },
+        ],
+        bestOdds: 2.6,
+        bestBookmaker: "William Hill",
+      },
+    ],
+  },
+  {
+    id: "evt-049",
+    sport: "volleyball",
+    league: "FIVB World Championship",
+    homeTeam: "USA",
+    awayTeam: "Poland",
+    commenceTime: new Date(Date.now() + 40 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 1.88, away: 1.96 },
+      { name: "William Hill", home: 1.85, away: 2.0 },
+      { name: "Betfair", home: 1.9, away: 1.94 },
+    ],
+    homeStats: { form: ["W", "W", "W", "L", "W"], avgScored: 3.1, avgConceded: 2.0 },
+    awayStats: { form: ["W", "W", "L", "W", "W"], avgScored: 3.0, avgConceded: 1.9 },
+    h2h: { homeWins: 5, draws: 0, awayWins: 5 },
+    markets: [
+      {
+        name: "Match Winner",
+        options: [
+          { label: "USA Win", probability: 52, pick: true },
+          { label: "Poland Win", probability: 48, pick: false },
+        ],
+        bestOdds: 1.9,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Total Sets Over/Under 3.5",
+        options: [
+          { label: "Over 3.5", probability: 54, pick: true },
+          { label: "Under 3.5", probability: 46, pick: false },
+        ],
+        bestOdds: 1.8,
+        bestBookmaker: "Bet365",
+      },
+    ],
+  },
+
+  // ── Horse Racing ──────────────────────────────────────────────────────
+  {
+    id: "evt-050",
+    sport: "horse_racing",
+    league: "Cheltenham Festival",
+    featured: true,
+    homeTeam: "Galopin Des Champs",
+    awayTeam: "Field",
+    commenceTime: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.5, away: 1.53 },
+      { name: "William Hill", home: 2.55, away: 1.5 },
+      { name: "Betfair", home: 2.6, away: 1.52 },
+    ],
+    homeStats: { form: ["W", "W", "L", "W", "W"], avgScored: 0.0, avgConceded: 0.0 },
+    awayStats: { form: ["W", "L", "W", "W", "L"], avgScored: 0.0, avgConceded: 0.0 },
+    h2h: { homeWins: 2, draws: 0, awayWins: 1 },
+    markets: [
+      {
+        name: "Win — Cheltenham Gold Cup",
+        options: [
+          { label: "Galopin Des Champs", probability: 42, pick: true },
+          { label: "Gerri Colombe", probability: 21, pick: false },
+          { label: "Bravemansgame", probability: 18, pick: false },
+          { label: "Other", probability: 19, pick: false },
+        ],
+        bestOdds: 2.6,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Each Way — Top 3 Finish",
+        options: [
+          { label: "Galopin Des Champs", probability: 72, pick: true },
+          { label: "Does Not Place", probability: 28, pick: false },
+        ],
+        bestOdds: 1.4,
+        bestBookmaker: "Bet365",
+      },
+      {
+        name: "Favourite to Win",
+        options: [
+          { label: "Yes", probability: 42, pick: true },
+          { label: "No", probability: 58, pick: false },
+        ],
+        bestOdds: 2.38,
+        bestBookmaker: "William Hill",
+      },
+    ],
+  },
+  {
+    id: "evt-051",
+    sport: "horse_racing",
+    league: "Royal Ascot",
+    homeTeam: "City of Troy",
+    awayTeam: "Field",
+    commenceTime: new Date(Date.now() + 28 * 3600 * 1000).toISOString(),
+    bookmakers: [
+      { name: "Bet365", home: 2.0, away: 1.83 },
+      { name: "William Hill", home: 2.05, away: 1.8 },
+      { name: "Betfair", home: 2.1, away: 1.78 },
+    ],
+    homeStats: { form: ["W", "W", "W", "W", "L"], avgScored: 0.0, avgConceded: 0.0 },
+    awayStats: { form: ["W", "L", "W", "L", "W"], avgScored: 0.0, avgConceded: 0.0 },
+    h2h: { homeWins: 3, draws: 0, awayWins: 1 },
+    markets: [
+      {
+        name: "Win — King George VI Stakes",
+        options: [
+          { label: "City of Troy", probability: 48, pick: true },
+          { label: "Ambiente Friendly", probability: 24, pick: false },
+          { label: "Other", probability: 28, pick: false },
+        ],
+        bestOdds: 2.1,
+        bestBookmaker: "Betfair",
+      },
+      {
+        name: "Each Way — Top 3 Finish",
+        options: [
+          { label: "City of Troy", probability: 76, pick: true },
+          { label: "Does Not Place", probability: 24, pick: false },
+        ],
+        bestOdds: 1.35,
+        bestBookmaker: "Bet365",
       },
     ],
   },

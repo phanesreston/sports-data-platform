@@ -20,25 +20,75 @@ const SPORT_META: Record<Sport | "all", { name: string; emoji: string; descripti
     emoji: "⚽",
     description: "Premier League, La Liga, Champions League and more",
   },
+  nba: {
+    name: "NBA",
+    emoji: "🏀",
+    description: "Moneyline, spread, and totals for every NBA game",
+  },
+  american_football: {
+    name: "NFL & NCAA",
+    emoji: "🏈",
+    description: "Moneyline, spread, and totals for NFL and college football",
+  },
+  formula1: {
+    name: "Formula 1",
+    emoji: "🏎️",
+    description: "Race winner, podium, and fastest lap markets for every Grand Prix",
+  },
   basketball: {
     name: "Basketball",
-    emoji: "🏀",
-    description: "NBA game predictions and spread analysis",
+    emoji: "🎯",
+    description: "EuroLeague, FIBA, and international basketball predictions",
+  },
+  cricket: {
+    name: "Cricket",
+    emoji: "🏏",
+    description: "IPL, Test, and T20 match analysis",
+  },
+  rugby: {
+    name: "Rugby",
+    emoji: "🏉",
+    description: "Rugby World Cup, Six Nations, and Premiership predictions",
+  },
+  baseball: {
+    name: "Baseball",
+    emoji: "⚾",
+    description: "MLB moneyline, run line, and totals for every game",
+  },
+  afl: {
+    name: "AFL",
+    emoji: "🦘",
+    description: "AFL Premiership match winner, line, and totals markets",
   },
   tennis: {
     name: "Tennis",
     emoji: "🎾",
     description: "ATP & WTA match predictions and set markets",
   },
-  american_football: {
-    name: "NFL",
-    emoji: "🏈",
-    description: "Moneyline, spread, and totals for every NFL game",
+  hockey: {
+    name: "Hockey",
+    emoji: "🏒",
+    description: "NHL moneyline, puck line, and over/under predictions",
   },
-  cricket: {
-    name: "Cricket",
-    emoji: "🏏",
-    description: "IPL, Test, and T20 match analysis",
+  mma: {
+    name: "MMA",
+    emoji: "🥊",
+    description: "UFC fight winner, method of victory, and round betting",
+  },
+  volleyball: {
+    name: "Volleyball",
+    emoji: "🏐",
+    description: "FIVB Nations League and World Championship match predictions",
+  },
+  handball: {
+    name: "Handball",
+    emoji: "🤾",
+    description: "EHF Champions League and Bundesliga match predictions",
+  },
+  horse_racing: {
+    name: "Horse Racing",
+    emoji: "🐎",
+    description: "Cheltenham, Royal Ascot, and top race meeting predictions",
   },
 };
 

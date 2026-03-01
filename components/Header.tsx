@@ -7,12 +7,22 @@ import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
 
 const SPORT_TABS = [
-  { value: "all",               label: "All Sports",  emoji: "🏆", href: "/" },
-  { value: "football",          label: "Football",    emoji: "⚽", href: "/?sport=football" },
-  { value: "basketball",        label: "Basketball",  emoji: "🏀", href: "/?sport=basketball" },
-  { value: "tennis",            label: "Tennis",      emoji: "🎾", href: "/?sport=tennis" },
-  { value: "american_football", label: "NFL",         emoji: "🏈", href: "/?sport=american_football" },
-  { value: "cricket",           label: "Cricket",     emoji: "🏏", href: "/?sport=cricket" },
+  { value: "all",               label: "All Sports",   emoji: "🏆", href: "/" },
+  { value: "football",          label: "Football",     emoji: "⚽", href: "/?sport=football" },
+  { value: "nba",               label: "NBA",          emoji: "🏀", href: "/?sport=nba" },
+  { value: "american_football", label: "NFL & NCAA",   emoji: "🏈", href: "/?sport=american_football" },
+  { value: "formula1",          label: "Formula 1",   emoji: "🏎️", href: "/?sport=formula1" },
+  { value: "basketball",        label: "Basketball",   emoji: "🎯", href: "/?sport=basketball" },
+  { value: "cricket",           label: "Cricket",      emoji: "🏏", href: "/?sport=cricket" },
+  { value: "rugby",             label: "Rugby",        emoji: "🏉", href: "/?sport=rugby" },
+  { value: "baseball",          label: "Baseball",     emoji: "⚾", href: "/?sport=baseball" },
+  { value: "afl",               label: "AFL",          emoji: "🦘", href: "/?sport=afl" },
+  { value: "tennis",            label: "Tennis",       emoji: "🎾", href: "/?sport=tennis" },
+  { value: "hockey",            label: "Hockey",       emoji: "🏒", href: "/?sport=hockey" },
+  { value: "mma",               label: "MMA",          emoji: "🥊", href: "/?sport=mma" },
+  { value: "volleyball",        label: "Volleyball",   emoji: "🏐", href: "/?sport=volleyball" },
+  { value: "handball",          label: "Handball",     emoji: "🤾", href: "/?sport=handball" },
+  { value: "horse_racing",      label: "Horse Racing", emoji: "🐎", href: "/?sport=horse_racing" },
 ];
 
 const navLinks = [
