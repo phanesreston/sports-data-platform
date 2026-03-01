@@ -32,7 +32,7 @@ const sections = [
 
 export default function HowItWorks() {
   return (
-    <article className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
+    <article className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24">
       {/* Article header */}
       <header className="mb-14 border-b border-bg-border pb-10">
         <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent-purple">
