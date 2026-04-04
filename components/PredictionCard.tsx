@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
-import { getEntityHref } from "@/data/sampleTeams";
 import { getLeagueHref } from "@/data/sampleLeagues";
 
 const SPORT_STYLES: Record<
@@ -45,14 +44,13 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
   );
 }
 
-/** Renders a team/athlete name as a link if a page exists for it, otherwise plain text */
-function TeamName({ name, align = "left" }: { name: string; align?: "left" | "right" }) {
-  const href = getEntityHref(name);
+/** Renders a team name as a link to its team page (football) or plain text */
+function TeamName({ name, sport, align = "left" }: { name: string; sport: string; align?: "left" | "right" }) {
   const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right block w-full" : "block"}`;
-  if (href) {
+  if (sport === "football") {
     return (
       <Link
-        href={href}
+        href={`/teams/${encodeURIComponent(name)}`}
         onClick={(e) => e.stopPropagation()}
         className={`${base} transition-colors hover:text-accent-green`}
       >
@@ -108,13 +106,13 @@ export default function PredictionCard({ event }: PredictionCardProps) {
       <div className="mt-3.5 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1">
-            <TeamName name={event.homeTeam} align="left" />
+            <TeamName name={event.homeTeam} sport={event.sport} align="left" />
           </div>
           <span className="shrink-0 rounded-lg bg-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500">
             VS
           </span>
           <div className="flex-1">
-            <TeamName name={event.awayTeam} align="right" />
+            <TeamName name={event.awayTeam} sport={event.sport} align="right" />
           </div>
         </div>
 

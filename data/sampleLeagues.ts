@@ -50,13 +50,18 @@ export interface LeagueProfile {
   overview?: OverviewStat[];
 }
 
-export const LEAGUE_NAME_TO_ID: Record<string, string> = {
-  "Premier League":  "league-pl",
-  "La Liga":         "league-laliga",
-  "NBA":             "league-nba",
-  "NFL":             "league-nfl",
-  "IPL":             "league-ipl",
-  "ATP Masters":     "league-atp",
+// Maps league display names to API-Football numeric league IDs
+export const LEAGUE_NAME_TO_ID: Record<string, number> = {
+  "Premier League":           39,
+  "La Liga":                  140,
+  "Serie A":                  135,
+  "Bundesliga":               78,
+  "Ligue 1":                  61,
+  "UEFA Champions League":    2,
+  "UEFA Europa League":       3,
+  "Championship":             40,
+  "Eredivisie":               88,
+  "Primeira Liga":            94,
 };
 
 export function getLeagueHref(name: string): string | null {
