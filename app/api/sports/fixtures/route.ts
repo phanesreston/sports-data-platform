@@ -83,22 +83,31 @@ export async function GET(req: NextRequest) {
 
   const allFixtures: FixtureWithStats[] = [];
 
+  // Date range: today → 7 days ahead (free plan doesn't support `next` param)
+  const today    = new Date().toISOString().split("T")[0];
+  const nextWeek = new Date(Date.now() + 7 * 86_400_000).toISOString().split("T")[0];
+
   for (const league of leagues) {
-    // Fetch next 5 upcoming fixtures for this league
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
-      league:  league.id,
-      season:  league.season,
-      next:    5,
-      status:  "NS", // Not Started only
+      league:   league.id,
+      season:   league.season,
+      from:     today,
+      to:       nextWeek,
       timezone: "UTC",
     });
 
-    const fixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
-    if (!fixtures || fixtures.length === 0) continue;
+    const allLeagueFixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
+    if (!allLeagueFixtures || allLeagueFixtures.length === 0) continue;
+
+    // Keep only not-started fixtures (NS) — date range can include live/finished
+    const fixtures = allLeagueFixtures
+      .filter((f) => f.fixture.status.short === "NS")
+      .slice(0, 3); // limit to 3 per league to stay within quota
+
+    if (fixtures.length === 0) continue;
 
     // For each fixture, fetch team stats, H2H, and predictions in parallel
-    // Limit to 3 fixtures per league to stay within rate limits
-    for (const fixture of fixtures.slice(0, 3)) {
+    for (const fixture of fixtures) {
       const homeId = fixture.teams.home.id;
       const awayId = fixture.teams.away.id;
       const fixtureId = fixture.fixture.id;
