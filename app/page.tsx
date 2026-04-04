@@ -153,7 +153,6 @@ function PredictionsContent() {
 
   const meta = SPORT_META[selectedSport] ?? SPORT_META.all;
 
-  const isLive = source === "live";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -177,10 +176,10 @@ function PredictionsContent() {
               ) : (
                 <>
                   <span className="relative flex h-2 w-2">
-                    <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${isLive ? "bg-accent-green" : "bg-amber-400"}`} />
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${isLive ? "bg-accent-green" : "bg-amber-400"}`} />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-green" />
                   </span>
-                  {isLive ? "Live data" : "Sample data — add API keys to enable live data"}
+                  Live data
                 </>
               )}
             </div>
