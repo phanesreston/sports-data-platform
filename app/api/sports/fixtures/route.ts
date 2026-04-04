@@ -1,133 +1,143 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { ApiSportsFixture, ApiSportsTeamStats, ApiSportsH2H } from "@/lib/types";
+import type {
+  ApiFootballResponse,
+  ApiFixture,
+  ApiTeamStatistics,
+  ApiPrediction,
+} from "@/lib/types";
+import type { TeamStats, H2HStats } from "@/lib/types";
 import {
-  transformApiSportsStats,
-  transformApiSportsH2H,
+  unwrapApiFootball,
+  transformTeamStatistics,
+  transformH2H,
+  transformPredictionToMarkets,
   placeholderStats,
 } from "@/lib/transformers";
-import type { TeamStats, H2HStats } from "@/lib/types";
+import type { Market } from "@/lib/types";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
-// Maps our sport keys to API-Sports league IDs (top competitions)
-const LEAGUE_IDS: Record<string, number[]> = {
-  football:          [39, 140, 135, 78, 61],  // EPL, La Liga, Serie A, Bundesliga, Ligue 1
-  american_football: [1],                      // NFL
-  basketball:        [12],                     // NBA (via basketball endpoint)
-  nba:               [12],
-  baseball:          [1],                      // MLB (via baseball endpoint)
-  hockey:            [57],                     // NHL (via hockey endpoint)
-  rugby:             [1],                      // NRL
-  afl:               [1],                      // AFL
-};
-
-// API-Sports uses different base URLs per sport
-const SPORT_ENDPOINTS: Record<string, string> = {
-  football:          "https://v3.football.api-sports.io",
-  american_football: "https://v1.american-football.api-sports.io",
-  basketball:        "https://v1.basketball.api-sports.io",
-  nba:               "https://v1.basketball.api-sports.io",
-  baseball:          "https://v1.baseball.api-sports.io",
-  hockey:            "https://v1.hockey.api-sports.io",
-  rugby:             "https://v1.rugby.api-sports.io",
-  afl:               "https://v1.afl.api-sports.io",
-};
+// Top league IDs for football (stable — won't change between seasons)
+const FOOTBALL_LEAGUES = [
+  { id: 39,  name: "Premier League",      season: 2024 },
+  { id: 140, name: "La Liga",             season: 2024 },
+  { id: 135, name: "Serie A",             season: 2024 },
+  { id: 78,  name: "Bundesliga",          season: 2024 },
+  { id: 61,  name: "Ligue 1",             season: 2024 },
+  { id: 2,   name: "Champions League",    season: 2024 },
+];
 
 async function apiFetch<T>(
-  endpoint: string,
   path: string,
-  params: Record<string, string>
-): Promise<T | null> {
+  params: Record<string, string | number>
+): Promise<ApiFootballResponse<T> | null> {
   const key = process.env.API_SPORTS_KEY;
   if (!key) return null;
 
-  const url = new URL(`${endpoint}${path}`);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const url = new URL(`${BASE_URL}${path}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
 
   try {
     const res = await fetch(url.toString(), {
-      headers: {
-        "x-apisports-key": key,
-        "x-rapidapi-key": key,
-      },
-      next: { revalidate: 300 }, // cache 5 min
+      headers: { "x-apisports-key": key },
+      next: { revalidate: 300 }, // 5 min cache
     });
 
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.response as T;
-  } catch {
+    if (!res.ok) {
+      console.error(`[API-Football] ${path} returned ${res.status}`);
+      return null;
+    }
+
+    // Forward rate limit info to console for monitoring
+    const remaining = res.headers.get("x-ratelimit-requests-remaining");
+    if (remaining !== null && parseInt(remaining) < 20) {
+      console.warn(`[API-Football] Low daily quota remaining: ${remaining}`);
+    }
+
+    return res.json() as Promise<ApiFootballResponse<T>>;
+  } catch (err) {
+    console.error(`[API-Football] fetch error on ${path}:`, err);
     return null;
   }
 }
 
 export interface FixtureWithStats {
-  fixture: ApiSportsFixture;
+  fixture: ApiFixture;
   homeStats: TeamStats;
   awayStats: TeamStats;
   h2h: H2HStats;
+  markets: Market[];
 }
 
 export async function GET(req: NextRequest) {
-  const sport = req.nextUrl.searchParams.get("sport") ?? "football";
-  const endpoint = SPORT_ENDPOINTS[sport] ?? BASE_URL;
-  const leagueIds = LEAGUE_IDS[sport] ?? [39];
+  const leagueParam = req.nextUrl.searchParams.get("league");
 
-  // Fetch upcoming fixtures for the next 7 days
-  const today = new Date().toISOString().split("T")[0];
-  const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+  // Determine which leagues to fetch
+  const leagues = leagueParam
+    ? FOOTBALL_LEAGUES.filter((l) => String(l.id) === leagueParam)
+    : FOOTBALL_LEAGUES.slice(0, 3); // default: top 3 leagues to keep quota low
+
+  if (leagues.length === 0) {
+    return NextResponse.json({ fixtures: [] });
+  }
 
   const allFixtures: FixtureWithStats[] = [];
 
-  for (const leagueId of leagueIds.slice(0, 2)) {
-    const fixtures = await apiFetch<ApiSportsFixture[]>(
-      endpoint,
-      "/fixtures",
-      {
-        league: String(leagueId),
-        from: today,
-        to: nextWeek,
-        status: "NS", // Not Started
-        timezone: "UTC",
-      }
-    );
+  for (const league of leagues) {
+    // Fetch next 5 upcoming fixtures for this league
+    const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
+      league:  league.id,
+      season:  league.season,
+      next:    5,
+      status:  "NS", // Not Started only
+      timezone: "UTC",
+    });
 
-    if (!fixtures) continue;
+    const fixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
+    if (!fixtures || fixtures.length === 0) continue;
 
-    for (const fixture of fixtures.slice(0, 5)) {
+    // For each fixture, fetch team stats, H2H, and predictions in parallel
+    // Limit to 3 fixtures per league to stay within rate limits
+    for (const fixture of fixtures.slice(0, 3)) {
       const homeId = fixture.teams.home.id;
       const awayId = fixture.teams.away.id;
+      const fixtureId = fixture.fixture.id;
 
-      // Fetch team stats in parallel
-      const [homeStatsRaw, awayStatsRaw, h2hRaw] = await Promise.all([
-        apiFetch<ApiSportsTeamStats[]>(endpoint, "/teams/statistics", {
-          team: String(homeId),
-          league: String(leagueId),
-          season: new Date().getFullYear().toString(),
-        }),
-        apiFetch<ApiSportsTeamStats[]>(endpoint, "/teams/statistics", {
-          team: String(awayId),
-          league: String(leagueId),
-          season: new Date().getFullYear().toString(),
-        }),
-        apiFetch<ApiSportsH2H[]>(endpoint, "/fixtures/headtohead", {
-          h2h: `${homeId}-${awayId}`,
-          last: "10",
-        }),
-      ]);
+      const [homeStatsJson, awayStatsJson, h2hJson, predictionJson] =
+        await Promise.all([
+          apiFetch<ApiTeamStatistics>("/teams/statistics", {
+            team:   homeId,
+            league: league.id,
+            season: league.season,
+          }),
+          apiFetch<ApiTeamStatistics>("/teams/statistics", {
+            team:   awayId,
+            league: league.id,
+            season: league.season,
+          }),
+          apiFetch<ApiFixture>("/fixtures/headtohead", {
+            h2h:  `${homeId}-${awayId}`,
+            last: 10,
+          }),
+          apiFetch<ApiPrediction>("/predictions", {
+            fixture: fixtureId,
+          }),
+        ]);
 
-      allFixtures.push({
-        fixture,
-        homeStats: homeStatsRaw?.[0]
-          ? transformApiSportsStats(homeStatsRaw[0])
-          : placeholderStats(),
-        awayStats: awayStatsRaw?.[0]
-          ? transformApiSportsStats(awayStatsRaw[0])
-          : placeholderStats(),
-        h2h: h2hRaw
-          ? transformApiSportsH2H(h2hRaw, homeId)
-          : { homeWins: 0, draws: 0, awayWins: 0 },
-      });
+      // Unwrap each response — /teams/statistics returns object in response[0]
+      const homeStatsRaw = unwrapApiFootball(homeStatsJson ?? ({} as ApiFootballResponse<ApiTeamStatistics>));
+      const awayStatsRaw = unwrapApiFootball(awayStatsJson ?? ({} as ApiFootballResponse<ApiTeamStatistics>));
+      const h2hFixtures  = unwrapApiFootball(h2hJson ?? ({} as ApiFootballResponse<ApiFixture>));
+      const predictions  = unwrapApiFootball(predictionJson ?? ({} as ApiFootballResponse<ApiPrediction>));
+
+      const homeStats = homeStatsRaw?.[0] ? transformTeamStatistics(homeStatsRaw[0]) : placeholderStats();
+      const awayStats = awayStatsRaw?.[0] ? transformTeamStatistics(awayStatsRaw[0]) : placeholderStats();
+      const h2h       = h2hFixtures ? transformH2H(h2hFixtures, homeId) : { homeWins: 0, draws: 0, awayWins: 0 };
+      const markets   = predictions?.[0]
+        ? transformPredictionToMarkets(predictions[0], fixture.teams.home.name, fixture.teams.away.name)
+        : [];
+
+      allFixtures.push({ fixture, homeStats, awayStats, h2h, markets });
     }
   }
 
