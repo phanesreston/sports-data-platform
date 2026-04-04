@@ -51,8 +51,14 @@ export interface OddsEvent {
   id: string;
   sport: Sport;
   league: string;
+  leagueId?: number;
+  leagueLogo?: string;
   homeTeam: string;
+  homeTeamId?: number;
+  homeLogo?: string;
   awayTeam: string;
+  awayTeamId?: number;
+  awayLogo?: string;
   commenceTime: string;
   bookmakers: Bookmaker[];
   homeStats: TeamStats;

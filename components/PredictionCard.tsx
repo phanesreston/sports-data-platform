@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
@@ -44,21 +45,37 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
   );
 }
 
-/** Renders a team name as a link to its team page (football) or plain text */
-function TeamName({ name, sport, align = "left" }: { name: string; sport: string; align?: "left" | "right" }) {
-  const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right block w-full" : "block"}`;
+/** Renders a team name (with optional logo) as a link for football, plain text otherwise */
+function TeamName({
+  name, logo, sport, align = "left",
+}: {
+  name: string; logo?: string; sport: string; align?: "left" | "right";
+}) {
+  const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right" : ""}`;
+  const logoEl = logo ? (
+    <div className={`relative h-5 w-5 shrink-0 ${align === "right" ? "order-last" : ""}`}>
+      <Image src={logo} alt="" fill className="object-contain" sizes="20px" />
+    </div>
+  ) : null;
+
   if (sport === "football") {
     return (
       <Link
         href={`/teams/${encodeURIComponent(name)}`}
         onClick={(e) => e.stopPropagation()}
-        className={`${base} transition-colors hover:text-accent-green`}
+        className={`flex items-center gap-1.5 transition-colors hover:text-accent-green ${align === "right" ? "flex-row-reverse" : ""}`}
       >
-        {name}
+        {logoEl}
+        <span className={base}>{name}</span>
       </Link>
     );
   }
-  return <span className={base}>{name}</span>;
+  return (
+    <div className={`flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
+      {logoEl}
+      <span className={base}>{name}</span>
+    </div>
+  );
 }
 
 interface PredictionCardProps {
@@ -82,13 +99,20 @@ export default function PredictionCard({ event }: PredictionCardProps) {
             {style.label}
           </span>
           {(() => {
-            const leagueHref = getLeagueHref(event.league);
-            return leagueHref ? (
+            const href = event.leagueId
+              ? `/leagues/${event.leagueId}`
+              : getLeagueHref(event.league);
+            return href ? (
               <Link
-                href={leagueHref}
+                href={href}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xs text-gray-400 transition-colors hover:text-gray-600"
+                className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-gray-600"
               >
+                {event.leagueLogo && (
+                  <div className="relative h-3.5 w-3.5">
+                    <Image src={event.leagueLogo} alt="" fill className="object-contain" sizes="14px" />
+                  </div>
+                )}
                 {event.league}
               </Link>
             ) : (
@@ -106,13 +130,13 @@ export default function PredictionCard({ event }: PredictionCardProps) {
       <div className="mt-3.5 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1">
-            <TeamName name={event.homeTeam} sport={event.sport} align="left" />
+            <TeamName name={event.homeTeam} logo={event.homeLogo} sport={event.sport} align="left" />
           </div>
           <span className="shrink-0 rounded-lg bg-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500">
             VS
           </span>
           <div className="flex-1">
-            <TeamName name={event.awayTeam} sport={event.sport} align="right" />
+            <TeamName name={event.awayTeam} logo={event.awayLogo} sport={event.sport} align="right" />
           </div>
         </div>
 

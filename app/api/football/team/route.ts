@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Step 1: find team
-  const searchParam = teamId ? { id: teamId } : { search: name! };
+  const searchParam: Record<string, string | number> = teamId ? { id: teamId } : { search: name! };
   const teamRes = unwrap(await apiFetch<ApiTeam>("/teams", searchParam, 86400));
   if (!teamRes?.length) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });

@@ -67,6 +67,16 @@ export async function GET(req: NextRequest) {
 
           const event = transformOddsApiEvent(raw, statsMap, marketsOverride);
 
+          // Attach logos + IDs from API-Football fixture when available
+          if (fixtureEntry) {
+            event.homeLogo    = fixtureEntry.fixture.teams.home.logo;
+            event.awayLogo    = fixtureEntry.fixture.teams.away.logo;
+            event.homeTeamId  = fixtureEntry.fixture.teams.home.id;
+            event.awayTeamId  = fixtureEntry.fixture.teams.away.id;
+            event.leagueId    = fixtureEntry.fixture.league.id;
+            event.leagueLogo  = fixtureEntry.fixture.league.logo;
+          }
+
           // Patch bestOdds back onto prediction-derived markets
           if (marketsOverride && event.bookmakers.length > 0) {
             event.markets = event.markets.map((market) => {
@@ -84,11 +94,17 @@ export async function GET(req: NextRequest) {
       } else if (fixturesData?.fixtures?.length) {
         for (const f of fixturesData.fixtures) {
           allEvents.push({
-            id:           `apisports-${f.fixture.fixture.id}`,
+            id:          `apisports-${f.fixture.fixture.id}`,
             sport:        s,
             league:       f.fixture.league.name,
+            leagueId:     f.fixture.league.id,
+            leagueLogo:   f.fixture.league.logo,
             homeTeam:     f.fixture.teams.home.name,
+            homeTeamId:   f.fixture.teams.home.id,
+            homeLogo:     f.fixture.teams.home.logo,
             awayTeam:     f.fixture.teams.away.name,
+            awayTeamId:   f.fixture.teams.away.id,
+            awayLogo:     f.fixture.teams.away.logo,
             commenceTime: f.fixture.fixture.date,
             bookmakers:   [],
             homeStats:    f.homeStats,
