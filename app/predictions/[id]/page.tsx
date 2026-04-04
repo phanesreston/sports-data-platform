@@ -18,19 +18,39 @@ const SPORT_STYLES: Record<
   string,
   { label: string; color: string; bg: string }
 > = {
-  football: { label: "Football", color: "text-emerald-700", bg: "bg-emerald-50" },
-  basketball: { label: "Basketball", color: "text-orange-700", bg: "bg-orange-50" },
-  tennis: { label: "Tennis", color: "text-amber-700", bg: "bg-amber-50" },
-  american_football: { label: "NFL", color: "text-blue-700", bg: "bg-blue-50" },
-  cricket: { label: "Cricket", color: "text-pink-700", bg: "bg-pink-50" },
+  football:          { label: "Football",    color: "text-emerald-700", bg: "bg-emerald-50" },
+  basketball:        { label: "Basketball",  color: "text-orange-700",  bg: "bg-orange-50"  },
+  tennis:            { label: "Tennis",      color: "text-amber-700",   bg: "bg-amber-50"   },
+  american_football: { label: "NFL",         color: "text-blue-700",    bg: "bg-blue-50"    },
+  cricket:           { label: "Cricket",     color: "text-pink-700",    bg: "bg-pink-50"    },
+  nba:               { label: "NBA",         color: "text-orange-700",  bg: "bg-orange-50"  },
+  afl:               { label: "AFL",         color: "text-yellow-700",  bg: "bg-yellow-50"  },
+  baseball:          { label: "Baseball",    color: "text-sky-700",     bg: "bg-sky-50"     },
+  formula1:          { label: "Formula 1",   color: "text-red-700",     bg: "bg-red-50"     },
+  handball:          { label: "Handball",    color: "text-violet-700",  bg: "bg-violet-50"  },
+  hockey:            { label: "Hockey",      color: "text-cyan-700",    bg: "bg-cyan-50"    },
+  mma:               { label: "MMA",         color: "text-rose-700",    bg: "bg-rose-50"    },
+  rugby:             { label: "Rugby",       color: "text-lime-700",    bg: "bg-lime-50"    },
+  volleyball:        { label: "Volleyball",  color: "text-indigo-700",  bg: "bg-indigo-50"  },
+  horse_racing:      { label: "Horse Racing",color: "text-teal-700",    bg: "bg-teal-50"    },
 };
 
 const STAT_LABEL: Record<Sport, { for: string; against: string }> = {
-  football: { for: "scored", against: "conceded" },
-  basketball: { for: "pts scored", against: "pts allowed" },
-  tennis: { for: "sets won", against: "sets lost" },
-  american_football: { for: "pts scored", against: "pts allowed" },
-  cricket: { for: "run rate", against: "econ rate" },
+  football:          { for: "scored",      against: "conceded"    },
+  basketball:        { for: "pts scored",  against: "pts allowed" },
+  tennis:            { for: "sets won",    against: "sets lost"   },
+  american_football: { for: "pts scored",  against: "pts allowed" },
+  cricket:           { for: "run rate",    against: "econ rate"   },
+  nba:               { for: "pts scored",  against: "pts allowed" },
+  afl:               { for: "goals",       against: "goals against"},
+  baseball:          { for: "runs scored", against: "runs allowed" },
+  formula1:          { for: "fastest lap", against: "lap diff"    },
+  handball:          { for: "goals",       against: "goals against"},
+  hockey:            { for: "goals",       against: "goals against"},
+  mma:               { for: "strikes",     against: "taken"       },
+  rugby:             { for: "pts scored",  against: "pts allowed" },
+  volleyball:        { for: "sets won",    against: "sets lost"   },
+  horse_racing:      { for: "wins",        against: "places"      },
 };
 
 function formatKickoff(isoString: string): string {
@@ -70,7 +90,7 @@ export default function PredictionDetailPage({ params }: Props) {
   if (!event) notFound();
 
   const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
-  const statLabel = STAT_LABEL[event.sport];
+  const statLabel = STAT_LABEL[event.sport] ?? { for: "scored", against: "conceded" };
   const totalH2H = event.h2h.homeWins + event.h2h.draws + event.h2h.awayWins;
   const hasDrawOdds = event.bookmakers.some((b) => b.draw != null);
 
