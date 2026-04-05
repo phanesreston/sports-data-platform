@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, X, Users, User, Zap } from "lucide-react";
-import { SAMPLE_TEAMS } from "@/data/sampleTeams";
-import { SAMPLE_ATHLETES } from "@/data/sampleAthletes";
-import { SAMPLE_ODDS } from "@/data/sampleOdds";
+import Image from "next/image";
+import { Search, X, Users, User, Zap, Loader2 } from "lucide-react";
+import type { OddsEvent } from "@/data/sampleOdds";
 
 const SPORT_BADGE: Record<string, { label: string; color: string; bg: string }> = {
   football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50" },
@@ -16,116 +15,75 @@ const SPORT_BADGE: Record<string, { label: string; color: string; bg: string }> 
   cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50" },
 };
 
-interface SearchResult {
+interface EventResult {
   id: string;
-  group: "event" | "team" | "player";
+  group: "event";
   title: string;
   subtitle: string;
   href: string;
-  sport?: string;
+  sport: string;
+  homeLogo?: string;
+  awayLogo?: string;
 }
+
+interface TeamResult {
+  id: string;
+  group: "team";
+  title: string;
+  subtitle: string;
+  href: string;
+  logo?: string;
+}
+
+interface PlayerResult {
+  id: string;
+  group: "player";
+  title: string;
+  subtitle: string;
+  href: string;
+  photo?: string;
+  teamLogo?: string;
+}
+
+type SearchResult = EventResult | TeamResult | PlayerResult;
 
 function formatKickoff(isoString: string): string {
   const date = new Date(isoString);
-  const now = new Date();
+  const now  = new Date();
   const diffMs = date.getTime() - now.getTime();
-  const diffH = Math.floor(diffMs / 3600000);
-  const diffM = Math.floor((diffMs % 3600000) / 60000);
-  if (diffH < 1) return `in ${diffM}m`;
+  const diffH  = Math.floor(diffMs / 3600000);
+  const diffM  = Math.floor((diffMs % 3600000) / 60000);
+  if (diffH < 1)  return `in ${diffM}m`;
   if (diffH < 24) return `in ${diffH}h ${diffM}m`;
-  const days = Math.floor(diffH / 24);
-  return `in ${days}d ${diffH % 24}h`;
+  return `in ${Math.floor(diffH / 24)}d ${diffH % 24}h`;
 }
 
-function runSearch(query: string): SearchResult[] {
-  const q = query.toLowerCase().trim();
-  if (q.length < 2) return [];
-
-  const results: SearchResult[] = [];
-
-  // Fixtures — show first as they are the core content
-  for (const event of SAMPLE_ODDS) {
-    if (
-      event.homeTeam.toLowerCase().includes(q) ||
-      event.awayTeam.toLowerCase().includes(q) ||
-      event.league.toLowerCase().includes(q)
-    ) {
-      results.push({
-        id: event.id,
-        group: "event",
-        title: `${event.homeTeam} vs ${event.awayTeam}`,
-        subtitle: `${event.league} · ${formatKickoff(event.commenceTime)}`,
-        href: `/predictions/${event.id}`,
-        sport: event.sport,
-      });
-    }
-  }
-
-  // Teams
-  for (const team of SAMPLE_TEAMS) {
-    if (
-      team.name.toLowerCase().includes(q) ||
-      team.league.toLowerCase().includes(q) ||
-      team.venue.toLowerCase().includes(q)
-    ) {
-      results.push({
-        id: team.id,
-        group: "team",
-        title: team.name,
-        subtitle: `${team.league} · ${team.venue}`,
-        href: `/teams/${team.id}`,
-        sport: team.sport,
-      });
-    }
-  }
-
-  // Individual athletes (tennis etc.)
-  for (const athlete of SAMPLE_ATHLETES) {
-    if (
-      athlete.fullName.toLowerCase().includes(q) ||
-      athlete.name.toLowerCase().includes(q) ||
-      athlete.nationality.toLowerCase().includes(q)
-    ) {
-      results.push({
-        id: athlete.id,
-        group: "player",
-        title: athlete.fullName,
-        subtitle: `${athlete.league} · Ranked #${athlete.ranking} · ${athlete.nationality}`,
-        href: `/athletes/${athlete.id}`,
-        sport: athlete.sport,
-      });
-    }
-  }
-
-  // Squad players
-  for (const team of SAMPLE_TEAMS) {
-    for (const group of team.squad) {
-      for (const player of group.players) {
-        if (
-          player.name.toLowerCase().includes(q) ||
-          player.nationality.toLowerCase().includes(q) ||
-          player.positionFull.toLowerCase().includes(q)
-        ) {
-          results.push({
-            id: player.id,
-            group: "player",
-            title: player.name,
-            subtitle: `${player.positionFull} · ${team.name} · #${player.number}`,
-            href: `/athletes/${player.id}`,
-            sport: team.sport,
-          });
-        }
-      }
-    }
-  }
-
-  return results;
+function searchEvents(events: OddsEvent[], q: string): EventResult[] {
+  const lower = q.toLowerCase();
+  return events
+    .filter(
+      (e) =>
+        e.homeTeam.toLowerCase().includes(lower) ||
+        e.awayTeam.toLowerCase().includes(lower) ||
+        e.league.toLowerCase().includes(lower)
+    )
+    .slice(0, 5)
+    .map((e) => ({
+      id:       e.id,
+      group:    "event" as const,
+      title:    `${e.homeTeam} vs ${e.awayTeam}`,
+      subtitle: `${e.league} · ${formatKickoff(e.commenceTime)}`,
+      href:     `/predictions/${e.id}`,
+      sport:    e.sport,
+      homeLogo: e.homeLogo,
+      awayLogo: e.awayLogo,
+    }));
 }
 
 const GROUP_META = {
-  event:  { label: "Fixtures",            Icon: Zap },
-  team:   { label: "Teams",               Icon: Users },
-  player: { label: "Players & Athletes",  Icon: User },
+  event:  { label: "Fixtures",           Icon: Zap },
+  team:   { label: "Teams",              Icon: Users },
+  player: { label: "Players",            Icon: User },
 } as const;
 
 interface Props {
@@ -133,60 +91,117 @@ interface Props {
 }
 
 export default function SearchModal({ onClose }: Props) {
-  const router = useRouter();
+  const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
+
+  const [query, setQuery]         = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
+  const [searching, setSearching] = useState(false);
 
-  const results = runSearch(query);
+  // Live events cached once on mount
+  const [events, setEvents] = useState<OddsEvent[]>([]);
+  useEffect(() => {
+    fetch("/api/events?sport=all")
+      .then((r) => r.ok ? r.json() : { events: [] })
+      .then((d) => setEvents(d.events ?? []))
+      .catch(() => {});
+  }, []);
 
-  // Group order: events → teams → players
-  const grouped = (["event", "team", "player"] as const)
-    .map((g) => ({ key: g, items: results.filter((r) => r.group === g) }))
-    .filter((g) => g.items.length > 0);
+  // API search results for teams + players
+  const [apiTeams, setApiTeams]     = useState<TeamResult[]>([]);
+  const [apiPlayers, setApiPlayers] = useState<PlayerResult[]>([]);
 
-  // Flat ordered list for keyboard nav
-  const flat = grouped.flatMap((g) => g.items);
+  const runApiSearch = useCallback(async (q: string) => {
+    if (q.length < 2) { setApiTeams([]); setApiPlayers([]); return; }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/football/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) return;
+      const data: {
+        teams:   { id: number; name: string; country: string; logo: string; city: string }[];
+        players: { id: number; name: string; photo: string; nationality: string; position: string; team: { id: number; name: string; logo: string } | null }[];
+      } = await res.json();
 
-  // Focus input on mount
+      setApiTeams(
+        data.teams.map((t) => ({
+          id:       String(t.id),
+          group:    "team" as const,
+          title:    t.name,
+          subtitle: [t.city, t.country].filter(Boolean).join(" · "),
+          href:     `/teams/${encodeURIComponent(t.name)}`,
+          logo:     t.logo,
+        }))
+      );
+
+      setApiPlayers(
+        data.players.map((p) => ({
+          id:       String(p.id),
+          group:    "player" as const,
+          title:    p.name,
+          subtitle: [p.position, p.team?.name, p.nationality].filter(Boolean).join(" · "),
+          href:     `/athletes/${p.id}`,
+          photo:    p.photo,
+          teamLogo: p.team?.logo,
+        }))
+      );
+    } catch {
+      // silent
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  // Debounce API search 350 ms
+  useEffect(() => {
+    const timer = setTimeout(() => runApiSearch(query), 350);
+    return () => clearTimeout(timer);
+  }, [query, runApiSearch]);
+
+  // Reset active index on query change
+  useEffect(() => { setActiveIdx(0); }, [query]);
+
+  // Focus on mount
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  // Reset active index when query changes
-  useEffect(() => { setActiveIdx(0); }, [query]);
+  // Build result groups
+  const eventResults  = query.length >= 2 ? searchEvents(events, query) : [];
+  const grouped: { key: "event" | "team" | "player"; items: SearchResult[] }[] = [
+    { key: "event",  items: eventResults },
+    { key: "team",   items: apiTeams },
+    { key: "player", items: apiPlayers },
+  ].filter((g) => g.items.length > 0);
+
+  const flat = grouped.flatMap((g) => g.items);
+  const showEmpty = query.length >= 2 && !searching && flat.length === 0;
 
   // Keyboard nav
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") { onClose(); return; }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIdx((i) => Math.min(i + 1, flat.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIdx((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && flat[activeIdx]) {
-        router.push(flat[activeIdx].href);
-        onClose();
-      }
+      if (e.key === "Escape")     { onClose(); return; }
+      if (e.key === "ArrowDown")  { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, flat.length - 1)); }
+      if (e.key === "ArrowUp")    { e.preventDefault(); setActiveIdx((i) => Math.max(i - 1, 0)); }
+      if (e.key === "Enter" && flat[activeIdx]) { router.push(flat[activeIdx].href); onClose(); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [flat, activeIdx, router, onClose]);
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-[200] flex items-start justify-center bg-gray-900/50 px-4 pt-[10vh] backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* Panel */}
       <div
         className="w-full max-w-xl overflow-hidden rounded-2xl border border-bg-border bg-bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search input row */}
+        {/* Input */}
         <div className="flex items-center gap-3 border-b border-bg-border px-4 py-3">
-          <Search className="h-4 w-4 shrink-0 text-gray-400" />
+          {searching ? (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
+          ) : (
+            <Search className="h-4 w-4 shrink-0 text-gray-400" />
+          )}
           <input
             ref={inputRef}
             type="text"
@@ -196,13 +211,11 @@ export default function SearchModal({ onClose }: Props) {
             className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
           />
           {query ? (
-            <button onClick={() => setQuery("")} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => { setQuery(""); setApiTeams([]); setApiPlayers([]); }} className="text-gray-400 transition-colors hover:text-gray-600">
               <X className="h-4 w-4" />
             </button>
           ) : null}
-          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-gray-400 sm:inline">
-            esc
-          </kbd>
+          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-gray-400 sm:inline">esc</kbd>
         </div>
 
         {/* Results */}
@@ -212,9 +225,11 @@ export default function SearchModal({ onClose }: Props) {
               <Search className="h-7 w-7 text-gray-300" />
               <p className="text-sm text-gray-400">Search teams, players and fixtures</p>
             </div>
-          ) : results.length === 0 ? (
+          ) : showEmpty ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-gray-400">No results for <span className="text-gray-800">&ldquo;{query}&rdquo;</span></p>
+              <p className="text-sm text-gray-400">
+                No results for <span className="text-gray-800">&ldquo;{query}&rdquo;</span>
+              </p>
             </div>
           ) : (
             <div className="p-2">
@@ -222,18 +237,13 @@ export default function SearchModal({ onClose }: Props) {
                 const { label, Icon } = GROUP_META[key];
                 return (
                   <div key={key} className="mb-1">
-                    {/* Group label */}
                     <div className="flex items-center gap-2 px-3 py-1.5">
                       <Icon className="h-3 w-3 text-gray-400" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                        {label}
-                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
                     </div>
-                    {/* Items */}
                     {items.map((result) => {
-                      const idx = flat.indexOf(result);
+                      const idx      = flat.indexOf(result);
                       const isActive = idx === activeIdx;
-                      const badge = result.sport ? SPORT_BADGE[result.sport] : null;
                       return (
                         <Link
                           key={result.id}
@@ -244,19 +254,13 @@ export default function SearchModal({ onClose }: Props) {
                             isActive ? "bg-bg-base" : "hover:bg-bg-base/60"
                           }`}
                         >
-                          {badge && (
-                            <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${badge.bg} ${badge.color}`}>
-                              {badge.label}
-                            </span>
-                          )}
+                          <ResultIcon result={result} />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-gray-800">{result.title}</p>
                             <p className="truncate text-xs text-gray-400">{result.subtitle}</p>
                           </div>
                           {isActive && (
-                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-gray-400">
-                              ↵
-                            </kbd>
+                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-gray-400">↵</kbd>
                           )}
                         </Link>
                       );
@@ -268,8 +272,8 @@ export default function SearchModal({ onClose }: Props) {
           )}
         </div>
 
-        {/* Footer hints */}
-        {results.length > 0 && (
+        {/* Footer */}
+        {flat.length > 0 && (
           <div className="flex items-center gap-4 border-t border-bg-border px-4 py-2 text-[10px] text-gray-400">
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↑↓</kbd> navigate</span>
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↵</kbd> open</span>
@@ -279,4 +283,55 @@ export default function SearchModal({ onClose }: Props) {
       </div>
     </div>
   );
+}
+
+function ResultIcon({ result }: { result: SearchResult }) {
+  if (result.group === "event") {
+    const badge = SPORT_BADGE[result.sport];
+    // Show both team logos if available, else sport badge
+    if (result.homeLogo && result.awayLogo) {
+      return (
+        <div className="flex shrink-0 items-center">
+          <div className="relative h-6 w-6 overflow-hidden rounded-full border border-bg-border bg-white">
+            <Image src={result.homeLogo} alt="" fill className="object-contain p-0.5" sizes="24px" />
+          </div>
+          <div className="relative -ml-2 h-6 w-6 overflow-hidden rounded-full border border-bg-border bg-white">
+            <Image src={result.awayLogo} alt="" fill className="object-contain p-0.5" sizes="24px" />
+          </div>
+        </div>
+      );
+    }
+    return badge ? (
+      <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${badge.bg} ${badge.color}`}>
+        {badge.label}
+      </span>
+    ) : null;
+  }
+
+  if (result.group === "team" && result.logo) {
+    return (
+      <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-gray-50">
+        <Image src={result.logo} alt="" fill className="object-contain p-0.5" sizes="28px" />
+      </div>
+    );
+  }
+
+  if (result.group === "player") {
+    if (result.photo) {
+      return (
+        <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gray-100">
+          <Image src={result.photo} alt="" fill className="object-cover" sizes="28px" />
+        </div>
+      );
+    }
+    if (result.teamLogo) {
+      return (
+        <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-gray-50">
+          <Image src={result.teamLogo} alt="" fill className="object-contain p-0.5" sizes="28px" />
+        </div>
+      );
+    }
+  }
+
+  return <div className="h-7 w-7 shrink-0 rounded-lg bg-bg-border" />;
 }
