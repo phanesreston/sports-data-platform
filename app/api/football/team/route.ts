@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
 
 // Known league IDs to try when fetching team statistics
 const LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3, 848];
@@ -41,29 +41,6 @@ interface ApiSquadPlayer {
   photo: string;
 }
 
-/**
- * From a list of API-Football team results, pick the best match for `query`.
- * Prefers: exact name match > senior team (no U21/U23/Reserves) > first result.
- */
-function pickBestTeam(results: ApiTeam[], query: string): ApiTeam | null {
-  if (!results.length) return null;
-  const q = query.toLowerCase();
-
-  // If the query itself is for a youth/reserve team, don't filter
-  const queryIsYouth = /\b(u\d{2}|u-\d{2}|youth|reserve|junior|ii\b|b\s?team)\b/i.test(query);
-
-  let pool = results;
-  if (!queryIsYouth) {
-    const seniors = results.filter(
-      (r) => !/\b(u\d{2}|u-\d{2}|youth|reserves?|juniors?|\bii\b|b\s?team)\b/i.test(r.team.name)
-    );
-    if (seniors.length) pool = seniors;
-  }
-
-  // Prefer an exact name match within the pool
-  return pool.find((r) => r.team.name.toLowerCase() === q) ?? pool[0];
-}
-
 export async function GET(req: NextRequest) {
   const name   = req.nextUrl.searchParams.get("name");
   const teamId = req.nextUrl.searchParams.get("id");
@@ -72,29 +49,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "name or id required" }, { status: 400 });
   }
 
-  // Step 1: find team — try the full name, then progressively shorter fallbacks
+  // Step 1: find team
   let teamRes: ApiTeam[] | null = null;
 
   if (teamId) {
     teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
   } else {
-    // Primary search with the full name
-    teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: name! }, 86400));
-
-    // If nothing found, try the first word (handles "Wolverhampton Wanderers" → "Wolverhampton")
-    if (!teamRes?.length) {
-      const firstWord = name!.split(" ")[0];
-      if (firstWord.length >= 3 && firstWord !== name) {
-        teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: firstWord }, 86400));
-      }
-    }
-
-    // Last resort: try every word ≥4 chars until we get a hit
-    if (!teamRes?.length) {
-      for (const word of name!.split(" ").filter((w) => w.length >= 4)) {
-        teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: word }, 86400));
-        if (teamRes?.length) break;
-      }
+    // Try progressive name variants: full name → stripped → first word → each word ≥4 chars
+    for (const variant of getTeamSearchVariants(name!)) {
+      teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: variant }, 86400));
+      if (teamRes?.length) break;
     }
   }
 

@@ -2,6 +2,51 @@ import type { ApiFootballResponse } from "./types";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
+/**
+ * From a list of API-Football team results, pick the best match for `query`.
+ * Filters out youth/reserve teams when the query is for a senior club.
+ * Prefers exact name match, then first remaining result.
+ */
+export function pickBestTeam<T extends { team: { name: string } }>(
+  results: T[],
+  query: string
+): T | null {
+  if (!results.length) return null;
+  const q = query.toLowerCase();
+  const queryIsYouth =
+    /\b(u\d{2}|u-\d{2}|youth|reserve|junior|ii\b|b\s?team)\b/i.test(query);
+  let pool = results;
+  if (!queryIsYouth) {
+    const seniors = results.filter(
+      (r) =>
+        !/\b(u\d{2}|u-\d{2}|youth|reserves?|juniors?|\bii\b|b\s?team)\b/i.test(
+          r.team.name
+        )
+    );
+    if (seniors.length) pool = seniors;
+  }
+  return pool.find((r) => r.team.name.toLowerCase() === q) ?? pool[0];
+}
+
+/**
+ * Generate progressive search variants for a team name.
+ * e.g. "Brighton & Hove Albion" → ["Brighton & Hove Albion", "Brighton", "Brighton Hove Albion", "Hove", "Albion"]
+ */
+export function getTeamSearchVariants(name: string): string[] {
+  const seen = new Set<string>();
+  const add = (v: string) => { const t = v.trim(); if (t.length >= 3) seen.add(t); };
+  add(name);
+  // Strip & and extra whitespace: "Brighton & Hove Albion" → "Brighton Hove Albion"
+  const stripped = name.replace(/\s*&\s*/g, " ").replace(/\s+/g, " ").trim();
+  if (stripped !== name) add(stripped);
+  // First word
+  const words = name.split(/[\s&]+/);
+  add(words[0]);
+  // Every word ≥ 4 chars
+  for (const w of words) if (w.length >= 4) add(w);
+  return Array.from(seen);
+}
+
 export async function apiFetch<T>(
   path: string,
   params: Record<string, string | number>,

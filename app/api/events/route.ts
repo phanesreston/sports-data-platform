@@ -6,7 +6,7 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
 
 interface ApiTeamBasic {
   team: { id: number; name: string; logo: string };
@@ -16,32 +16,42 @@ interface ApiTeamBasic {
  * Fuzzy logo lookup: tries exact match first, then checks whether either
  * string contains the other (handles "Tottenham Hotspur" ↔ "Tottenham" etc.)
  */
-function logoFromMap(map: Record<string, string>, name: string): string | undefined {
+function dataFromMap(
+  map: Record<string, { logo?: string; id?: number }>,
+  name: string
+): { logo?: string; id?: number } | undefined {
   if (map[name]) return map[name];
   const lower = name.toLowerCase();
-  for (const [key, logo] of Object.entries(map)) {
+  for (const [key, val] of Object.entries(map)) {
     const k = key.toLowerCase();
-    if (k.includes(lower) || lower.includes(k)) return logo;
+    if (k.includes(lower) || lower.includes(k)) return val;
   }
   return undefined;
 }
 
 /**
- * Fetch logos for a set of team names we still couldn't match.
- * Uses the shared apiFetch which caches results for 24 hours, so this
- * only hits the API once per unique team name per day.
+ * Fetch logo + numeric ID for team names we couldn't match from the fixture map.
+ * Tries progressive name variants (full → first word → each word ≥4 chars),
+ * filters out youth/reserve results, and caches 24 h.
  */
-async function fetchMissingLogos(names: string[]): Promise<Record<string, string>> {
+async function fetchMissingTeamData(
+  names: string[]
+): Promise<Record<string, { logo?: string; id?: number }>> {
   const results = await Promise.all(
     names.map(async (name) => {
-      const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { search: name }, 86400));
-      // search returns multiple results — take the closest (first) match
-      const logo = res?.[0]?.team?.logo;
-      return logo ? { name, logo } : null;
+      let best: { team: { id: number; name: string; logo: string } } | null = null;
+      for (const variant of getTeamSearchVariants(name)) {
+        const res = unwrap(
+          await apiFetch<ApiTeamBasic>("/teams", { search: variant }, 86400)
+        );
+        best = pickBestTeam(res ?? [], name);
+        if (best) break;
+      }
+      return best ? { name, logo: best.team.logo, id: best.team.id } : null;
     })
   );
-  const map: Record<string, string> = {};
-  for (const r of results) if (r) map[r.name] = r.logo;
+  const map: Record<string, { logo?: string; id?: number }> = {};
+  for (const r of results) if (r) map[r.name] = { logo: r.logo, id: r.id };
   return map;
 }
 
@@ -75,13 +85,13 @@ export async function GET(req: NextRequest) {
       ]);
 
       const oddsData     = await parseJson<{ events: OddsApiEvent[] }>(oddsRes);
-      const fixturesData = await parseJson<{ fixtures: FixtureWithStats[]; teamLogoMap: Record<string, string> }>(fixturesRes);
+      const fixturesData = await parseJson<{ fixtures: FixtureWithStats[]; teamLogoMap: Record<string, { logo: string; id: number }> }>(fixturesRes);
 
       // No data from either source — skip this sport entirely (no sample fallback)
       if (!oddsData?.events?.length && !fixturesData?.fixtures?.length) continue;
 
-      // teamLogoMap: name → logo for ALL upcoming fixtures (not just the stats-enriched ones)
-      const teamLogoMap: Record<string, string> = fixturesData?.teamLogoMap ?? {};
+      // teamLogoMap2: name → { logo, id } for ALL upcoming fixtures
+      const teamLogoMap2: Record<string, { logo?: string; id?: number }> = fixturesData?.teamLogoMap ?? {};
 
       // Build stats lookup keyed by "homeTeam__awayTeam"
       const statsMap = new Map<
@@ -119,8 +129,12 @@ export async function GET(req: NextRequest) {
             event.leagueLogo  = fixtureEntry.fixture.league.logo;
           } else {
             // Fuzzy match against teamLogoMap (handles name variants)
-            event.homeLogo = logoFromMap(teamLogoMap, raw.home_team);
-            event.awayLogo = logoFromMap(teamLogoMap, raw.away_team);
+            const homeData = dataFromMap(teamLogoMap2, raw.home_team);
+            const awayData = dataFromMap(teamLogoMap2, raw.away_team);
+            event.homeLogo   = homeData?.logo;
+            event.awayLogo   = awayData?.logo;
+            event.homeTeamId = homeData?.id;
+            event.awayTeamId = awayData?.id;
           }
 
           // Patch bestOdds back onto prediction-derived markets
@@ -137,19 +151,23 @@ export async function GET(req: NextRequest) {
           return event;
         });
 
-        // For any football events still missing logos, fetch them directly from
-        // API-Football (cached 24 h — only costs quota on first hit per team name)
+        // For football events still missing logos or IDs, resolve via API-Football
+        // (cached 24 h — only costs quota on first hit per unique team name)
         if (s === "football") {
           const missingNames = new Set<string>();
           for (const e of transformed) {
-            if (!e.homeLogo) missingNames.add(e.homeTeam);
-            if (!e.awayLogo) missingNames.add(e.awayTeam);
+            if (!e.homeLogo || !e.homeTeamId) missingNames.add(e.homeTeam);
+            if (!e.awayLogo || !e.awayTeamId) missingNames.add(e.awayTeam);
           }
           if (missingNames.size > 0) {
-            const fetched = await fetchMissingLogos([...missingNames]);
+            const fetched = await fetchMissingTeamData([...missingNames]);
             for (const e of transformed) {
-              if (!e.homeLogo) e.homeLogo = fetched[e.homeTeam];
-              if (!e.awayLogo) e.awayLogo = fetched[e.awayTeam];
+              const home = fetched[e.homeTeam];
+              const away = fetched[e.awayTeam];
+              if (!e.homeLogo && home?.logo)    e.homeLogo   = home.logo;
+              if (!e.homeTeamId && home?.id)    e.homeTeamId = home.id;
+              if (!e.awayLogo && away?.logo)    e.awayLogo   = away.logo;
+              if (!e.awayTeamId && away?.id)    e.awayTeamId = away.id;
             }
           }
         }

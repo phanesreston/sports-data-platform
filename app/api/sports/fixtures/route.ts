@@ -82,8 +82,8 @@ export async function GET(req: NextRequest) {
   }
 
   const allFixtures: FixtureWithStats[] = [];
-  // teamLogoMap: name → logo URL for ALL upcoming fixtures (not just the enriched ones)
-  const teamLogoMap: Record<string, string> = {};
+  // teamLogoMap: name → { logo, id } for ALL upcoming fixtures (not just the enriched ones)
+  const teamLogoMap: Record<string, { logo: string; id: number }> = {};
 
   // Date range: today → 7 days ahead (free plan doesn't support `next` param)
   const today    = new Date().toISOString().split("T")[0];
@@ -103,10 +103,10 @@ export async function GET(req: NextRequest) {
 
     const upcomingFixtures = allLeagueFixtures.filter((f) => f.fixture.status.short === "NS");
 
-    // Collect logos for ALL upcoming teams in this league (cheap — data already fetched)
+    // Collect logos + IDs for ALL upcoming teams in this league (cheap — data already fetched)
     for (const f of upcomingFixtures) {
-      if (f.teams.home.logo) teamLogoMap[f.teams.home.name] = f.teams.home.logo;
-      if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = f.teams.away.logo;
+      if (f.teams.home.logo) teamLogoMap[f.teams.home.name] = { logo: f.teams.home.logo, id: f.teams.home.id };
+      if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = { logo: f.teams.away.logo, id: f.teams.away.id };
     }
 
     // Enrich only the first 3 fixtures with stats/H2H/predictions (quota-heavy)
