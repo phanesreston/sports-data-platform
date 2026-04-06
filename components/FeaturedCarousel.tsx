@@ -36,10 +36,11 @@ function FormDot({ result }: { result: "W" | "D" | "L" }) {
 }
 
 function TeamDisplay({
-  name, logo, sport, align,
+  name, logo, teamId, sport, align,
 }: {
-  name: string; logo?: string; sport: string; align: "left" | "right";
+  name: string; logo?: string; teamId?: number; sport: string; align: "left" | "right";
 }) {
+  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
   const inner = (
     <div className={`flex items-center gap-2.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
       <TeamLogo logo={logo} name={name} size={40} className="rounded-xl" />
@@ -53,7 +54,7 @@ function TeamDisplay({
 
   if (sport === "football") {
     return (
-      <Link href={`/teams/${encodeURIComponent(name)}`} onClick={(e) => e.stopPropagation()} className="group">
+      <Link href={href} onClick={(e) => e.stopPropagation()} className="group">
         {inner}
       </Link>
     );
@@ -143,7 +144,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
           <div className="mt-6 flex items-center gap-4">
             {/* Home */}
             <div className="flex flex-1 flex-col gap-2.5">
-              <TeamDisplay name={event.homeTeam} logo={event.homeLogo} sport={event.sport} align="left" />
+              <TeamDisplay name={event.homeTeam} logo={event.homeLogo} teamId={event.homeTeamId} sport={event.sport} align="left" />
               <div className="flex gap-1">
                 {event.homeStats.form.map((r, i) => <FormDot key={i} result={r} />)}
               </div>
@@ -157,7 +158,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
             {/* Away */}
             <div className="flex flex-1 flex-col items-end gap-2.5">
-              <TeamDisplay name={event.awayTeam} logo={event.awayLogo} sport={event.sport} align="right" />
+              <TeamDisplay name={event.awayTeam} logo={event.awayLogo} teamId={event.awayTeamId} sport={event.sport} align="right" />
               <div className="flex justify-end gap-1">
                 {event.awayStats.form.map((r, i) => <FormDot key={i} result={r} />)}
               </div>

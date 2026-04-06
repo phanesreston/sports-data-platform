@@ -47,12 +47,14 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
 }
 
 function TeamName({
-  name, logo, sport, align = "left",
+  name, logo, teamId, sport, align = "left",
 }: {
-  name: string; logo?: string; sport: string; align?: "left" | "right";
+  name: string; logo?: string; teamId?: number; sport: string; align?: "left" | "right";
 }) {
   const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right" : ""}`;
   const row = `flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`;
+  // Prefer ID-based URL to avoid name-matching issues on the team page
+  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
 
   const inner = (
     <>
@@ -64,7 +66,7 @@ function TeamName({
   if (sport === "football") {
     return (
       <Link
-        href={`/teams/${encodeURIComponent(name)}`}
+        href={href}
         onClick={(e) => e.stopPropagation()}
         className={`${row} transition-colors hover:text-accent-green`}
       >
@@ -127,13 +129,13 @@ export default function PredictionCard({ event }: PredictionCardProps) {
       <div className="mt-3.5 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1">
-            <TeamName name={event.homeTeam} logo={event.homeLogo} sport={event.sport} align="left" />
+            <TeamName name={event.homeTeam} logo={event.homeLogo} teamId={event.homeTeamId} sport={event.sport} align="left" />
           </div>
           <span className="shrink-0 rounded-lg bg-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500">
             VS
           </span>
           <div className="flex-1">
-            <TeamName name={event.awayTeam} logo={event.awayLogo} sport={event.sport} align="right" />
+            <TeamName name={event.awayTeam} logo={event.awayLogo} teamId={event.awayTeamId} sport={event.sport} align="right" />
           </div>
         </div>
 

@@ -90,10 +90,12 @@ function Skeleton({ className }: { className: string }) {
 }
 
 function TeamBlock({
-  name, logo, sport,
+  name, logo, teamId, sport,
 }: {
-  name: string; logo?: string; sport: string;
+  name: string; logo?: string; teamId?: number; sport: string;
 }) {
+  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
+
   const inner = (
     <>
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gray-50 p-2 shadow-sm">
@@ -114,7 +116,7 @@ function TeamBlock({
   if (sport === "football") {
     return (
       <Link
-        href={`/teams/${encodeURIComponent(name)}`}
+        href={href}
         className="group flex flex-1 flex-col items-center rounded-xl p-3 transition-colors hover:bg-gray-50"
       >
         {inner}
@@ -149,7 +151,7 @@ export default function PredictionDetailPage({ params }: Props) {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
           <Link href="/" className="mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
             <ArrowLeft className="h-4 w-4" />
@@ -247,11 +249,11 @@ function EventDetail({ event }: { event: OddsEvent }) {
 
           {/* Teams side by side with logos */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <TeamBlock name={event.homeTeam} logo={event.homeLogo} sport={event.sport} />
+            <TeamBlock name={event.homeTeam} logo={event.homeLogo} teamId={event.homeTeamId} sport={event.sport} />
             <div className="shrink-0 rounded-xl bg-bg-border px-3 py-2 text-sm font-bold text-gray-500">
               VS
             </div>
-            <TeamBlock name={event.awayTeam} logo={event.awayLogo} sport={event.sport} />
+            <TeamBlock name={event.awayTeam} logo={event.awayLogo} teamId={event.awayTeamId} sport={event.sport} />
           </div>
         </div>
       </div>
@@ -388,12 +390,12 @@ function EventDetail({ event }: { event: OddsEvent }) {
       {event.sport === "football" && (
         <div className="flex gap-3">
           {[
-            { name: event.homeTeam, logo: event.homeLogo },
-            { name: event.awayTeam, logo: event.awayLogo },
-          ].map(({ name, logo }) => (
+            { name: event.homeTeam, logo: event.homeLogo, teamId: event.homeTeamId },
+            { name: event.awayTeam, logo: event.awayLogo, teamId: event.awayTeamId },
+          ].map(({ name, logo, teamId }) => (
             <Link
               key={name}
-              href={`/teams/${encodeURIComponent(name)}`}
+              href={teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:text-accent-green"
             >
               {logo && (
