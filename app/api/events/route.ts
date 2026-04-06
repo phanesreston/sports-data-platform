@@ -6,6 +6,44 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
+import { apiFetch, unwrap } from "@/lib/apifootball";
+
+interface ApiTeamBasic {
+  team: { id: number; name: string; logo: string };
+}
+
+/**
+ * Fuzzy logo lookup: tries exact match first, then checks whether either
+ * string contains the other (handles "Tottenham Hotspur" ↔ "Tottenham" etc.)
+ */
+function logoFromMap(map: Record<string, string>, name: string): string | undefined {
+  if (map[name]) return map[name];
+  const lower = name.toLowerCase();
+  for (const [key, logo] of Object.entries(map)) {
+    const k = key.toLowerCase();
+    if (k.includes(lower) || lower.includes(k)) return logo;
+  }
+  return undefined;
+}
+
+/**
+ * Fetch logos for a set of team names we still couldn't match.
+ * Uses the shared apiFetch which caches results for 24 hours, so this
+ * only hits the API once per unique team name per day.
+ */
+async function fetchMissingLogos(names: string[]): Promise<Record<string, string>> {
+  const results = await Promise.all(
+    names.map(async (name) => {
+      const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { search: name }, 86400));
+      // search returns multiple results — take the closest (first) match
+      const logo = res?.[0]?.team?.logo;
+      return logo ? { name, logo } : null;
+    })
+  );
+  const map: Record<string, string> = {};
+  for (const r of results) if (r) map[r.name] = r.logo;
+  return map;
+}
 
 // Sports covered by The Odds API
 const ODDS_API_SPORTS: Sport[] = [
@@ -59,7 +97,8 @@ export async function GET(req: NextRequest) {
       }
 
       if (oddsData?.events?.length) {
-        const transformed = oddsData.events.slice(0, 10).map((raw) => {
+        const rawSlice = oddsData.events.slice(0, 10);
+        const transformed = rawSlice.map((raw) => {
           const fixtureEntry = fixturesData?.fixtures?.find(
             (f) =>
               f.fixture.teams.home.name === raw.home_team &&
@@ -70,7 +109,7 @@ export async function GET(req: NextRequest) {
 
           const event = transformOddsApiEvent(raw, statsMap, marketsOverride);
 
-          // Attach full fixture data (stats, IDs, logos) when a fixture matches
+          // Attach full fixture data (stats, IDs, logos) when exact fixture matches
           if (fixtureEntry) {
             event.homeLogo    = fixtureEntry.fixture.teams.home.logo;
             event.awayLogo    = fixtureEntry.fixture.teams.away.logo;
@@ -79,9 +118,9 @@ export async function GET(req: NextRequest) {
             event.leagueId    = fixtureEntry.fixture.league.id;
             event.leagueLogo  = fixtureEntry.fixture.league.logo;
           } else {
-            // Fall back to teamLogoMap for events beyond the stats-enriched slice
-            event.homeLogo = event.homeLogo ?? teamLogoMap[raw.home_team];
-            event.awayLogo = event.awayLogo ?? teamLogoMap[raw.away_team];
+            // Fuzzy match against teamLogoMap (handles name variants)
+            event.homeLogo = logoFromMap(teamLogoMap, raw.home_team);
+            event.awayLogo = logoFromMap(teamLogoMap, raw.away_team);
           }
 
           // Patch bestOdds back onto prediction-derived markets
@@ -97,6 +136,24 @@ export async function GET(req: NextRequest) {
 
           return event;
         });
+
+        // For any football events still missing logos, fetch them directly from
+        // API-Football (cached 24 h — only costs quota on first hit per team name)
+        if (s === "football") {
+          const missingNames = new Set<string>();
+          for (const e of transformed) {
+            if (!e.homeLogo) missingNames.add(e.homeTeam);
+            if (!e.awayLogo) missingNames.add(e.awayTeam);
+          }
+          if (missingNames.size > 0) {
+            const fetched = await fetchMissingLogos([...missingNames]);
+            for (const e of transformed) {
+              if (!e.homeLogo) e.homeLogo = fetched[e.homeTeam];
+              if (!e.awayLogo) e.awayLogo = fetched[e.awayTeam];
+            }
+          }
+        }
+
         allEvents.push(...transformed);
       } else if (fixturesData?.fixtures?.length) {
         for (const f of fixturesData.fixtures) {
