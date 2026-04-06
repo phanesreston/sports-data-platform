@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
+import Image from "next/image";  // used for league logo
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import TeamLogo from "@/components/TeamLogo";
 import { Clock, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 
@@ -39,34 +40,20 @@ function TeamDisplay({
 }: {
   name: string; logo?: string; sport: string; align: "left" | "right";
 }) {
-  const nameEl = (
-    <span className={`text-xl font-extrabold leading-tight text-gray-900 transition-colors group-hover:text-accent-green sm:text-2xl ${
-      align === "right" ? "text-right" : ""
-    }`}>
-      {name}
-    </span>
-  );
-
-  const logoEl = logo ? (
-    <div className={`relative h-10 w-10 shrink-0 ${align === "right" ? "order-last" : ""}`}>
-      <Image src={logo} alt={name} fill className="object-contain" sizes="40px" />
-    </div>
-  ) : null;
-
   const inner = (
     <div className={`flex items-center gap-2.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
-      {logoEl}
-      {nameEl}
+      <TeamLogo logo={logo} name={name} size={40} className="rounded-xl" />
+      <span className={`text-xl font-extrabold leading-tight text-gray-900 transition-colors group-hover:text-accent-green sm:text-2xl ${
+        align === "right" ? "text-right" : ""
+      }`}>
+        {name}
+      </span>
     </div>
   );
 
   if (sport === "football") {
     return (
-      <Link
-        href={`/teams/${encodeURIComponent(name)}`}
-        onClick={(e) => e.stopPropagation()}
-        className="group"
-      >
+      <Link href={`/teams/${encodeURIComponent(name)}`} onClick={(e) => e.stopPropagation()} className="group">
         {inner}
       </Link>
     );

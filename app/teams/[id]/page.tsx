@@ -7,6 +7,7 @@ import { ChevronLeft, MapPin, Calendar, Users, BarChart3, List, Shield } from "l
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PredictionCard from "@/components/PredictionCard";
+import PlayerPhoto from "@/components/PlayerPhoto";
 import type { OddsEvent } from "@/data/sampleOdds";
 
 type Tab = "overview" | "squad" | "fixtures";
@@ -60,9 +61,7 @@ function PlayerCard({ player }: { player: SquadPlayer }) {
       href={`/athletes/${player.id}`}
       className="group flex items-center gap-3 rounded-xl border border-bg-border bg-bg-card p-3 shadow-sm transition-colors hover:border-gray-300"
     >
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-100">
-        <Image src={player.photo} alt={player.name} fill className="object-cover" sizes="40px" />
-      </div>
+      <PlayerPhoto photo={player.photo} name={player.name} size={40} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-gray-800 group-hover:text-accent-green">
           {player.name}

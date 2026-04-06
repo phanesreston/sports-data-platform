@@ -37,10 +37,13 @@ export async function GET(req: NextRequest) {
       ]);
 
       const oddsData     = await parseJson<{ events: OddsApiEvent[] }>(oddsRes);
-      const fixturesData = await parseJson<{ fixtures: FixtureWithStats[] }>(fixturesRes);
+      const fixturesData = await parseJson<{ fixtures: FixtureWithStats[]; teamLogoMap: Record<string, string> }>(fixturesRes);
 
       // No data from either source — skip this sport entirely (no sample fallback)
       if (!oddsData?.events?.length && !fixturesData?.fixtures?.length) continue;
+
+      // teamLogoMap: name → logo for ALL upcoming fixtures (not just the stats-enriched ones)
+      const teamLogoMap: Record<string, string> = fixturesData?.teamLogoMap ?? {};
 
       // Build stats lookup keyed by "homeTeam__awayTeam"
       const statsMap = new Map<
@@ -67,7 +70,7 @@ export async function GET(req: NextRequest) {
 
           const event = transformOddsApiEvent(raw, statsMap, marketsOverride);
 
-          // Attach logos + IDs from API-Football fixture when available
+          // Attach full fixture data (stats, IDs, logos) when a fixture matches
           if (fixtureEntry) {
             event.homeLogo    = fixtureEntry.fixture.teams.home.logo;
             event.awayLogo    = fixtureEntry.fixture.teams.away.logo;
@@ -75,6 +78,10 @@ export async function GET(req: NextRequest) {
             event.awayTeamId  = fixtureEntry.fixture.teams.away.id;
             event.leagueId    = fixtureEntry.fixture.league.id;
             event.leagueLogo  = fixtureEntry.fixture.league.logo;
+          } else {
+            // Fall back to teamLogoMap for events beyond the stats-enriched slice
+            event.homeLogo = event.homeLogo ?? teamLogoMap[raw.home_team];
+            event.awayLogo = event.awayLogo ?? teamLogoMap[raw.away_team];
           }
 
           // Patch bestOdds back onto prediction-derived markets

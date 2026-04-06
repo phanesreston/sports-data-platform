@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import TeamLogo from "@/components/TeamLogo";
 
 interface PlayerStats {
   team:   { id: number; name: string; logo: string };
@@ -129,9 +130,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         {primaryStats && (
                           <Link href={`/teams/${encodeURIComponent(teamName)}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500 hover:text-gray-800">
-                            <div className="relative h-4 w-4">
-                              <Image src={primaryStats.team.logo} alt="" fill className="object-contain" sizes="16px" />
-                            </div>
+                            <TeamLogo logo={primaryStats.team.logo} name={teamName} size={16} className="rounded" />
                             {teamName}
                           </Link>
                         )}

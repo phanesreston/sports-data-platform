@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, ExternalLink } from "lucide-react";
 import type { OddsEvent, Sport } from "@/data/sampleOdds";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import TeamLogo from "@/components/TeamLogo";
 
 interface Props {
   params: { id: string };
@@ -263,11 +264,14 @@ function EventDetail({ event }: { event: OddsEvent }) {
         </div>
         <div className="space-y-3">
           {[
-            { name: event.homeTeam, stats: event.homeStats },
-            { name: event.awayTeam, stats: event.awayStats },
-          ].map(({ name, stats }) => (
+            { name: event.homeTeam, logo: event.homeLogo, stats: event.homeStats },
+            { name: event.awayTeam, logo: event.awayLogo, stats: event.awayStats },
+          ].map(({ name, logo, stats }) => (
             <div key={name} className="flex items-center gap-3">
-              <span className="w-28 shrink-0 truncate text-sm text-gray-700">{name}</span>
+              <div className="flex w-32 shrink-0 items-center gap-2">
+                <TeamLogo logo={logo} name={name} size={20} className="rounded" />
+                <span className="truncate text-sm text-gray-700">{name}</span>
+              </div>
               <FormPills form={stats.form} />
               <span className="ml-auto whitespace-nowrap text-sm">
                 <span className="font-semibold text-emerald-600">{stats.avgScored.toFixed(1)}</span>
@@ -346,9 +350,19 @@ function EventDetail({ event }: { event: OddsEvent }) {
               <thead>
                 <tr className="border-b border-bg-border text-left text-xs text-gray-400">
                   <th className="pb-3 pr-4 font-medium">Bookmaker</th>
-                  <th className="pb-3 pr-4 text-right font-medium">{event.homeTeam}</th>
+                  <th className="pb-3 pr-4 text-right font-medium">
+                    <span className="flex items-center justify-end gap-1.5">
+                      <TeamLogo logo={event.homeLogo} name={event.homeTeam} size={16} className="rounded" />
+                      {event.homeTeam}
+                    </span>
+                  </th>
                   {hasDrawOdds && <th className="pb-3 pr-4 text-right font-medium">Draw</th>}
-                  <th className="pb-3 text-right font-medium">{event.awayTeam}</th>
+                  <th className="pb-3 text-right font-medium">
+                    <span className="flex items-center justify-end gap-1.5">
+                      <TeamLogo logo={event.awayLogo} name={event.awayTeam} size={16} className="rounded" />
+                      {event.awayTeam}
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-bg-border">

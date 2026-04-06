@@ -78,10 +78,12 @@ export async function GET(req: NextRequest) {
     : FOOTBALL_LEAGUES.slice(0, 3); // default: top 3 leagues to keep quota low
 
   if (leagues.length === 0) {
-    return NextResponse.json({ fixtures: [] });
+    return NextResponse.json({ fixtures: [], teamLogoMap: {} });
   }
 
   const allFixtures: FixtureWithStats[] = [];
+  // teamLogoMap: name → logo URL for ALL upcoming fixtures (not just the enriched ones)
+  const teamLogoMap: Record<string, string> = {};
 
   // Date range: today → 7 days ahead (free plan doesn't support `next` param)
   const today    = new Date().toISOString().split("T")[0];
@@ -99,11 +101,16 @@ export async function GET(req: NextRequest) {
     const allLeagueFixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
     if (!allLeagueFixtures || allLeagueFixtures.length === 0) continue;
 
-    // Keep only not-started fixtures (NS) — date range can include live/finished
-    const fixtures = allLeagueFixtures
-      .filter((f) => f.fixture.status.short === "NS")
-      .slice(0, 3); // limit to 3 per league to stay within quota
+    const upcomingFixtures = allLeagueFixtures.filter((f) => f.fixture.status.short === "NS");
 
+    // Collect logos for ALL upcoming teams in this league (cheap — data already fetched)
+    for (const f of upcomingFixtures) {
+      if (f.teams.home.logo) teamLogoMap[f.teams.home.name] = f.teams.home.logo;
+      if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = f.teams.away.logo;
+    }
+
+    // Enrich only the first 3 fixtures with stats/H2H/predictions (quota-heavy)
+    const fixtures = upcomingFixtures.slice(0, 3);
     if (fixtures.length === 0) continue;
 
     // For each fixture, fetch team stats, H2H, and predictions in parallel
@@ -150,5 +157,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ fixtures: allFixtures });
+  return NextResponse.json({ fixtures: allFixtures, teamLogoMap });
 }

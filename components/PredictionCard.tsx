@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
+import Image from "next/image";  // still used for league logo
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 import { getLeagueHref } from "@/data/sampleLeagues";
+import TeamLogo from "@/components/TeamLogo";
 
 const SPORT_STYLES: Record<
   string,
@@ -45,37 +46,33 @@ function FormDots({ form }: { form: ("W" | "D" | "L")[] }) {
   );
 }
 
-/** Renders a team name (with optional logo) as a link for football, plain text otherwise */
 function TeamName({
   name, logo, sport, align = "left",
 }: {
   name: string; logo?: string; sport: string; align?: "left" | "right";
 }) {
   const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right" : ""}`;
-  const logoEl = logo ? (
-    <div className={`relative h-5 w-5 shrink-0 ${align === "right" ? "order-last" : ""}`}>
-      <Image src={logo} alt="" fill className="object-contain" sizes="20px" />
-    </div>
-  ) : null;
+  const row = `flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`;
+
+  const inner = (
+    <>
+      <TeamLogo logo={logo} name={name} size={20} className="rounded" />
+      <span className={base}>{name}</span>
+    </>
+  );
 
   if (sport === "football") {
     return (
       <Link
         href={`/teams/${encodeURIComponent(name)}`}
         onClick={(e) => e.stopPropagation()}
-        className={`flex items-center gap-1.5 transition-colors hover:text-accent-green ${align === "right" ? "flex-row-reverse" : ""}`}
+        className={`${row} transition-colors hover:text-accent-green`}
       >
-        {logoEl}
-        <span className={base}>{name}</span>
+        {inner}
       </Link>
     );
   }
-  return (
-    <div className={`flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
-      {logoEl}
-      <span className={base}>{name}</span>
-    </div>
-  );
+  return <div className={row}>{inner}</div>;
 }
 
 interface PredictionCardProps {

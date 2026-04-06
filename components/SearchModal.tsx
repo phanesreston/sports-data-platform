@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Search, X, Users, User, Zap, Loader2 } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
+import TeamLogo from "@/components/TeamLogo";
+import PlayerPhoto from "@/components/PlayerPhoto";
 
 const SPORT_BADGE: Record<string, { label: string; color: string; bg: string }> = {
   football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50" },
@@ -287,51 +288,19 @@ export default function SearchModal({ onClose }: Props) {
 
 function ResultIcon({ result }: { result: SearchResult }) {
   if (result.group === "event") {
-    const badge = SPORT_BADGE[result.sport];
-    // Show both team logos if available, else sport badge
-    if (result.homeLogo && result.awayLogo) {
-      return (
-        <div className="flex shrink-0 items-center">
-          <div className="relative h-6 w-6 overflow-hidden rounded-full border border-bg-border bg-white">
-            <Image src={result.homeLogo} alt="" fill className="object-contain p-0.5" sizes="24px" />
-          </div>
-          <div className="relative -ml-2 h-6 w-6 overflow-hidden rounded-full border border-bg-border bg-white">
-            <Image src={result.awayLogo} alt="" fill className="object-contain p-0.5" sizes="24px" />
-          </div>
-        </div>
-      );
-    }
-    return badge ? (
-      <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${badge.bg} ${badge.color}`}>
-        {badge.label}
-      </span>
-    ) : null;
-  }
-
-  if (result.group === "team" && result.logo) {
+    // Overlapping home + away logos
     return (
-      <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-gray-50">
-        <Image src={result.logo} alt="" fill className="object-contain p-0.5" sizes="28px" />
+      <div className="flex shrink-0 items-center">
+        <TeamLogo logo={result.homeLogo} name={result.title.split(" vs ")[0]} size={24} className="rounded-full border border-bg-border" />
+        <TeamLogo logo={result.awayLogo} name={result.title.split(" vs ")[1] ?? ""} size={24} className="-ml-2 rounded-full border border-bg-border" />
       </div>
     );
   }
 
-  if (result.group === "player") {
-    if (result.photo) {
-      return (
-        <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gray-100">
-          <Image src={result.photo} alt="" fill className="object-cover" sizes="28px" />
-        </div>
-      );
-    }
-    if (result.teamLogo) {
-      return (
-        <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-gray-50">
-          <Image src={result.teamLogo} alt="" fill className="object-contain p-0.5" sizes="28px" />
-        </div>
-      );
-    }
+  if (result.group === "team") {
+    return <TeamLogo logo={result.logo} name={result.title} size={28} className="rounded-lg" />;
   }
 
-  return <div className="h-7 w-7 shrink-0 rounded-lg bg-bg-border" />;
+  // player
+  return <PlayerPhoto photo={result.photo} name={result.title} size={28} />;
 }
