@@ -53,8 +53,7 @@ function TeamName({
 }) {
   const base = `text-sm font-bold leading-snug text-gray-800 ${align === "right" ? "text-right" : ""}`;
   const row = `flex items-center gap-1.5 ${align === "right" ? "flex-row-reverse" : ""}`;
-  // Prefer ID-based URL to avoid name-matching issues on the team page
-  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
+  const href = `/teams/${encodeURIComponent(name)}`;
 
   const inner = (
     <>

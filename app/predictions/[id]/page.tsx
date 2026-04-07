@@ -94,7 +94,7 @@ function TeamBlock({
 }: {
   name: string; logo?: string; teamId?: number; sport: string;
 }) {
-  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
+  const href = `/teams/${encodeURIComponent(name)}`;
 
   const inner = (
     <>
@@ -395,7 +395,7 @@ function EventDetail({ event }: { event: OddsEvent }) {
           ].map(({ name, logo, teamId }) => (
             <Link
               key={name}
-              href={teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`}
+              href={`/teams/${encodeURIComponent(name)}`}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:text-accent-green"
             >
               {logo && (

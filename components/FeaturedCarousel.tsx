@@ -40,7 +40,7 @@ function TeamDisplay({
 }: {
   name: string; logo?: string; teamId?: number; sport: string; align: "left" | "right";
 }) {
-  const href = teamId ? `/teams/${teamId}` : `/teams/${encodeURIComponent(name)}`;
+  const href = `/teams/${encodeURIComponent(name)}`;
   const inner = (
     <div className={`flex items-center gap-2.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
       <TeamLogo logo={logo} name={name} size={40} className="rounded-xl" />
