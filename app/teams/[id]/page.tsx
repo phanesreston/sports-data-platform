@@ -97,8 +97,13 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         if (!teamData || teamData.error) { setNotFound(true); return; }
         setData(teamData);
         const name = teamData.team.name;
+        const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const nn = norm(name);
         setFixtures((eventsData.events as OddsEvent[]).filter(
-          (e) => e.homeTeam === name || e.awayTeam === name
+          (e) => {
+            const hn = norm(e.homeTeam), an = norm(e.awayTeam);
+            return hn === nn || an === nn || hn.includes(nn) || nn.includes(hn) || an.includes(nn) || nn.includes(an);
+          }
         ));
       })
       .catch(() => setNotFound(true))

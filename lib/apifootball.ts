@@ -30,20 +30,30 @@ export function pickBestTeam<T extends { team: { name: string } }>(
 
 /**
  * Generate progressive search variants for a team name.
- * e.g. "Brighton & Hove Albion" → ["Brighton & Hove Albion", "Brighton", "Brighton Hove Albion", "Hove", "Albion"]
+ *
+ * Uses three tiers — most-specific first — and stops at the first API hit:
+ *   1. Exact name:           "Brighton & Hove Albion"
+ *   2. &-stripped form:      "Brighton Hove Albion"
+ *   3. First word only:      "Brighton"
+ *
+ * Deliberately avoids trailing generic words like "Albion", "Wanderers",
+ * "City" etc. that would match the wrong club.
  */
 export function getTeamSearchVariants(name: string): string[] {
   const seen = new Set<string>();
   const add = (v: string) => { const t = v.trim(); if (t.length >= 3) seen.add(t); };
+
+  // Tier 1: exact
   add(name);
-  // Strip & and extra whitespace: "Brighton & Hove Albion" → "Brighton Hove Albion"
+
+  // Tier 2: strip & — "Brighton & Hove Albion" → "Brighton Hove Albion"
   const stripped = name.replace(/\s*&\s*/g, " ").replace(/\s+/g, " ").trim();
   if (stripped !== name) add(stripped);
-  // First word
-  const words = name.split(/[\s&]+/);
-  add(words[0]);
-  // Every word ≥ 4 chars
-  for (const w of words) if (w.length >= 4) add(w);
+
+  // Tier 3: first word only (most specific single-word identifier for the club)
+  const firstWord = name.split(/[\s&]+/)[0];
+  if (firstWord !== name && firstWord.length >= 4) add(firstWord);
+
   return Array.from(seen);
 }
 

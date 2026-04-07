@@ -61,6 +61,18 @@ const ODDS_API_SPORTS: Sport[] = [
   "hockey", "mma", "rugby", "afl", "basketball", "tennis",
 ];
 
+/**
+ * Fuzzy team name match: strips punctuation/spaces and checks whether
+ * either string contains the other.
+ * "Tottenham Hotspur" ↔ "Tottenham", "Brighton & Hove Albion" ↔ "Brighton" etc.
+ */
+function fuzzyTeamMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const an = norm(a), bn = norm(b);
+  return an === bn || an.includes(bn) || bn.includes(an);
+}
+
 export async function GET(req: NextRequest) {
   const sport = (req.nextUrl.searchParams.get("sport") ?? "all") as Sport | "all";
   const baseUrl = getBaseUrl(req);
@@ -93,16 +105,24 @@ export async function GET(req: NextRequest) {
       // teamLogoMap2: name → { logo, id } for ALL upcoming fixtures
       const teamLogoMap2: Record<string, { logo?: string; id?: number }> = fixturesData?.teamLogoMap ?? {};
 
-      // Build stats lookup keyed by "homeTeam__awayTeam"
+      // Build stats lookup keyed by Odds API team names (after fuzzy-matching to fixture names)
       const statsMap = new Map<
         string,
         { home: TeamStats; away: TeamStats; h2h: H2HStats }
       >();
 
-      if (fixturesData?.fixtures) {
-        for (const f of fixturesData.fixtures) {
-          const key = `${f.fixture.teams.home.name}__${f.fixture.teams.away.name}`;
-          statsMap.set(key, { home: f.homeStats, away: f.awayStats, h2h: f.h2h });
+      if (oddsData?.events?.length && fixturesData?.fixtures) {
+        for (const raw of oddsData.events.slice(0, 10)) {
+          const f = fixturesData.fixtures.find(
+            (fx) =>
+              fuzzyTeamMatch(fx.fixture.teams.home.name, raw.home_team) &&
+              fuzzyTeamMatch(fx.fixture.teams.away.name, raw.away_team)
+          );
+          if (f) {
+            // Key by the Odds API names so transformOddsApiEvent can find it
+            const key = `${raw.home_team}__${raw.away_team}`;
+            statsMap.set(key, { home: f.homeStats, away: f.awayStats, h2h: f.h2h });
+          }
         }
       }
 
@@ -111,8 +131,8 @@ export async function GET(req: NextRequest) {
         const transformed = rawSlice.map((raw) => {
           const fixtureEntry = fixturesData?.fixtures?.find(
             (f) =>
-              f.fixture.teams.home.name === raw.home_team &&
-              f.fixture.teams.away.name === raw.away_team
+              fuzzyTeamMatch(f.fixture.teams.home.name, raw.home_team) &&
+              fuzzyTeamMatch(f.fixture.teams.away.name, raw.away_team)
           );
           const marketsOverride =
             fixtureEntry?.markets?.length ? fixtureEntry.markets : undefined;

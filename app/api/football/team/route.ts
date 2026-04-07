@@ -50,23 +50,27 @@ export async function GET(req: NextRequest) {
   }
 
   // Step 1: find team
-  let teamRes: ApiTeam[] | null = null;
+  let teamEntry: ApiTeam | null = null;
 
   if (teamId) {
-    teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
+    // Fetch directly by ID — unambiguous, no name-matching needed
+    const res = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
+    teamEntry = res?.[0] ?? null;
   } else {
-    // Try progressive name variants: full name → stripped → first word → each word ≥4 chars
+    // Try progressive name variants (full → &-stripped → first word) until we get a hit,
+    // then pick the best non-youth senior match for the original name.
+    let teamRes: ApiTeam[] | null = null;
     for (const variant of getTeamSearchVariants(name!)) {
       teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: variant }, 86400));
       if (teamRes?.length) break;
     }
+    teamEntry = pickBestTeam(teamRes ?? [], name!);
   }
 
-  const best = pickBestTeam(teamRes ?? [], name ?? "");
-  if (!best) {
+  if (!teamEntry) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
-  const { team, venue } = best;
+  const { team, venue } = teamEntry;
 
   // Step 2: find which leagues the team is currently in
   const leaguesRes = unwrap(
