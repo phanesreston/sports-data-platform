@@ -52,9 +52,16 @@ export function getTeamSearchVariants(name: string): string[] {
   const stripped = name.replace(/\s*&\s*/g, " ").replace(/\s+/g, " ").trim();
   if (stripped !== name) add(stripped);
 
-  // Tier 3: first word only (most specific single-word identifier for the club)
-  const firstWord = name.split(/[\s&]+/)[0];
-  if (firstWord !== name && firstWord.length >= 4) add(firstWord);
+  // Tier 3: first two words — "West Ham United" → "West Ham", "Tottenham Hotspur" → "Tottenham Hotspur" (unchanged, only 2 words)
+  const words = name.split(/[\s&]+/).filter(Boolean);
+  if (words.length >= 3) {
+    const twoWords = words.slice(0, 2).join(" ");
+    if (twoWords !== name) add(twoWords);
+  }
+
+  // Tier 4: first word only (most specific single-word identifier for the club)
+  const firstWord = words[0];
+  if (firstWord && firstWord !== name && firstWord.length >= 4) add(firstWord);
 
   return Array.from(seen);
 }
