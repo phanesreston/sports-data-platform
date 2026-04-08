@@ -286,12 +286,13 @@ export function deriveMarketsFromOdds(
   return [{ name: "Match Result", options, bestOdds, bestBookmaker: bestBk }];
 }
 
-// ─── Placeholder stats (used when API data is unavailable) ────────────────────
+// ─── Empty stats (returned when API data is unavailable) ─────────────────────
+// Returns zeros so the UI can show "no data" rather than fake figures.
 
 export function placeholderStats(): TeamStats {
   return {
-    form: ["W", "D", "W", "L", "W"],
-    avgScored: 1.5,
-    avgConceded: 1.2,
+    form: [],
+    avgScored: 0,
+    avgConceded: 0,
   };
 }

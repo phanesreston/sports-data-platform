@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
+import { apiFetch, unwrap } from "@/lib/apifootball";
 
-// Known league IDs to try when fetching team statistics
-const LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3, 848];
+// Leagues to search when resolving a team by name.
+// Using league+season ensures we only get SENIOR clubs — no youth/reserve teams.
+const LOOKUP_LEAGUES = [
+  { id: 39,  season: 2024 }, // Premier League
+  { id: 140, season: 2024 }, // La Liga
+  { id: 135, season: 2024 }, // Serie A
+  { id: 78,  season: 2024 }, // Bundesliga
+  { id: 61,  season: 2024 }, // Ligue 1
+  { id: 2,   season: 2024 }, // UEFA Champions League
+  { id: 3,   season: 2024 }, // UEFA Europa League
+  // Fallback seasons for recently relegated/promoted clubs
+  { id: 39,  season: 2023 },
+  { id: 140, season: 2023 },
+  { id: 135, season: 2023 },
+  { id: 78,  season: 2023 },
+  { id: 61,  season: 2023 },
+];
+
+// Leagues to try for season stats (priority order)
+const STATS_LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3];
 const SEASON = 2024;
 
 interface ApiTeam {
@@ -41,6 +59,42 @@ interface ApiSquadPlayer {
   photo: string;
 }
 
+/** Strip everything except letters and digits for loose comparison */
+function norm(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Find a team by name using league rosters instead of the search endpoint.
+ * Fetching /teams?league=X&season=Y only returns the senior clubs actually
+ * registered in that league — no youth / reserve teams possible.
+ *
+ * Match priority:
+ *   1. Exact (after normalisation)
+ *   2. One name contains the other ("Wolverhampton" ↔ "Wolverhampton Wanderers")
+ */
+async function findTeamByName(name: string): Promise<ApiTeam | null> {
+  const nn = norm(name);
+
+  for (const { id, season } of LOOKUP_LEAGUES) {
+    const res = unwrap(
+      await apiFetch<ApiTeam>("/teams", { league: id, season }, 86400)
+    );
+    if (!res?.length) continue;
+
+    const exact = res.find((t) => norm(t.team.name) === nn);
+    if (exact) return exact;
+
+    const fuzzy = res.find((t) => {
+      const tn = norm(t.team.name);
+      return tn.includes(nn) || nn.includes(tn);
+    });
+    if (fuzzy) return fuzzy;
+  }
+
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const name   = req.nextUrl.searchParams.get("name");
   const teamId = req.nextUrl.searchParams.get("id");
@@ -49,22 +103,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "name or id required" }, { status: 400 });
   }
 
-  // Step 1: find team
+  // ── Step 1: resolve team entry ──────────────────────────────────────────────
   let teamEntry: ApiTeam | null = null;
 
   if (teamId) {
-    // Fetch directly by ID — unambiguous, no name-matching needed
+    // Direct ID lookup — unambiguous, no name matching needed
     const res = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
     teamEntry = res?.[0] ?? null;
   } else {
-    // Try progressive name variants (full → &-stripped → first word) until we get a hit,
-    // then pick the best non-youth senior match for the original name.
-    let teamRes: ApiTeam[] | null = null;
-    for (const variant of getTeamSearchVariants(name!)) {
-      teamRes = unwrap(await apiFetch<ApiTeam>("/teams", { search: variant }, 86400));
-      if (teamRes?.length) break;
-    }
-    teamEntry = pickBestTeam(teamRes ?? [], name!);
+    // League-roster lookup — returns only senior clubs, never U21/reserves
+    teamEntry = await findTeamByName(name!);
   }
 
   if (!teamEntry) {
@@ -72,15 +120,15 @@ export async function GET(req: NextRequest) {
   }
   const { team, venue } = teamEntry;
 
-  // Step 2: find which leagues the team is currently in
+  // ── Step 2: find which league the team is currently in ──────────────────────
   const leaguesRes = unwrap(
     await apiFetch<ApiLeagueForTeam>("/leagues", { team: team.id, current: "true" }, 3600)
   );
   const currentLeagueId =
-    leaguesRes?.find((l) => LEAGUE_PRIORITY.includes(l.league.id))?.league.id ??
+    leaguesRes?.find((l) => STATS_LEAGUE_PRIORITY.includes(l.league.id))?.league.id ??
     leaguesRes?.[0]?.league.id;
 
-  // Step 3: team statistics (parallel with squad)
+  // ── Step 3: stats + squad in parallel ───────────────────────────────────────
   const [statsRes, squadRes] = await Promise.all([
     currentLeagueId
       ? apiFetch<ApiTeamStats>("/teams/statistics", { team: team.id, league: currentLeagueId, season: SEASON }, 3600)
@@ -92,10 +140,9 @@ export async function GET(req: NextRequest) {
     ),
   ]);
 
-  const stats  = unwrap(statsRes)?.[0] ?? null;
-  const squad  = unwrap(squadRes)?.[0]?.players ?? [];
+  const stats = unwrap(statsRes)?.[0] ?? null;
+  const squad = unwrap(squadRes)?.[0]?.players ?? [];
 
-  // Group squad by position
   const grouped = {
     Goalkeepers: squad.filter((p) => p.position === "Goalkeeper"),
     Defenders:   squad.filter((p) => p.position === "Defender"),
