@@ -23,7 +23,9 @@ export function pickBestTeam<T extends { team: { name: string } }>(
           r.team.name
         )
     );
-    if (seniors.length) pool = seniors;
+    // If ALL results are youth teams and we're not querying for youth → no match
+    if (!seniors.length) return null;
+    pool = seniors;
   }
   return pool.find((r) => r.team.name.toLowerCase() === q) ?? pool[0];
 }

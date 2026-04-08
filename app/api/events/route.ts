@@ -6,11 +6,22 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
-import { apiFetch, unwrap, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
+import { apiFetch, unwrap } from "@/lib/apifootball";
 
 interface ApiTeamBasic {
   team: { id: number; name: string; logo: string };
 }
+
+// Leagues to pull full rosters from when the fixture-based logoMap is empty.
+// Fetching by league only returns senior clubs — no U21/reserve teams possible.
+const LOGO_LEAGUES = [
+  { id: 39,  season: 2024 }, // Premier League
+  { id: 140, season: 2024 }, // La Liga
+  { id: 135, season: 2024 }, // Serie A
+  { id: 78,  season: 2024 }, // Bundesliga
+  { id: 61,  season: 2024 }, // Ligue 1
+  { id: 2,   season: 2024 }, // Champions League
+];
 
 /**
  * Fuzzy logo lookup: tries exact match first, then checks whether either
@@ -30,37 +41,48 @@ function dataFromMap(
   return undefined;
 }
 
+const _norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
 /**
- * Fetch logo + numeric ID for team names we couldn't match from the fixture map.
- * Tries progressive name variants (full → first word → each word ≥4 chars),
- * filters out youth/reserve results, and caches 24 h.
+ * Resolve logos + IDs for team names not found in the fixture-based logoMap.
+ * Fetches full league rosters (6 calls, cached 24 h each) instead of making
+ * one search call per team — avoids rate-limiting and never returns youth teams.
  */
 async function fetchMissingTeamData(
   names: string[]
 ): Promise<Record<string, { logo?: string; id?: number }>> {
-  console.log(`[events] fetchMissingTeamData for: ${names.join(", ")}`);
-  const results = await Promise.all(
-    names.map(async (name) => {
-      let best: { team: { id: number; name: string; logo: string } } | null = null;
-      for (const variant of getTeamSearchVariants(name)) {
-        console.log(`[events]   searching variant "${variant}" for "${name}"`);
-        const res = unwrap(
-          await apiFetch<ApiTeamBasic>("/teams", { search: variant }, 86400)
-        );
-        console.log(`[events]   → ${res?.length ?? 0} result(s): ${res?.map(r => r.team.name).join(", ") || "none"}`);
-        best = pickBestTeam(res ?? [], name);
-        if (best) {
-          console.log(`[events]   → picked: "${best.team.name}" (id ${best.team.id})`);
-          break;
-        }
-      }
-      if (!best) console.warn(`[events]   ✗ could not resolve "${name}"`);
-      return best ? { name, logo: best.team.logo, id: best.team.id } : null;
-    })
-  );
-  const map: Record<string, { logo?: string; id?: number }> = {};
-  for (const r of results) if (r) map[r.name] = { logo: r.logo, id: r.id };
-  return map;
+  console.log(`[events] fetchMissingTeamData: resolving ${names.length} teams via league rosters`);
+
+  // Collect all senior teams from configured leagues (each cached 24 h)
+  const allTeams: Array<{ team: { id: number; name: string; logo: string } }> = [];
+  for (const { id, season } of LOGO_LEAGUES) {
+    const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { league: id, season }, 86400));
+    console.log(`[events]   league ${id}/${season}: ${res?.length ?? 0} teams`);
+    if (res) allTeams.push(...res);
+  }
+  console.log(`[events]   total league teams loaded: ${allTeams.length}`);
+
+  const result: Record<string, { logo?: string; id?: number }> = {};
+  for (const name of names) {
+    const nn = _norm(name);
+    const exact = allTeams.find(t => _norm(t.team.name) === nn);
+    if (exact) {
+      result[name] = { logo: exact.team.logo, id: exact.team.id };
+      console.log(`[events]   ✓ exact: "${name}" → "${exact.team.name}" (id ${exact.team.id})`);
+      continue;
+    }
+    const fuzzy = allTeams.find(t => {
+      const tn = _norm(t.team.name);
+      return tn.includes(nn) || nn.includes(tn);
+    });
+    if (fuzzy) {
+      result[name] = { logo: fuzzy.team.logo, id: fuzzy.team.id };
+      console.log(`[events]   ~ fuzzy: "${name}" → "${fuzzy.team.name}" (id ${fuzzy.team.id})`);
+    } else {
+      console.warn(`[events]   ✗ no match for "${name}"`);
+    }
+  }
+  return result;
 }
 
 // Sports covered by The Odds API
