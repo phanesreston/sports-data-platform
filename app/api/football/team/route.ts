@@ -75,23 +75,36 @@ function norm(s: string): string {
  */
 async function findTeamByName(name: string): Promise<ApiTeam | null> {
   const nn = norm(name);
+  console.log(`\n[team] findTeamByName("${name}") normalisedQuery="${nn}"`);
 
   for (const { id, season } of LOOKUP_LEAGUES) {
     const res = unwrap(
       await apiFetch<ApiTeam>("/teams", { league: id, season }, 86400)
     );
-    if (!res?.length) continue;
+    if (!res?.length) {
+      console.log(`[team]   league ${id}/${season}: no teams returned`);
+      continue;
+    }
+
+    console.log(`[team]   league ${id}/${season}: ${res.length} teams — checking for "${name}"`);
 
     const exact = res.find((t) => norm(t.team.name) === nn);
-    if (exact) return exact;
+    if (exact) {
+      console.log(`[team]   ✓ exact match: "${exact.team.name}" (id ${exact.team.id}) in league ${id}`);
+      return exact;
+    }
 
     const fuzzy = res.find((t) => {
       const tn = norm(t.team.name);
       return tn.includes(nn) || nn.includes(tn);
     });
-    if (fuzzy) return fuzzy;
+    if (fuzzy) {
+      console.log(`[team]   ~ fuzzy match: "${fuzzy.team.name}" (id ${fuzzy.team.id}) in league ${id} for query "${name}"`);
+      return fuzzy;
+    }
   }
 
+  console.warn(`[team]   ✗ no match found for "${name}" in any configured league`);
   return null;
 }
 
@@ -103,30 +116,37 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "name or id required" }, { status: 400 });
   }
 
+  console.log(`\n[team] GET request — name="${name}" id="${teamId}"`);
+
   // ── Step 1: resolve team entry ──────────────────────────────────────────────
   let teamEntry: ApiTeam | null = null;
 
   if (teamId) {
-    // Direct ID lookup — unambiguous, no name matching needed
+    console.log(`[team] looking up by id: ${teamId}`);
     const res = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
     teamEntry = res?.[0] ?? null;
+    console.log(`[team] id lookup result: ${teamEntry ? `"${teamEntry.team.name}" (id ${teamEntry.team.id})` : "✗ not found"}`);
   } else {
     // League-roster lookup — returns only senior clubs, never U21/reserves
     teamEntry = await findTeamByName(name!);
   }
 
   if (!teamEntry) {
+    console.warn(`[team] ✗ returning 404 for name="${name}" id="${teamId}"`);
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
   const { team, venue } = teamEntry;
+  console.log(`[team] resolved: "${team.name}" (id ${team.id})`);
 
   // ── Step 2: find which league the team is currently in ──────────────────────
   const leaguesRes = unwrap(
     await apiFetch<ApiLeagueForTeam>("/leagues", { team: team.id, current: "true" }, 3600)
   );
+  console.log(`[team] leagues for team ${team.id}: ${leaguesRes?.map(l => `${l.league.name}(${l.league.id})`).join(", ") || "none"}`);
   const currentLeagueId =
     leaguesRes?.find((l) => STATS_LEAGUE_PRIORITY.includes(l.league.id))?.league.id ??
     leaguesRes?.[0]?.league.id;
+  console.log(`[team] using league ${currentLeagueId} for stats`);
 
   // ── Step 3: stats + squad in parallel ───────────────────────────────────────
   const [statsRes, squadRes] = await Promise.all([
@@ -142,6 +162,8 @@ export async function GET(req: NextRequest) {
 
   const stats = unwrap(statsRes)?.[0] ?? null;
   const squad = unwrap(squadRes)?.[0]?.players ?? [];
+  console.log(`[team] stats: ${stats ? "✓" : "✗ missing"}  squad: ${squad.length} players`);
+  console.log(`[team] ── DONE returning "${team.name}" ──\n`);
 
   const grouped = {
     Goalkeepers: squad.filter((p) => p.position === "Goalkeeper"),
