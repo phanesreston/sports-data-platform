@@ -29,7 +29,8 @@ const FOOTBALL_LEAGUES = [
 
 async function apiFetch<T>(
   path: string,
-  params: Record<string, string | number>
+  params: Record<string, string | number>,
+  revalidate = 300
 ): Promise<ApiFootballResponse<T> | null> {
   const key = process.env.API_SPORTS_KEY;
   if (!key) return null;
@@ -40,7 +41,7 @@ async function apiFetch<T>(
   try {
     const res = await fetch(url.toString(), {
       headers: { "x-apisports-key": key },
-      next: { revalidate: 300 }, // 5 min cache
+      next: { revalidate },
     });
 
     if (!res.ok) {
@@ -59,6 +60,12 @@ async function apiFetch<T>(
     console.error(`[API-Football] fetch error on ${path}:`, err);
     return null;
   }
+}
+
+// Minimal team shape returned by /teams?league=X&season=Y
+interface ApiLeagueTeam {
+  team:  { id: number; name: string; logo: string };
+  venue: { id: number; name: string; city: string };
 }
 
 export interface FixtureWithStats {
@@ -88,6 +95,24 @@ export async function GET(req: NextRequest) {
   // Date range: today → 7 days ahead (free plan doesn't support `next` param)
   const today    = new Date().toISOString().split("T")[0];
   const nextWeek = new Date(Date.now() + 7 * 86_400_000).toISOString().split("T")[0];
+
+  // Pre-seed teamLogoMap from full league team lists (exact API names + IDs).
+  // Cached 24 h — one call per league per day. This ensures all 20 PL teams
+  // (etc.) are in the map even if they have no fixture in the next 7 days.
+  for (const league of leagues) {
+    const teamsJson = await apiFetch<ApiLeagueTeam>("/teams", {
+      league:  league.id,
+      season:  league.season,
+    }, 86400);
+    const leagueTeams = unwrapApiFootball(teamsJson ?? ({} as ApiFootballResponse<ApiLeagueTeam>));
+    if (leagueTeams) {
+      for (const t of leagueTeams) {
+        if (t.team.logo) {
+          teamLogoMap[t.team.name] = { logo: t.team.logo, id: t.team.id };
+        }
+      }
+    }
+  }
 
   for (const league of leagues) {
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
