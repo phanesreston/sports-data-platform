@@ -104,6 +104,25 @@ async function findTeamByName(name: string): Promise<ApiTeam | null> {
     }
   }
 
+  // Alias fallback: some clubs are stored under a nickname in API-Football
+  const alias = TEAM_NAME_ALIASES[name];
+  if (alias) {
+    const an = norm(alias);
+    console.log(`[team]   trying alias "${alias}" (norm="${an}") for "${name}"`);
+    for (const { id, season } of LOOKUP_LEAGUES) {
+      const res = unwrap(await apiFetch<ApiTeam>("/teams", { league: id, season }, 86400));
+      if (!res?.length) continue;
+      const match = res.find((t) => {
+        const tn = norm(t.team.name);
+        return tn === an || tn.includes(an) || an.includes(tn);
+      });
+      if (match) {
+        console.log(`[team]   ✓ alias match: "${match.team.name}" (id ${match.team.id}) via alias "${alias}"`);
+        return match;
+      }
+    }
+  }
+
   console.warn(`[team]   ✗ no match found for "${name}" in any configured league`);
   return null;
 }
