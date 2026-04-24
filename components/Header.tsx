@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { Menu, X, Zap, Search, ChevronDown } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
 
@@ -11,7 +11,7 @@ const MORE_BTN_PX = 92;
 
 const SPORT_TABS = [
   { value: "all",               label: "All Sports",   emoji: "🏆", href: "/" },
-  { value: "football",          label: "Football",     emoji: "⚽", href: "/?sport=football" },
+  { value: "football",          label: "Football",     emoji: "⚽", href: "/football" },
   { value: "nba",               label: "NBA",          emoji: "🏀", href: "/?sport=nba" },
   { value: "american_football", label: "NFL & NCAA",   emoji: "🏈", href: "/?sport=american_football" },
   { value: "formula1",          label: "Formula 1",   emoji: "🏎️", href: "/?sport=formula1" },
@@ -35,7 +35,10 @@ const navLinks = [
 
 function SportTabs() {
   const searchParams = useSearchParams();
-  const activeSport = searchParams.get("sport") ?? "all";
+  const pathname = usePathname();
+  const activeSport = pathname.startsWith("/football")
+    ? "football"
+    : (searchParams.get("sport") ?? "all");
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const [overflowStart, setOverflowStart] = useState(SPORT_TABS.length);
