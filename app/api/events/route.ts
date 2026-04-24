@@ -6,22 +6,11 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
-import { apiFetch, unwrap, TEAM_NAME_ALIASES } from "@/lib/apifootball";
+import { apiFetch, unwrap, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
 
 interface ApiTeamBasic {
   team: { id: number; name: string; logo: string };
 }
-
-// Leagues to pull full rosters from when the fixture-based logoMap is empty.
-// Fetching by league only returns senior clubs — no U21/reserve teams possible.
-const LOGO_LEAGUES = [
-  { id: 39,  season: 2024 }, // Premier League
-  { id: 140, season: 2024 }, // La Liga
-  { id: 135, season: 2024 }, // Serie A
-  { id: 78,  season: 2024 }, // Bundesliga
-  { id: 61,  season: 2024 }, // Ligue 1
-  { id: 2,   season: 2024 }, // Champions League
-];
 
 /**
  * Fuzzy logo lookup: tries exact match first, then checks whether either
@@ -51,60 +40,40 @@ function dataFromMap(
   return undefined;
 }
 
-const _norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-
 /**
  * Resolve logos + IDs for team names not found in the fixture-based logoMap.
- * Fetches full league rosters (6 calls, cached 24 h each) instead of making
- * one search call per team — avoids rate-limiting and never returns youth teams.
+ * Uses /teams?name=X (same approach as the team route) with alias + progressive
+ * variant fallback. Results cached 1 h each so subsequent requests are instant.
  */
 async function fetchMissingTeamData(
   names: string[]
 ): Promise<Record<string, { logo?: string; id?: number }>> {
-  console.log(`[events] fetchMissingTeamData: resolving ${names.length} teams via league rosters`);
-
-  // Collect all senior teams from configured leagues (each cached 24 h)
-  const allTeams: Array<{ team: { id: number; name: string; logo: string } }> = [];
-  for (const { id, season } of LOGO_LEAGUES) {
-    const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { league: id, season }, 86400));
-    console.log(`[events]   league ${id}/${season}: ${res?.length ?? 0} teams`);
-    if (res) allTeams.push(...res);
-  }
-  console.log(`[events]   total league teams loaded: ${allTeams.length}`);
+  console.log(`[events] fetchMissingTeamData: resolving ${names.length} teams via /teams?name=X`);
 
   const result: Record<string, { logo?: string; id?: number }> = {};
   for (const name of names) {
-    const nn = _norm(name);
-    const exact = allTeams.find(t => _norm(t.team.name) === nn);
-    if (exact) {
-      result[name] = { logo: exact.team.logo, id: exact.team.id };
-      console.log(`[events]   ✓ exact: "${name}" → "${exact.team.name}" (id ${exact.team.id})`);
-      continue;
-    }
-    const fuzzy = allTeams.find(t => {
-      const tn = _norm(t.team.name);
-      return tn.includes(nn) || nn.includes(tn);
-    });
-    if (fuzzy) {
-      result[name] = { logo: fuzzy.team.logo, id: fuzzy.team.id };
-      console.log(`[events]   ~ fuzzy: "${name}" → "${fuzzy.team.name}" (id ${fuzzy.team.id})`);
-      continue;
-    }
-    // Try alias (e.g. "Wolverhampton Wanderers" → "Wolves")
     const alias = TEAM_NAME_ALIASES[name];
-    if (alias) {
-      const an = _norm(alias);
-      const aliasMatch = allTeams.find(t => {
-        const tn = _norm(t.team.name);
-        return tn === an || tn.includes(an) || an.includes(tn);
-      });
-      if (aliasMatch) {
-        result[name] = { logo: aliasMatch.team.logo, id: aliasMatch.team.id };
-        console.log(`[events]   ✓ alias: "${name}" → "${alias}" → "${aliasMatch.team.name}" (id ${aliasMatch.team.id})`);
-        continue;
-      }
+    const variants: string[] = [];
+    if (alias) variants.push(alias);
+    for (const v of getTeamSearchVariants(name)) {
+      if (!variants.includes(v)) variants.push(v);
     }
-    console.warn(`[events]   ✗ no match for "${name}"`);
+
+    let found = false;
+    for (const variant of variants) {
+      console.log(`[events]   GET /teams?name="${variant}" for "${name}"`);
+      const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { name: variant }, 3600));
+      if (!res?.length) { console.log(`[events]   no results`); continue; }
+      const match = pickBestTeam(res, name);
+      if (match) {
+        result[name] = { logo: match.team.logo, id: match.team.id };
+        console.log(`[events]   ✓ "${match.team.name}" (id ${match.team.id}) via "${variant}"`);
+        found = true;
+        break;
+      }
+      console.log(`[events]   all results were youth/reserve teams`);
+    }
+    if (!found) console.warn(`[events]   ✗ no match for "${name}"`);
   }
   return result;
 }
