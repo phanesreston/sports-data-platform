@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, TEAM_NAME_ALIASES } from "@/lib/apifootball";
+import { apiFetch, unwrap, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
 
-// Leagues to search when resolving a team by name.
-// Using league+season ensures we only get SENIOR clubs — no youth/reserve teams.
-const LOOKUP_LEAGUES = [
-  { id: 39,  season: 2024 }, // Premier League
-  { id: 140, season: 2024 }, // La Liga
-  { id: 135, season: 2024 }, // Serie A
-  { id: 78,  season: 2024 }, // Bundesliga
-  { id: 61,  season: 2024 }, // Ligue 1
-  { id: 2,   season: 2024 }, // UEFA Champions League
-  { id: 3,   season: 2024 }, // UEFA Europa League
-  // Fallback seasons for recently relegated/promoted clubs
-  { id: 39,  season: 2023 },
-  { id: 140, season: 2023 },
-  { id: 135, season: 2023 },
-  { id: 78,  season: 2023 },
-  { id: 61,  season: 2023 },
-];
 
 // Leagues to try for season stats (priority order)
 const STATS_LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3];
@@ -59,71 +42,39 @@ interface ApiSquadPlayer {
   photo: string;
 }
 
-/** Strip everything except letters and digits for loose comparison */
-function norm(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 /**
- * Find a team by name using league rosters instead of the search endpoint.
- * Fetching /teams?league=X&season=Y only returns the senior clubs actually
- * registered in that league — no youth / reserve teams possible.
- *
- * Match priority:
- *   1. Exact (after normalisation)
- *   2. One name contains the other ("Wolverhampton" ↔ "Wolverhampton Wanderers")
+ * Find a team using /teams?name=X (direct name search).
+ * Try the alias first (e.g. "Wolves" for "Wolverhampton Wanderers"), then
+ * progressive variants of the full name. pickBestTeam filters youth/reserve
+ * clubs from results so we always get the senior side.
  */
 async function findTeamByName(name: string): Promise<ApiTeam | null> {
-  const nn = norm(name);
-  console.log(`\n[team] findTeamByName("${name}") normalisedQuery="${nn}"`);
+  console.log(`\n[team] findTeamByName("${name}")`);
 
-  for (const { id, season } of LOOKUP_LEAGUES) {
-    const res = unwrap(
-      await apiFetch<ApiTeam>("/teams", { league: id, season }, 86400)
-    );
+  // Alias first, then progressive name variants
+  const alias = TEAM_NAME_ALIASES[name];
+  const variants: string[] = [];
+  if (alias) variants.push(alias);
+  for (const v of getTeamSearchVariants(name)) {
+    if (!variants.includes(v)) variants.push(v);
+  }
+
+  for (const variant of variants) {
+    console.log(`[team]   GET /teams?name="${variant}"`);
+    const res = unwrap(await apiFetch<ApiTeam>("/teams", { name: variant }, 3600));
     if (!res?.length) {
-      console.log(`[team]   league ${id}/${season}: no teams returned`);
+      console.log(`[team]   no results`);
       continue;
     }
-
-    console.log(`[team]   league ${id}/${season}: ${res.length} teams — checking for "${name}"`);
-
-    const exact = res.find((t) => norm(t.team.name) === nn);
-    if (exact) {
-      console.log(`[team]   ✓ exact match: "${exact.team.name}" (id ${exact.team.id}) in league ${id}`);
-      return exact;
+    const match = pickBestTeam(res, name);
+    if (match) {
+      console.log(`[team]   ✓ "${match.team.name}" (id ${match.team.id}) via search "${variant}"`);
+      return match;
     }
-
-    const fuzzy = res.find((t) => {
-      const tn = norm(t.team.name);
-      return tn.includes(nn) || nn.includes(tn);
-    });
-    if (fuzzy) {
-      console.log(`[team]   ~ fuzzy match: "${fuzzy.team.name}" (id ${fuzzy.team.id}) in league ${id} for query "${name}"`);
-      return fuzzy;
-    }
+    console.log(`[team]   all results were youth/reserve teams`);
   }
 
-  // Alias fallback: some clubs are stored under a nickname in API-Football
-  const alias = TEAM_NAME_ALIASES[name];
-  if (alias) {
-    const an = norm(alias);
-    console.log(`[team]   trying alias "${alias}" (norm="${an}") for "${name}"`);
-    for (const { id, season } of LOOKUP_LEAGUES) {
-      const res = unwrap(await apiFetch<ApiTeam>("/teams", { league: id, season }, 86400));
-      if (!res?.length) continue;
-      const match = res.find((t) => {
-        const tn = norm(t.team.name);
-        return tn === an || tn.includes(an) || an.includes(tn);
-      });
-      if (match) {
-        console.log(`[team]   ✓ alias match: "${match.team.name}" (id ${match.team.id}) via alias "${alias}"`);
-        return match;
-      }
-    }
-  }
-
-  console.warn(`[team]   ✗ no match found for "${name}" in any configured league`);
+  console.warn(`[team]   ✗ no match found for "${name}"`);
   return null;
 }
 
