@@ -2,6 +2,12 @@ import type { ApiFootballResponse } from "./types";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
+// Maps Odds API / user-facing team names to the name API-Football stores them
+// under when no substring overlap exists. Add entries as mismatches appear in logs.
+export const TEAM_NAME_ALIASES: Record<string, string> = {
+  "Wolverhampton Wanderers": "Wolves",
+};
+
 /**
  * From a list of API-Football team results, pick the best match for `query`.
  * Filters out youth/reserve teams when the query is for a senior club.

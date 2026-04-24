@@ -6,7 +6,7 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, TEAM_NAME_ALIASES } from "@/lib/apifootball";
 
 interface ApiTeamBasic {
   team: { id: number; name: string; logo: string };
@@ -37,6 +37,16 @@ function dataFromMap(
   for (const [key, val] of Object.entries(map)) {
     const k = key.toLowerCase();
     if (k.includes(lower) || lower.includes(k)) return { ...val, matchedKey: key };
+  }
+  // Try the API-Football nickname when no substring overlap exists (e.g. "Wolverhampton Wanderers" → "Wolves")
+  const alias = TEAM_NAME_ALIASES[name];
+  if (alias) {
+    if (map[alias]) return { ...map[alias], matchedKey: alias };
+    const al = alias.toLowerCase();
+    for (const [key, val] of Object.entries(map)) {
+      const k = key.toLowerCase();
+      if (k.includes(al) || al.includes(k)) return { ...val, matchedKey: key };
+    }
   }
   return undefined;
 }
@@ -78,9 +88,23 @@ async function fetchMissingTeamData(
     if (fuzzy) {
       result[name] = { logo: fuzzy.team.logo, id: fuzzy.team.id };
       console.log(`[events]   ~ fuzzy: "${name}" → "${fuzzy.team.name}" (id ${fuzzy.team.id})`);
-    } else {
-      console.warn(`[events]   ✗ no match for "${name}"`);
+      continue;
     }
+    // Try alias (e.g. "Wolverhampton Wanderers" → "Wolves")
+    const alias = TEAM_NAME_ALIASES[name];
+    if (alias) {
+      const an = _norm(alias);
+      const aliasMatch = allTeams.find(t => {
+        const tn = _norm(t.team.name);
+        return tn === an || tn.includes(an) || an.includes(tn);
+      });
+      if (aliasMatch) {
+        result[name] = { logo: aliasMatch.team.logo, id: aliasMatch.team.id };
+        console.log(`[events]   ✓ alias: "${name}" → "${alias}" → "${aliasMatch.team.name}" (id ${aliasMatch.team.id})`);
+        continue;
+      }
+    }
+    console.warn(`[events]   ✗ no match for "${name}"`);
   }
   return result;
 }

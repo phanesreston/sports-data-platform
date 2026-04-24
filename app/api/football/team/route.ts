@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, TEAM_NAME_ALIASES } from "@/lib/apifootball";
 
 // Leagues to search when resolving a team by name.
 // Using league+season ensures we only get SENIOR clubs — no youth/reserve teams.
