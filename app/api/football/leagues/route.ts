@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { apiFetch, unwrap } from "@/lib/apifootball";
 
 const SEASON = 2024;
 
-const TOP_LEAGUES = [
+export const TOP_LEAGUES = [
   { id: 39,  name: "Premier League", country: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
   { id: 140, name: "La Liga",         country: "Spain",   flag: "🇪🇸" },
   { id: 135, name: "Serie A",         country: "Italy",   flag: "🇮🇹" },
@@ -17,24 +17,30 @@ interface ApiLeagueInfo {
   seasons: { year: number; current: boolean }[];
 }
 
-export async function GET() {
-  const results = await Promise.all(
-    TOP_LEAGUES.map(({ id }) =>
-      apiFetch<ApiLeagueInfo>("/leagues", { id, season: SEASON }, 86400)
-    )
-  );
+async function fetchLeagueInfo(id: number) {
+  const meta = TOP_LEAGUES.find((l) => l.id === id);
+  const res = unwrap(await apiFetch<ApiLeagueInfo>("/leagues", { id, season: SEASON }, 86400));
+  const info = res?.[0];
+  return {
+    id,
+    name:    meta?.name    ?? info?.league.name    ?? String(id),
+    country: meta?.country ?? info?.country.name   ?? "",
+    flag:    meta?.flag    ?? "",
+    logo:    info?.league.logo ?? "",
+    season:  SEASON,
+  };
+}
 
-  const leagues = TOP_LEAGUES.map((meta, i) => {
-    const info = unwrap(results[i])?.[0];
-    return {
-      id:      meta.id,
-      name:    meta.name,
-      country: meta.country,
-      flag:    meta.flag,
-      logo:    info?.league.logo ?? "",
-      season:  SEASON,
-    };
-  });
+export async function GET(req: NextRequest) {
+  const idParam = req.nextUrl.searchParams.get("id");
 
+  // Single league lookup
+  if (idParam) {
+    const league = await fetchLeagueInfo(Number(idParam));
+    return NextResponse.json({ league });
+  }
+
+  // All top leagues
+  const leagues = await Promise.all(TOP_LEAGUES.map((l) => fetchLeagueInfo(l.id)));
   return NextResponse.json({ leagues });
 }
