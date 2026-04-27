@@ -1,12 +1,29 @@
 "use client";
 
-import Image from "next/image";  // still used for league logo
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, TrendingUp } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 import { getLeagueHref } from "@/data/sampleLeagues";
 import TeamLogo from "@/components/TeamLogo";
+
+function getTopPick(event: OddsEvent) {
+  return event.markets
+    .flatMap((m) => m.options.filter((o) => o.pick))
+    .sort((a, b) => b.probability - a.probability)[0] ?? null;
+}
+
+function getMatchProbabilities(event: OddsEvent) {
+  const m = event.markets.find((m) =>
+    m.name.toLowerCase().includes("result") || m.name.toLowerCase().includes("winner")
+  );
+  if (!m) return null;
+  const o = m.options;
+  if (o.length === 3) return { home: o[0].probability, draw: o[1].probability, away: o[2].probability };
+  if (o.length === 2) return { home: o[0].probability, draw: null, away: o[1].probability };
+  return null;
+}
 
 const SPORT_STYLES: Record<
   string,
@@ -84,6 +101,13 @@ export default function PredictionCard({ event }: PredictionCardProps) {
   const router = useRouter();
   const style = SPORT_STYLES[event.sport] ?? SPORT_STYLES.football;
   const timeUntil = formatKickoff(event.commenceTime);
+  const topPick = getTopPick(event);
+  const probs = getMatchProbabilities(event);
+  const signalColor = topPick
+    ? topPick.probability >= 70 ? "text-accent-green"
+    : topPick.probability >= 58 ? "text-blue-400"
+    : "text-amber-400"
+    : "text-slate-500";
 
   return (
     <article
@@ -145,6 +169,35 @@ export default function PredictionCard({ event }: PredictionCardProps) {
           <FormDots form={event.awayStats.form} />
         </div>
       </div>
+
+      {/* Analytics footer */}
+      {(probs || topPick) && (
+        <div className="mt-3 border-t border-bg-border pt-3 space-y-2">
+          {probs && (
+            <div>
+              <div className="flex overflow-hidden rounded-full">
+                <div className="h-1.5 bg-accent-green" style={{ width: `${probs.home}%` }} />
+                {probs.draw !== null && (
+                  <div className="h-1.5 bg-slate-600" style={{ width: `${probs.draw}%` }} />
+                )}
+                <div className="h-1.5 bg-slate-500" style={{ width: `${probs.away ?? 100 - probs.home}%` }} />
+              </div>
+              <div className="mt-0.5 flex justify-between text-[9px] text-slate-600">
+                <span>{probs.home}%H</span>
+                {probs.draw !== null && <span>{probs.draw}%D</span>}
+                <span>{probs.away ?? 100 - probs.home}%A</span>
+              </div>
+            </div>
+          )}
+          {topPick && (
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className={`h-3 w-3 shrink-0 ${signalColor}`} />
+              <span className="text-[10px] text-slate-500">{topPick.label}</span>
+              <span className={`text-[10px] font-bold ${signalColor}`}>{topPick.probability}%</span>
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 }
