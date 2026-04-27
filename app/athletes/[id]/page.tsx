@@ -49,20 +49,25 @@ function StatBox({ label, value }: { label: string; value: string | number | nul
 }
 
 export default function AthletePage({ params }: { params: { id: string } }) {
-  const [data, setData]       = useState<PlayerData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [data, setData]           = useState<PlayerData | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [notFound, setNotFound]   = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
 
   useEffect(() => {
     fetch(`/api/football/player?id=${params.id}`)
-      .then((r) => r.ok ? r.json() : null)
+      .then(async (r) => {
+        if (r.status === 429) { setRateLimited(true); return null; }
+        return r.ok ? r.json() : null;
+      })
       .then((json) => {
-        if (!json || json.error) { setNotFound(true); return; }
+        if (!json) { if (!rateLimited) setNotFound(true); return; }
+        if (json.error) { setNotFound(true); return; }
         setData(json.player);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [params.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Primary stat block = first competition with league data
   const primaryStats = data?.statistics?.[0] ?? null;
@@ -96,6 +101,17 @@ export default function AthletePage({ params }: { params: { id: string } }) {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
               </div>
+            </div>
+          )}
+
+          {!loading && rateLimited && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-20 text-center shadow-sm">
+              <User className="mb-3 h-12 w-12 text-gray-200" />
+              <p className="font-semibold text-gray-700">Too many requests</p>
+              <p className="mt-1 text-sm text-gray-400">The data API is busy — please wait a moment and refresh.</p>
+              <button onClick={() => window.location.reload()} className="mt-4 text-sm font-semibold text-accent-green hover:underline">
+                Refresh
+              </button>
             </div>
           )}
 

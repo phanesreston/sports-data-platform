@@ -116,3 +116,9 @@ export function unwrap<T>(res: ApiFootballResponse<T> | null): T[] | null {
   }
   return res.response?.length ? res.response : null;
 }
+
+export function isRateLimited(res: ApiFootballResponse<unknown> | null): boolean {
+  if (!res?.errors) return false;
+  const s = JSON.stringify(res.errors).toLowerCase();
+  return s.includes("ratelimit") || s.includes("rate limit") || s.includes("too many");
+}

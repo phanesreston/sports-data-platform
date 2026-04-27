@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
-
-const SEASON = 2024;
+import { apiFetch, unwrap, isRateLimited } from "@/lib/apifootball";
 
 export interface ApiPlayerFull {
   player: {
@@ -36,16 +34,30 @@ export interface ApiPlayerFull {
   }[];
 }
 
-export async function GET(req: NextRequest) {
-  const id     = req.nextUrl.searchParams.get("id");
-  const season = req.nextUrl.searchParams.get("season") ?? String(SEASON);
+const SEASONS = [2024, 2023, 2022];
 
+export async function GET(req: NextRequest) {
+  const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  const res = unwrap(await apiFetch<ApiPlayerFull>("/players", { id, season }, 3600));
-  if (!res?.length) {
-    return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  for (const season of SEASONS) {
+    // Short revalidate (60s) so rate-limit errors are never cached for long
+    const raw = await apiFetch<ApiPlayerFull>("/players", { id, season }, 60);
+
+    if (isRateLimited(raw)) {
+      console.warn(`[player] rate limited fetching player ${id} season ${season}`);
+      return NextResponse.json({ error: "Rate limited — try again in a moment" }, { status: 429 });
+    }
+
+    const res = unwrap(raw);
+    if (res?.length) {
+      console.log(`[player] found player ${id} in season ${season}`);
+      return NextResponse.json({ player: res[0] });
+    }
+
+    console.log(`[player] no data for player ${id} season ${season}, trying next`);
   }
 
-  return NextResponse.json({ player: res[0] });
+  console.warn(`[player] player ${id} not found in any season`);
+  return NextResponse.json({ error: "Player not found" }, { status: 404 });
 }
