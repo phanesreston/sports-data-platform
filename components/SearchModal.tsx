@@ -9,11 +9,11 @@ import TeamLogo from "@/components/TeamLogo";
 import PlayerPhoto from "@/components/PlayerPhoto";
 
 const SPORT_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50" },
-  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50" },
-  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50" },
-  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50" },
-  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50" },
+  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-500/10" },
+  tennis:            { label: "Tennis",     color: "text-amber-400",   bg: "bg-amber-500/10" },
+  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-500/10" },
+  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-500/10" },
 };
 
 interface EventResult {
@@ -199,9 +199,9 @@ export default function SearchModal({ onClose }: Props) {
         {/* Input */}
         <div className="flex items-center gap-3 border-b border-bg-border px-4 py-3">
           {searching ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-500" />
           ) : (
-            <Search className="h-4 w-4 shrink-0 text-gray-400" />
+            <Search className="h-4 w-4 shrink-0 text-slate-500" />
           )}
           <input
             ref={inputRef}
@@ -209,27 +209,27 @@ export default function SearchModal({ onClose }: Props) {
             placeholder="Search teams, players, fixtures…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
           />
           {query ? (
-            <button onClick={() => { setQuery(""); setApiTeams([]); setApiPlayers([]); }} className="text-gray-400 transition-colors hover:text-gray-600">
+            <button onClick={() => { setQuery(""); setApiTeams([]); setApiPlayers([]); }} className="text-slate-500 transition-colors hover:text-slate-400">
               <X className="h-4 w-4" />
             </button>
           ) : null}
-          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-gray-400 sm:inline">esc</kbd>
+          <kbd className="hidden rounded border border-bg-border px-2 py-0.5 text-[10px] text-slate-500 sm:inline">esc</kbd>
         </div>
 
         {/* Results */}
         <div className="max-h-[60vh] overflow-y-auto">
           {query.length < 2 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Search className="h-7 w-7 text-gray-300" />
-              <p className="text-sm text-gray-400">Search teams, players and fixtures</p>
+              <Search className="h-7 w-7 text-slate-600" />
+              <p className="text-sm text-slate-500">Search teams, players and fixtures</p>
             </div>
           ) : showEmpty ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-gray-400">
-                No results for <span className="text-gray-800">&ldquo;{query}&rdquo;</span>
+              <p className="text-sm text-slate-500">
+                No results for <span className="text-white">&ldquo;{query}&rdquo;</span>
               </p>
             </div>
           ) : (
@@ -239,8 +239,8 @@ export default function SearchModal({ onClose }: Props) {
                 return (
                   <div key={key} className="mb-1">
                     <div className="flex items-center gap-2 px-3 py-1.5">
-                      <Icon className="h-3 w-3 text-gray-400" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</span>
+                      <Icon className="h-3 w-3 text-slate-500" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</span>
                     </div>
                     {items.map((result) => {
                       const idx      = flat.indexOf(result);
@@ -257,11 +257,11 @@ export default function SearchModal({ onClose }: Props) {
                         >
                           <ResultIcon result={result} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-gray-800">{result.title}</p>
-                            <p className="truncate text-xs text-gray-400">{result.subtitle}</p>
+                            <p className="truncate text-sm font-semibold text-white">{result.title}</p>
+                            <p className="truncate text-xs text-slate-500">{result.subtitle}</p>
                           </div>
                           {isActive && (
-                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-gray-400">↵</kbd>
+                            <kbd className="shrink-0 rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-slate-500">↵</kbd>
                           )}
                         </Link>
                       );
@@ -275,7 +275,7 @@ export default function SearchModal({ onClose }: Props) {
 
         {/* Footer */}
         {flat.length > 0 && (
-          <div className="flex items-center gap-4 border-t border-bg-border px-4 py-2 text-[10px] text-gray-400">
+          <div className="flex items-center gap-4 border-t border-bg-border px-4 py-2 text-[10px] text-slate-500">
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↑↓</kbd> navigate</span>
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">↵</kbd> open</span>
             <span><kbd className="rounded bg-bg-border px-1 py-0.5">esc</kbd> close</span>

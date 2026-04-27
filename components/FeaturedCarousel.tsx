@@ -9,11 +9,11 @@ import { Clock, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string; glow: string }> = {
-  football:          { label: "Football",   color: "text-emerald-700", bg: "bg-emerald-50", glow: "from-emerald-50" },
-  basketball:        { label: "Basketball", color: "text-orange-700",  bg: "bg-orange-50",  glow: "from-orange-50"  },
-  tennis:            { label: "Tennis",     color: "text-amber-700",   bg: "bg-amber-50",   glow: "from-amber-50"   },
-  american_football: { label: "NFL",        color: "text-blue-700",    bg: "bg-blue-50",    glow: "from-blue-50"    },
-  cricket:           { label: "Cricket",    color: "text-pink-700",    bg: "bg-pink-50",    glow: "from-pink-50"    },
+  football:          { label: "Football",   color: "text-emerald-400", bg: "bg-emerald-500/10", glow: "from-emerald-500/5" },
+  basketball:        { label: "Basketball", color: "text-orange-400",  bg: "bg-orange-500/10",  glow: "from-orange-500/5"  },
+  tennis:            { label: "Tennis",     color: "text-amber-400",   bg: "bg-amber-500/10",   glow: "from-amber-50"   },
+  american_football: { label: "NFL",        color: "text-blue-400",    bg: "bg-blue-500/10",    glow: "from-blue-500/5"    },
+  cricket:           { label: "Cricket",    color: "text-pink-400",    bg: "bg-pink-500/10",    glow: "from-pink-50"    },
 };
 
 function formatKickoff(isoString: string): string {
@@ -30,7 +30,7 @@ function formatKickoff(isoString: string): string {
 function FormDot({ result }: { result: "W" | "D" | "L" }) {
   return (
     <span className={`h-2.5 w-2.5 rounded-full ${
-      result === "W" ? "bg-emerald-500" : result === "D" ? "bg-gray-300" : "bg-red-400"
+      result === "W" ? "bg-emerald-500" : result === "D" ? "bg-slate-600" : "bg-red-400"
     }`} />
   );
 }
@@ -44,7 +44,7 @@ function TeamDisplay({
   const inner = (
     <div className={`flex items-center gap-2.5 ${align === "right" ? "flex-row-reverse" : ""}`}>
       <TeamLogo logo={logo} name={name} size={40} className="rounded-xl" />
-      <span className={`text-xl font-extrabold leading-tight text-gray-900 transition-colors group-hover:text-accent-green sm:text-2xl ${
+      <span className={`text-xl font-extrabold leading-tight text-white transition-colors group-hover:text-accent-green sm:text-2xl ${
         align === "right" ? "text-right" : ""
       }`}>
         {name}
@@ -118,7 +118,7 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
                 <Link
                   href={`/leagues/${event.leagueId}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+                  className="flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-400"
                 >
                   {event.leagueLogo && (
                     <div className="relative h-4 w-4">
@@ -128,13 +128,13 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
                   {event.league}
                 </Link>
               ) : (
-                <span className="text-xs text-gray-400">{event.league}</span>
+                <span className="text-xs text-slate-500">{event.league}</span>
               )}
               <span className="rounded-full bg-accent-green/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-green">
                 Featured
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 text-xs text-gray-400">
+            <div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
               <Clock className="h-3.5 w-3.5" />
               <span>{formatKickoff(event.commenceTime)}</span>
             </div>
@@ -152,8 +152,8 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
 
             {/* VS */}
             <div className="flex shrink-0 flex-col items-center gap-1">
-              <span className="rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-gray-500">VS</span>
-              <span className="text-[10px] text-gray-300">last 5</span>
+              <span className="rounded-xl bg-bg-border px-3 py-1.5 text-sm font-bold text-slate-400">VS</span>
+              <span className="text-[10px] text-slate-600">last 5</span>
             </div>
 
             {/* Away */}
@@ -170,12 +170,12 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-bg-border pt-4">
               <div className="flex items-center gap-2 text-sm">
                 <TrendingUp className="h-4 w-4 shrink-0 text-accent-green" />
-                <span className="text-gray-400">Top pick:</span>
-                <span className="font-semibold text-gray-800">{topPick.label}</span>
+                <span className="text-slate-500">Top pick:</span>
+                <span className="font-semibold text-white">{topPick.label}</span>
                 <span className="font-bold text-accent-green">{topPick.probability}%</span>
               </div>
               {bestBookmaker && (
-                <span className="hidden text-xs text-gray-400 sm:block">
+                <span className="hidden text-xs text-slate-500 sm:block">
                   Best odds: {bestBookmaker.home.toFixed(2)} @ {bestBookmaker.name}
                 </span>
               )}
@@ -194,16 +194,16 @@ export default function FeaturedCarousel({ events }: FeaturedCarouselProps) {
                 onClick={() => goTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
                 className={`rounded-full transition-all duration-300 ${
-                  i === current ? "h-2 w-4 bg-accent-green" : "h-2 w-2 bg-bg-border hover:bg-gray-300"
+                  i === current ? "h-2 w-4 bg-accent-green" : "h-2 w-2 bg-bg-border hover:bg-slate-600"
                 }`}
               />
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={prev} aria-label="Previous" className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-700">
+            <button onClick={prev} aria-label="Previous" className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-slate-500 transition-colors hover:border-bg-border hover:text-slate-200">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button onClick={next} aria-label="Next" className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-700">
+            <button onClick={next} aria-label="Next" className="flex h-7 w-7 items-center justify-center rounded-full border border-bg-border text-slate-500 transition-colors hover:border-bg-border hover:text-slate-200">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>

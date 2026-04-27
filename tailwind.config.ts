@@ -10,16 +10,16 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          base: "#F3F4F6",
-          surface: "#FFFFFF",
-          card: "#FFFFFF",
-          border: "#E5E7EB",
+          base: "#080810",
+          surface: "#0f0f1a",
+          card: "#13131e",
+          border: "#1c1c2e",
         },
         accent: {
-          green: "#4CAF6A",
-          "green-dim": "#3d9959",
-          purple: "#2F343A",
-          "purple-dim": "#1a1e22",
+          green: "#22c55e",
+          "green-dim": "#16a34a",
+          purple: "#818cf8",
+          "purple-dim": "#4f46e5",
         },
       },
       fontFamily: {
@@ -27,7 +27,7 @@ const config: Config = {
       },
       backgroundImage: {
         "hero-glow":
-          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(76,175,106,0.08), transparent)",
+          "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,197,94,0.15), transparent)",
       },
     },
   },

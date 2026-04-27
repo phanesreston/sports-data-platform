@@ -31,13 +31,13 @@ export default function Hero() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl">
             Know the Stats.{" "}
             <span className="text-accent-green">Make Your Call.</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500 sm:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-400 sm:text-xl">
             We analyse team form, head-to-head records, and historical data
             across multiple outcomes — so you can make an informed decision
             before every match.
@@ -53,7 +53,7 @@ export default function Hero() {
             </a>
             <a
               href="#how-it-works"
-              className="rounded-xl border border-bg-border bg-white px-8 py-3.5 text-base font-semibold text-[#2F343A] transition-colors hover:border-gray-300 hover:bg-gray-50"
+              className="rounded-xl border border-bg-border bg-bg-card px-8 py-3.5 text-base font-semibold text-[#2F343A] transition-colors hover:border-bg-border hover:bg-bg-border"
             >
               How It Works
             </a>
@@ -68,10 +68,10 @@ export default function Hero() {
               className="flex flex-col items-center gap-1 rounded-2xl border border-bg-border bg-bg-card px-4 py-5 shadow-sm"
             >
               <Icon className="mb-1 h-5 w-5 text-accent-green" />
-              <span className="text-2xl font-extrabold text-gray-900 sm:text-3xl">
+              <span className="text-2xl font-extrabold text-white sm:text-3xl">
                 {value}
               </span>
-              <span className="text-center text-xs text-gray-400">{label}</span>
+              <span className="text-center text-xs text-slate-500">{label}</span>
             </div>
           ))}
         </div>

@@ -15,21 +15,21 @@ interface Props {
 }
 
 const SPORT_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  football:          { label: "Football",    color: "text-emerald-700", bg: "bg-emerald-50" },
-  basketball:        { label: "Basketball",  color: "text-orange-700",  bg: "bg-orange-50"  },
-  tennis:            { label: "Tennis",      color: "text-amber-700",   bg: "bg-amber-50"   },
-  american_football: { label: "NFL",         color: "text-blue-700",    bg: "bg-blue-50"    },
-  cricket:           { label: "Cricket",     color: "text-pink-700",    bg: "bg-pink-50"    },
-  nba:               { label: "NBA",         color: "text-orange-700",  bg: "bg-orange-50"  },
-  afl:               { label: "AFL",         color: "text-yellow-700",  bg: "bg-yellow-50"  },
-  baseball:          { label: "Baseball",    color: "text-sky-700",     bg: "bg-sky-50"     },
-  formula1:          { label: "Formula 1",   color: "text-red-700",     bg: "bg-red-50"     },
-  handball:          { label: "Handball",    color: "text-violet-700",  bg: "bg-violet-50"  },
-  hockey:            { label: "Hockey",      color: "text-cyan-700",    bg: "bg-cyan-50"    },
-  mma:               { label: "MMA",         color: "text-rose-700",    bg: "bg-rose-50"    },
-  rugby:             { label: "Rugby",       color: "text-lime-700",    bg: "bg-lime-50"    },
-  volleyball:        { label: "Volleyball",  color: "text-indigo-700",  bg: "bg-indigo-50"  },
-  horse_racing:      { label: "Horse Racing",color: "text-teal-700",    bg: "bg-teal-50"    },
+  football:          { label: "Football",    color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  basketball:        { label: "Basketball",  color: "text-orange-400",  bg: "bg-orange-500/10"  },
+  tennis:            { label: "Tennis",      color: "text-amber-400",   bg: "bg-amber-500/10"   },
+  american_football: { label: "NFL",         color: "text-blue-400",    bg: "bg-blue-500/10"    },
+  cricket:           { label: "Cricket",     color: "text-pink-400",    bg: "bg-pink-500/10"    },
+  nba:               { label: "NBA",         color: "text-orange-400",  bg: "bg-orange-500/10"  },
+  afl:               { label: "AFL",         color: "text-yellow-400",  bg: "bg-yellow-500/10"  },
+  baseball:          { label: "Baseball",    color: "text-sky-400",     bg: "bg-sky-500/10"     },
+  formula1:          { label: "Formula 1",   color: "text-red-400",     bg: "bg-red-500/10"     },
+  handball:          { label: "Handball",    color: "text-violet-400",  bg: "bg-violet-500/10"  },
+  hockey:            { label: "Hockey",      color: "text-cyan-400",    bg: "bg-cyan-500/10"    },
+  mma:               { label: "MMA",         color: "text-rose-400",    bg: "bg-rose-500/10"    },
+  rugby:             { label: "Rugby",       color: "text-lime-400",    bg: "bg-lime-500/10"    },
+  volleyball:        { label: "Volleyball",  color: "text-indigo-400",  bg: "bg-indigo-500/10"  },
+  horse_racing:      { label: "Horse Racing",color: "text-teal-400",    bg: "bg-teal-500/10"    },
 };
 
 const STAT_LABEL: Record<Sport, { for: string; against: string }> = {
@@ -74,9 +74,9 @@ function FormPills({ form }: { form: ("W" | "D" | "L")[] }) {
         <span
           key={i}
           className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${
-            r === "W" ? "bg-emerald-100 text-emerald-700"
-            : r === "D" ? "bg-gray-100 text-gray-500"
-            : "bg-red-100 text-red-700"
+            r === "W" ? "bg-emerald-500/10 text-emerald-400"
+            : r === "D" ? "bg-bg-border text-slate-400"
+            : "bg-red-500/10 text-red-400"
           }`}
         >
           {r}
@@ -87,7 +87,7 @@ function FormPills({ form }: { form: ("W" | "D" | "L")[] }) {
 }
 
 function Skeleton({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded bg-gray-200 ${className}`} />;
+  return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
 
 function TeamBlock({
@@ -99,16 +99,16 @@ function TeamBlock({
 
   const inner = (
     <>
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gray-50 p-2 shadow-sm">
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-bg-border p-2 shadow-sm">
         {logo ? (
           <Image src={logo} alt={name} fill className="object-contain p-1" sizes="80px" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl font-black text-gray-200">
+          <div className="flex h-full w-full items-center justify-center text-2xl font-black text-slate-700">
             {name.slice(0, 1)}
           </div>
         )}
       </div>
-      <span className="mt-3 text-center text-base font-extrabold leading-tight text-gray-900 sm:text-lg">
+      <span className="mt-3 text-center text-base font-extrabold leading-tight text-white sm:text-lg">
         {name}
       </span>
     </>
@@ -118,10 +118,10 @@ function TeamBlock({
     return (
       <Link
         href={href}
-        className="group flex flex-1 flex-col items-center rounded-xl p-3 transition-colors hover:bg-gray-50"
+        className="group flex flex-1 flex-col items-center rounded-xl p-3 transition-colors hover:bg-bg-border"
       >
         {inner}
-        <span className="mt-1 flex items-center gap-1 text-[11px] text-gray-300 opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">
           View team <ExternalLink className="h-3 w-3" />
         </span>
       </Link>
@@ -155,7 +155,7 @@ export default function PredictionDetailPage({ params }: Props) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <button onClick={() => router.back()} className="mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
+          <button onClick={() => router.back()} className="mb-8 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-200">
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
@@ -189,8 +189,8 @@ export default function PredictionDetailPage({ params }: Props) {
           {!loading && notFound && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
               <span className="text-4xl">🔍</span>
-              <p className="mt-3 text-sm font-semibold text-gray-700">Event not found</p>
-              <p className="mt-1 text-xs text-gray-400">This event may have started or is no longer available.</p>
+              <p className="mt-3 text-sm font-semibold text-slate-200">Event not found</p>
+              <p className="mt-1 text-xs text-slate-500">This event may have started or is no longer available.</p>
               <Link href="/" className="mt-5 rounded-lg bg-accent-green px-4 py-2 text-sm font-semibold text-white hover:bg-accent-green-dim">
                 View all predictions
               </Link>
@@ -227,7 +227,7 @@ function EventDetail({ event }: { event: OddsEvent }) {
               {event.leagueId ? (
                 <Link
                   href={`/leagues/${event.leagueId}`}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-700"
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-200"
                 >
                   {event.leagueLogo && (
                     <div className="relative h-4 w-4">
@@ -237,22 +237,22 @@ function EventDetail({ event }: { event: OddsEvent }) {
                   {event.league}
                 </Link>
               ) : (
-                <span className="text-xs text-gray-400">{event.league}</span>
+                <span className="text-xs text-slate-500">{event.league}</span>
               )}
             </div>
             <div className="flex flex-col items-end gap-0.5">
-              <div className="flex items-center gap-1 text-xs font-semibold text-gray-500">
+              <div className="flex items-center gap-1 text-xs font-semibold text-slate-400">
                 <Clock className="h-3 w-3" />
                 {formatKickoff(event.commenceTime)}
               </div>
-              <span className="text-[10px] text-gray-300">{formatDateTime(event.commenceTime)}</span>
+              <span className="text-[10px] text-slate-600">{formatDateTime(event.commenceTime)}</span>
             </div>
           </div>
 
           {/* Teams side by side with logos */}
           <div className="flex items-center gap-2 sm:gap-4">
             <TeamBlock name={event.homeTeam} logo={event.homeLogo} teamId={event.homeTeamId} sport={event.sport} />
-            <div className="shrink-0 rounded-xl bg-bg-border px-3 py-2 text-sm font-bold text-gray-500">
+            <div className="shrink-0 rounded-xl bg-bg-border px-3 py-2 text-sm font-bold text-slate-400">
               VS
             </div>
             <TeamBlock name={event.awayTeam} logo={event.awayLogo} teamId={event.awayTeamId} sport={event.sport} />
@@ -263,8 +263,8 @@ function EventDetail({ event }: { event: OddsEvent }) {
       {/* Team form + H2H */}
       <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">Team Form (last 5)</h2>
-          <span className="text-xs text-gray-400">{statLabel.for} / {statLabel.against}</span>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Team Form (last 5)</h2>
+          <span className="text-xs text-slate-500">{statLabel.for} / {statLabel.against}</span>
         </div>
         <div className="space-y-3">
           {[
@@ -274,27 +274,27 @@ function EventDetail({ event }: { event: OddsEvent }) {
             <div key={name} className="flex items-center gap-3">
               <div className="flex w-32 shrink-0 items-center gap-2">
                 <TeamLogo logo={logo} name={name} size={20} className="rounded" />
-                <span className="truncate text-sm text-gray-700">{name}</span>
+                <span className="truncate text-sm text-slate-200">{name}</span>
               </div>
               <FormPills form={stats.form} />
               <span className="ml-auto whitespace-nowrap text-sm">
                 <span className="font-semibold text-emerald-600">{stats.avgScored.toFixed(1)}</span>
-                <span className="text-gray-300"> / </span>
-                <span className="font-semibold text-red-600">{stats.avgConceded.toFixed(1)}</span>
+                <span className="text-slate-600"> / </span>
+                <span className="font-semibold text-red-400">{stats.avgConceded.toFixed(1)}</span>
               </span>
             </div>
           ))}
         </div>
         {totalH2H > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-bg-border pt-4 text-sm">
-            <span className="text-gray-400">H2H ({totalH2H}):</span>
+            <span className="text-slate-500">H2H ({totalH2H}):</span>
             <span className="font-semibold text-emerald-600">{event.h2h.homeWins}W</span>
             {event.h2h.draws > 0 && (
-              <><span className="text-gray-300">·</span><span className="text-gray-500">{event.h2h.draws}D</span></>
+              <><span className="text-slate-600">·</span><span className="text-slate-400">{event.h2h.draws}D</span></>
             )}
-            <span className="text-gray-300">·</span>
-            <span className="font-semibold text-red-600">{event.h2h.awayWins}L</span>
-            <span className="text-gray-400">for {event.homeTeam}</span>
+            <span className="text-slate-600">·</span>
+            <span className="font-semibold text-red-400">{event.h2h.awayWins}L</span>
+            <span className="text-slate-500">for {event.homeTeam}</span>
           </div>
         )}
       </div>
@@ -302,14 +302,14 @@ function EventDetail({ event }: { event: OddsEvent }) {
       {/* Statistical predictions */}
       {event.markets.length > 0 && (
         <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
-          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-gray-400">Statistical Predictions</h2>
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-slate-500">Statistical Predictions</h2>
           <div className="divide-y divide-bg-border">
             {event.markets.map((market, i) => (
               <div key={i} className="py-4 first:pt-0 last:pb-0">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-800">{market.name}</span>
+                  <span className="text-sm font-semibold text-white">{market.name}</span>
                   {market.bestOdds > 0 && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-slate-500">
                       Best odds: {market.bestOdds.toFixed(2)} @ {market.bestBookmaker}
                     </span>
                   )}
@@ -317,16 +317,16 @@ function EventDetail({ event }: { event: OddsEvent }) {
                 <div className="space-y-2.5">
                   {market.options.map((opt, j) => (
                     <div key={j} className="flex items-center gap-3">
-                      <span className={`w-36 shrink-0 truncate text-sm ${opt.pick ? "font-semibold text-gray-800" : "text-gray-400"}`}>
+                      <span className={`w-36 shrink-0 truncate text-sm ${opt.pick ? "font-semibold text-white" : "text-slate-500"}`}>
                         {opt.label}
                       </span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-border">
                         <div
-                          className={`h-full rounded-full ${opt.pick ? "bg-accent-green" : "bg-gray-200"}`}
+                          className={`h-full rounded-full ${opt.pick ? "bg-accent-green" : "bg-bg-border"}`}
                           style={{ width: `${opt.probability}%` }}
                         />
                       </div>
-                      <span className={`w-9 shrink-0 text-right text-sm font-bold ${opt.pick ? "text-accent-green" : "text-gray-400"}`}>
+                      <span className={`w-9 shrink-0 text-right text-sm font-bold ${opt.pick ? "text-accent-green" : "text-slate-500"}`}>
                         {opt.probability}%
                       </span>
                       {opt.pick ? (
@@ -348,11 +348,11 @@ function EventDetail({ event }: { event: OddsEvent }) {
       {/* Odds comparison */}
       {event.bookmakers.length > 0 && (
         <div className="mb-6 rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-400">Odds Comparison</h2>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Odds Comparison</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-bg-border text-left text-xs text-gray-400">
+                <tr className="border-b border-bg-border text-left text-xs text-slate-500">
                   <th className="pb-3 pr-4 font-medium">Bookmaker</th>
                   <th className="pb-3 pr-4 text-right font-medium">
                     <span className="flex items-center justify-end gap-1.5">
@@ -372,14 +372,14 @@ function EventDetail({ event }: { event: OddsEvent }) {
               <tbody className="divide-y divide-bg-border">
                 {event.bookmakers.map((bk) => (
                   <tr key={bk.name}>
-                    <td className="py-3 pr-4 text-gray-600">{bk.name}</td>
-                    <td className="py-3 pr-4 text-right font-semibold text-gray-800">{bk.home.toFixed(2)}</td>
+                    <td className="py-3 pr-4 text-slate-400">{bk.name}</td>
+                    <td className="py-3 pr-4 text-right font-semibold text-white">{bk.home.toFixed(2)}</td>
                     {hasDrawOdds && (
-                      <td className="py-3 pr-4 text-right text-gray-500">
+                      <td className="py-3 pr-4 text-right text-slate-400">
                         {bk.draw != null ? bk.draw.toFixed(2) : "—"}
                       </td>
                     )}
-                    <td className="py-3 text-right font-semibold text-gray-800">{bk.away.toFixed(2)}</td>
+                    <td className="py-3 text-right font-semibold text-white">{bk.away.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -398,7 +398,7 @@ function EventDetail({ event }: { event: OddsEvent }) {
             <Link
               key={name}
               href={`/teams/${encodeURIComponent(name)}`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:text-accent-green"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-bg-border bg-bg-card px-4 py-3 text-sm font-semibold text-slate-400 shadow-sm transition-colors hover:border-bg-border hover:text-accent-green"
             >
               {logo && (
                 <div className="relative h-5 w-5">

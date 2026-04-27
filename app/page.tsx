@@ -95,17 +95,17 @@ function PredictionCardSkeleton() {
   return (
     <div className="animate-pulse rounded-2xl border border-bg-border bg-bg-card p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
-        <div className="h-4 w-20 rounded bg-gray-200" />
-        <div className="h-4 w-16 rounded bg-gray-200" />
+        <div className="h-4 w-20 rounded bg-bg-border" />
+        <div className="h-4 w-16 rounded bg-bg-border" />
       </div>
       <div className="mb-3 flex items-center justify-between gap-4">
-        <div className="h-5 w-28 rounded bg-gray-200" />
-        <div className="h-5 w-8 rounded bg-gray-200" />
-        <div className="h-5 w-28 rounded bg-gray-200" />
+        <div className="h-5 w-28 rounded bg-bg-border" />
+        <div className="h-5 w-8 rounded bg-bg-border" />
+        <div className="h-5 w-28 rounded bg-bg-border" />
       </div>
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-full rounded bg-gray-100" />
-        <div className="h-3 w-3/4 rounded bg-gray-100" />
+        <div className="h-3 w-full rounded bg-bg-border" />
+        <div className="h-3 w-3/4 rounded bg-bg-border" />
       </div>
     </div>
   );
@@ -163,14 +163,14 @@ function PredictionsContent() {
           {/* Page heading */}
           <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">
+              <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
                 {meta.emoji} {meta.name}
               </h1>
-              <p className="mt-1 text-sm text-gray-400">{meta.description}</p>
+              <p className="mt-1 text-sm text-slate-500">{meta.description}</p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
               {loading ? (
-                <span className="text-gray-300">Loading events…</span>
+                <span className="text-slate-600">Loading events…</span>
               ) : error ? (
                 <span className="text-red-400">{error}</span>
               ) : (
@@ -189,14 +189,14 @@ function PredictionsContent() {
           {loading && (
             <>
               <section className="mb-10">
-                <div className="mb-3 h-4 w-24 animate-pulse rounded bg-gray-200" />
+                <div className="mb-3 h-4 w-24 animate-pulse rounded bg-bg-border" />
                 <div className="grid gap-5 sm:grid-cols-2">
                   <PredictionCardSkeleton />
                   <PredictionCardSkeleton />
                 </div>
               </section>
               <section>
-                <div className="mb-3 h-4 w-20 animate-pulse rounded bg-gray-200" />
+                <div className="mb-3 h-4 w-20 animate-pulse rounded bg-bg-border" />
                 <div className="grid gap-5 sm:grid-cols-2">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <PredictionCardSkeleton key={i} />
@@ -210,7 +210,7 @@ function PredictionsContent() {
           {!loading && events.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
               <span className="text-4xl">🔍</span>
-              <p className="mt-3 text-sm text-gray-400">
+              <p className="mt-3 text-sm text-slate-500">
                 No events found for this sport.
               </p>
             </div>
@@ -226,7 +226,7 @@ function PredictionsContent() {
                       Featured
                     </span>
                     <div className="flex-1 border-t border-bg-border" />
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-slate-500">
                       {featured.length} event{featured.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -237,11 +237,11 @@ function PredictionsContent() {
               {upcoming.length > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-3">
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       Upcoming
                     </span>
                     <div className="flex-1 border-t border-bg-border" />
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-slate-500">
                       {upcoming.length} event{upcoming.length !== 1 ? "s" : ""}
                     </span>
                   </div>

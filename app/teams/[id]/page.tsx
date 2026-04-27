@@ -14,9 +14,9 @@ import type { OddsEvent } from "@/data/sampleOdds";
 type Tab = "overview" | "squad" | "fixtures";
 
 const RESULT_STYLES = {
-  W: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  D: "bg-gray-100 text-gray-600 border-gray-200",
-  L: "bg-red-50 text-red-700 border-red-200",
+  W: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  D: "bg-bg-border text-slate-400 border-bg-border",
+  L: "bg-red-500/10 text-red-400 border-red-500/20",
 };
 
 interface SquadPlayer {
@@ -45,7 +45,7 @@ interface TeamData {
 }
 
 function Skeleton({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded bg-gray-200 ${className}`} />;
+  return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
 
 function FormBadge({ result }: { result: "W" | "D" | "L" }) {
@@ -60,16 +60,16 @@ function PlayerCard({ player }: { player: SquadPlayer }) {
   return (
     <Link
       href={`/athletes/${player.id}`}
-      className="group flex items-center gap-3 rounded-xl border border-bg-border bg-bg-card p-3 shadow-sm transition-colors hover:border-gray-300"
+      className="group flex items-center gap-3 rounded-xl border border-bg-border bg-bg-card p-3 shadow-sm transition-colors hover:border-bg-border"
     >
       <PlayerPhoto photo={player.photo} name={player.name} size={40} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-800 group-hover:text-accent-green">
+        <p className="truncate text-sm font-semibold text-white group-hover:text-accent-green">
           {player.name}
         </p>
-        <p className="text-[11px] text-gray-400">
+        <p className="text-[11px] text-slate-500">
           {player.position}
-          {player.number != null && <span className="ml-1.5 text-gray-300">#{player.number}</span>}
+          {player.number != null && <span className="ml-1.5 text-slate-600">#{player.number}</span>}
           {" · "}Age {player.age}
         </p>
       </div>
@@ -120,7 +120,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <button onClick={() => router.back()} className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
+          <button onClick={() => router.back()} className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-200">
             <ChevronLeft className="h-4 w-4" /> Back
           </button>
 
@@ -135,9 +135,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
           {!loading && notFound && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-20 text-center shadow-sm">
-              <Shield className="mb-3 h-12 w-12 text-gray-200" />
-              <p className="font-semibold text-gray-700">Team not found</p>
-              <p className="mt-1 text-sm text-gray-400">"{teamName}" could not be found.</p>
+              <Shield className="mb-3 h-12 w-12 text-slate-700" />
+              <p className="font-semibold text-slate-200">Team not found</p>
+              <p className="mt-1 text-sm text-slate-500">"{teamName}" could not be found.</p>
               <Link href="/" className="mt-4 text-sm font-semibold text-accent-green hover:underline">← Back to predictions</Link>
             </div>
           )}
@@ -154,10 +154,10 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                         <Image src={data.team.logo} alt={data.team.name} fill className="object-contain" sizes="80px" />
                       </div>
                       <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">{data.team.name}</h1>
-                        <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                        <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{data.team.name}</h1>
+                        <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
                           {data.stats?.league && (
-                            <Link href={`/leagues/${data.stats.league.id}`} className="flex items-center gap-1.5 hover:text-gray-700">
+                            <Link href={`/leagues/${data.stats.league.id}`} className="flex items-center gap-1.5 hover:text-slate-200">
                               <div className="relative h-4 w-4">
                                 <Image src={data.stats.league.logo} alt="" fill className="object-contain" sizes="16px" />
                               </div>
@@ -173,7 +173,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
                     {formChars.length > 0 && (
                       <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs uppercase tracking-widest text-gray-400">Form</span>
+                        <span className="text-xs uppercase tracking-widest text-slate-500">Form</span>
                         <div className="flex gap-1.5">
                           {formChars.map((r, i) => <FormBadge key={i} result={r} />)}
                         </div>
@@ -193,7 +193,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                       className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-colors ${
                         activeTab === tab
                           ? "border-accent-green text-accent-green"
-                          : "border-transparent text-gray-400 hover:text-gray-700"
+                          : "border-transparent text-slate-500 hover:text-slate-200"
                       }`}
                     >
                       {tab === "overview" && <BarChart3 className="h-3.5 w-3.5" />}
@@ -201,7 +201,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                       {tab === "fixtures" && <Calendar className="h-3.5 w-3.5" />}
                       {tab}
                       {tab === "fixtures" && fixtures.length > 0 && (
-                        <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-gray-400">{fixtures.length}</span>
+                        <span className="ml-1 rounded-full bg-bg-border px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{fixtures.length}</span>
                       )}
                     </button>
                   ))}
@@ -214,7 +214,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                   {data.stats && (
                     <>
                       <div>
-                        <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">Season Stats</h2>
+                        <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Season Stats</h2>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                           {[
                             { label: "Played",       value: data.stats.fixtures.played.total },
@@ -227,8 +227,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                             { label: "Clean Sheets", value: data.stats.clean_sheet.total },
                           ].map((s) => (
                             <div key={s.label} className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center shadow-sm">
-                              <div className="text-xl font-extrabold text-gray-900">{s.value}</div>
-                              <div className="mt-0.5 text-[11px] text-gray-400">{s.label}</div>
+                              <div className="text-xl font-extrabold text-white">{s.value}</div>
+                              <div className="mt-0.5 text-[11px] text-slate-500">{s.label}</div>
                             </div>
                           ))}
                         </div>
@@ -238,7 +238,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
                   {Object.values(data.squad).flat().length > 0 && (
                     <div>
-                      <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">Key Players</h2>
+                      <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Key Players</h2>
                       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {Object.values(data.squad).flat().slice(0, 6).map((p) => <PlayerCard key={p.id} player={p} />)}
                       </div>
@@ -250,7 +250,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
                   {fixtures.length > 0 && (
                     <div>
-                      <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">Next Fixture</h2>
+                      <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Next Fixture</h2>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <PredictionCard event={fixtures[0]} />
                       </div>
@@ -265,8 +265,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                   {Object.entries(data.squad).map(([group, players]) =>
                     players.length > 0 ? (
                       <div key={group}>
-                        <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">
-                          {group} <span className="ml-1 font-normal normal-case text-gray-300">({players.length})</span>
+                        <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">
+                          {group} <span className="ml-1 font-normal normal-case text-slate-600">({players.length})</span>
                         </h3>
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                           {players.map((p) => <PlayerCard key={p.id} player={p} />)}
@@ -286,8 +286,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center rounded-xl border border-bg-border bg-bg-card py-16 text-center shadow-sm">
-                      <List className="mb-3 h-10 w-10 text-gray-300" />
-                      <p className="text-sm text-gray-400">No upcoming fixtures found</p>
+                      <List className="mb-3 h-10 w-10 text-slate-600" />
+                      <p className="text-sm text-slate-500">No upcoming fixtures found</p>
                     </div>
                   )}
                 </div>

@@ -147,7 +147,7 @@ function SportTabs() {
               className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
                 isActive
                   ? "bg-accent-green/15 text-accent-green"
-                  : "text-gray-500 hover:bg-bg-border hover:text-gray-800"
+                  : "text-slate-400 hover:bg-bg-border hover:text-white"
               }`}
             >
               <span>{tab.emoji}</span>
@@ -166,7 +166,7 @@ function SportTabs() {
               className={`flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
                 activeInOverflow
                   ? "bg-accent-green/15 text-accent-green"
-                  : "text-gray-500 hover:bg-bg-border hover:text-gray-800"
+                  : "text-slate-400 hover:bg-bg-border hover:text-white"
               }`}
             >
               More
@@ -187,7 +187,7 @@ function SportTabs() {
                       className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
                         isActive
                           ? "bg-accent-green/10 text-accent-green"
-                          : "text-gray-600 hover:bg-bg-border hover:text-gray-900"
+                          : "text-slate-400 hover:bg-bg-border hover:text-white"
                       }`}
                     >
                       <span>{tab.emoji}</span>
@@ -211,7 +211,7 @@ function SportTabsFallback() {
       {SPORT_TABS.slice(0, 6).map((tab) => (
         <span
           key={tab.value}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-400"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-500"
         >
           <span>{tab.emoji}</span>
           <span>{tab.label}</span>
@@ -247,7 +247,7 @@ export default function Header() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-green">
               <Zap className="h-4 w-4 text-white" fill="white" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-gray-900">
+            <span className="text-lg font-bold tracking-tight text-white">
               WeLike<span className="text-accent-green">Sportz</span>
             </span>
           </a>
@@ -258,7 +258,7 @@ export default function Header() {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+                className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
               >
                 {link.label}
               </a>
@@ -270,12 +270,12 @@ export default function Header() {
             {/* Search button — pill on desktop, icon on mobile */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-bg-border bg-bg-base px-3 py-1.5 text-sm text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-700"
+              className="flex items-center gap-2 rounded-xl border border-bg-border bg-bg-base px-3 py-1.5 text-sm text-slate-500 transition-colors hover:border-bg-border hover:text-slate-200"
               aria-label="Search"
             >
               <Search className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Search</span>
-              <kbd className="hidden rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-gray-400 sm:inline">
+              <kbd className="hidden rounded border border-bg-border px-1.5 py-0.5 text-[10px] text-slate-500 sm:inline">
                 ⌘K
               </kbd>
             </button>
@@ -287,7 +287,7 @@ export default function Header() {
 
             {/* Mobile menu toggle */}
             <button
-              className="flex items-center justify-center rounded-md p-2 text-gray-500 md:hidden"
+              className="flex items-center justify-center rounded-md p-2 text-slate-400 md:hidden"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle menu"
             >
@@ -313,13 +313,13 @@ export default function Header() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="block py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+                className="block py-2 text-sm font-medium text-slate-400 hover:text-white"
               >
                 {link.label}
               </a>
             ))}
             <div className="mt-3 border-t border-bg-border pt-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">
                 Sports
               </p>
               {SPORT_TABS.map((tab) => (
@@ -327,7 +327,7 @@ export default function Header() {
                   key={tab.value}
                   href={tab.href}
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+                  className="flex items-center gap-2 py-2 text-sm font-medium text-slate-400 hover:text-white"
                 >
                   <span>{tab.emoji}</span>
                   <span>{tab.label}</span>

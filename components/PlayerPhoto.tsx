@@ -32,14 +32,14 @@ export default function PlayerPhoto({
   }
 
   const colours = [
-    "bg-emerald-100 text-emerald-700",
-    "bg-blue-100 text-blue-700",
-    "bg-red-100 text-red-700",
-    "bg-amber-100 text-amber-700",
+    "bg-emerald-500/10 text-emerald-400",
+    "bg-blue-100 text-blue-400",
+    "bg-red-500/10 text-red-400",
+    "bg-amber-100 text-amber-400",
     "bg-purple-100 text-purple-700",
-    "bg-pink-100 text-pink-700",
-    "bg-sky-100 text-sky-700",
-    "bg-orange-100 text-orange-700",
+    "bg-pink-100 text-pink-400",
+    "bg-sky-100 text-sky-400",
+    "bg-orange-100 text-orange-400",
   ];
   const colour = colours[(name.charCodeAt(0) ?? 0) % colours.length];
 

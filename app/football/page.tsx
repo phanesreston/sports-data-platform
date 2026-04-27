@@ -17,7 +17,7 @@ interface LeagueInfo {
 }
 
 function Skeleton({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-gray-100 ${className}`} />;
+  return <div className={`animate-pulse rounded-2xl bg-bg-border ${className}`} />;
 }
 
 export default function FootballPage() {
@@ -38,8 +38,8 @@ export default function FootballPage() {
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
           <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-gray-900">Football</h1>
-            <p className="mt-1 text-sm text-gray-400">Select a league to view fixtures, standings, teams and top players</p>
+            <h1 className="text-3xl font-extrabold text-white">Football</h1>
+            <p className="mt-1 text-sm text-slate-500">Select a league to view fixtures, standings, teams and top players</p>
           </div>
 
           {loading && (
@@ -68,20 +68,20 @@ export default function FootballPage() {
                         sizes="64px"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center rounded-full bg-gray-100 text-3xl">
+                      <div className="flex h-full w-full items-center justify-center rounded-full bg-bg-border text-3xl">
                         {league.flag}
                       </div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-bold text-gray-900 group-hover:text-accent-green">
+                    <p className="truncate text-lg font-bold text-white group-hover:text-accent-green">
                       {league.name}
                     </p>
-                    <p className="mt-0.5 text-sm text-gray-400">
+                    <p className="mt-0.5 text-sm text-slate-500">
                       {league.flag} {league.country} · {league.season}/{String(league.season + 1).slice(2)}
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-300 transition-colors group-hover:text-accent-green" />
+                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-600 transition-colors group-hover:text-accent-green" />
                 </Link>
               ))}
             </div>

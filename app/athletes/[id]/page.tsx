@@ -37,14 +37,14 @@ interface PlayerData {
 }
 
 function Skeleton({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded bg-gray-200 ${className}`} />;
+  return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
 
 function StatBox({ label, value }: { label: string; value: string | number | null }) {
   return (
     <div className="rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center shadow-sm">
-      <div className="text-xl font-extrabold text-gray-900">{value ?? "—"}</div>
-      <div className="mt-0.5 text-[11px] text-gray-400">{label}</div>
+      <div className="text-xl font-extrabold text-white">{value ?? "—"}</div>
+      <div className="mt-0.5 text-[11px] text-slate-500">{label}</div>
     </div>
   );
 }
@@ -84,7 +84,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
 
           <button
             onClick={() => router.back()}
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-200"
           >
             <ChevronLeft className="h-4 w-4" />
             {teamName || "Back"}
@@ -108,9 +108,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
 
           {!loading && rateLimited && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-20 text-center shadow-sm">
-              <User className="mb-3 h-12 w-12 text-gray-200" />
-              <p className="font-semibold text-gray-700">Too many requests</p>
-              <p className="mt-1 text-sm text-gray-400">The data API is busy — please wait a moment and refresh.</p>
+              <User className="mb-3 h-12 w-12 text-slate-700" />
+              <p className="font-semibold text-slate-200">Too many requests</p>
+              <p className="mt-1 text-sm text-slate-500">The data API is busy — please wait a moment and refresh.</p>
               <button onClick={() => window.location.reload()} className="mt-4 text-sm font-semibold text-accent-green hover:underline">
                 Refresh
               </button>
@@ -119,9 +119,9 @@ export default function AthletePage({ params }: { params: { id: string } }) {
 
           {!loading && notFound && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-20 text-center shadow-sm">
-              <User className="mb-3 h-12 w-12 text-gray-200" />
-              <p className="font-semibold text-gray-700">Player not found</p>
-              <p className="mt-1 text-sm text-gray-400">This player could not be found in the database.</p>
+              <User className="mb-3 h-12 w-12 text-slate-700" />
+              <p className="font-semibold text-slate-200">Player not found</p>
+              <p className="mt-1 text-sm text-slate-500">This player could not be found in the database.</p>
               <Link href="/" className="mt-4 text-sm font-semibold text-accent-green hover:underline">← Back to predictions</Link>
             </div>
           )}
@@ -134,7 +134,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                 <div className="p-6 sm:p-8">
                   <div className="flex flex-wrap items-start gap-6">
                     {/* Headshot */}
-                    <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+                    <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-bg-border shadow-sm">
                       <Image
                         src={data.player.photo}
                         alt={data.player.name}
@@ -147,13 +147,13 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     <div className="flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         {primaryStats && (
-                          <Link href={`/teams/${encodeURIComponent(teamName)}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500 hover:text-gray-800">
+                          <Link href={`/teams/${encodeURIComponent(teamName)}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-white">
                             <TeamLogo logo={primaryStats.team.logo} name={teamName} size={16} className="rounded" />
                             {teamName}
                           </Link>
                         )}
                         {primaryStats?.league && (
-                          <Link href={`/leagues/${primaryStats.league.id}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-gray-500 hover:text-gray-800">
+                          <Link href={`/leagues/${primaryStats.league.id}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-white">
                             <div className="relative h-4 w-4">
                               <Image src={primaryStats.league.logo} alt="" fill className="object-contain" sizes="16px" />
                             </div>
@@ -161,15 +161,15 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                           </Link>
                         )}
                         {data.player.injured && (
-                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">Injured</span>
+                          <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">Injured</span>
                         )}
                       </div>
 
-                      <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">{data.player.name}</h1>
+                      <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{data.player.name}</h1>
 
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
                         {primaryStats?.games.position && (
-                          <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400">
                             {primaryStats.games.position}
                           </span>
                         )}
@@ -183,7 +183,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       {primaryStats?.games.rating && (
                         <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-accent-green/30 bg-accent-green/5 px-4 py-2">
                           <span className="text-2xl font-extrabold text-accent-green">{parseFloat(primaryStats.games.rating).toFixed(1)}</span>
-                          <span className="text-xs text-gray-400">Avg Rating</span>
+                          <span className="text-xs text-slate-500">Avg Rating</span>
                         </div>
                       )}
                     </div>
@@ -198,7 +198,7 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                     <div className="relative h-5 w-5">
                       <Image src={stats.league.logo} alt="" fill className="object-contain" sizes="20px" />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       {stats.league.name} {stats.league.season}/{String(stats.league.season + 1).slice(2)}
                     </span>
                     <div className="flex-1 border-t border-bg-border" />
