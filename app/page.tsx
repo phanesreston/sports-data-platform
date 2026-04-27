@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, TrendingUp, Zap, BarChart2, ChevronRight } from "lucide-react";
+import { Activity, TrendingUp, Zap, BarChart2 } from "lucide-react";
 import type { OddsEvent, Sport } from "@/data/sampleOdds";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PredictionCard from "@/components/PredictionCard";
 import SignalCard from "@/components/SignalCard";
 import AnalyticsTicker from "@/components/AnalyticsTicker";
+import BetRankingsTable from "@/components/BetRankingsTable";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -181,12 +181,6 @@ function DashboardContent() {
       .slice(0, 3);
   }, [filtered, topSignalEvents]);
 
-  // Remaining events for the all-markets grid
-  const remainingEvents = useMemo(() => {
-    const highlightIds = new Set([...topSignalEvents, ...valueBetEvents].map((e) => e.id));
-    return filtered.filter((e) => !highlightIds.has(e.id));
-  }, [filtered, topSignalEvents, valueBetEvents]);
-
   const sportCounts = useMemo(() => {
     const map: Partial<Record<Sport | "all", number>> = { all: events.length };
     for (const e of events) map[e.sport] = (map[e.sport] ?? 0) + 1;
@@ -329,38 +323,18 @@ function DashboardContent() {
             </section>
           )}
 
-          {/* All Markets */}
-          {!loading && remainingEvents.length > 0 && (
+          {/* Ranked Bets Table */}
+          {!loading && filtered.length > 0 && (
             <section>
               <div className="mb-4 flex items-center gap-3">
                 <BarChart2 className="h-4 w-4 text-slate-500" />
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                  {topSignalEvents.length > 0 ? "All Markets" : "Upcoming Fixtures"}
+                  Ranked Picks
                 </span>
                 <div className="flex-1 border-t border-bg-border" />
-                <span className="text-xs text-slate-600">{remainingEvents.length} {remainingEvents.length === 1 ? "event" : "events"}</span>
+                <span className="text-xs text-slate-600">Most favourable first</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {remainingEvents.map((e) => (
-                  <PredictionCard key={e.id} event={e} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* When all events are in highlighted sections */}
-          {!loading && filtered.length > 0 && remainingEvents.length === 0 && topSignalEvents.length === 0 && valueBetEvents.length === 0 && (
-            <section>
-              <div className="mb-4 flex items-center gap-3">
-                <BarChart2 className="h-4 w-4 text-slate-500" />
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">All Markets</span>
-                <div className="flex-1 border-t border-bg-border" />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {filtered.map((e) => (
-                  <PredictionCard key={e.id} event={e} />
-                ))}
-              </div>
+              <BetRankingsTable events={filtered} singleSport={activeSport !== "all"} />
             </section>
           )}
 
