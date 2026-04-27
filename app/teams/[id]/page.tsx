@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, Calendar, Users, BarChart3, List, Shield } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -77,6 +78,7 @@ function PlayerCard({ player }: { player: SquadPlayer }) {
 }
 
 export default function TeamPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [data, setData]           = useState<TeamData | null>(null);
   const [fixtures, setFixtures]   = useState<OddsEvent[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -118,9 +120,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <Link href="/?sport=football" className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
-            <ChevronLeft className="h-4 w-4" /> Football
-          </Link>
+          <button onClick={() => router.back()} className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
+            <ChevronLeft className="h-4 w-4" /> Back
+          </button>
 
           {loading && (
             <div className="space-y-4">

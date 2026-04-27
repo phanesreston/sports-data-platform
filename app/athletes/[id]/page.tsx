@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, User } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -49,6 +50,7 @@ function StatBox({ label, value }: { label: string; value: string | number | nul
 }
 
 export default function AthletePage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [data, setData]           = useState<PlayerData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [notFound, setNotFound]   = useState(false);
@@ -80,13 +82,13 @@ export default function AthletePage({ params }: { params: { id: string } }) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <Link
-            href={teamName ? `/teams/${encodeURIComponent(teamName)}` : "/"}
+          <button
+            onClick={() => router.back()}
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700"
           >
             <ChevronLeft className="h-4 w-4" />
             {teamName || "Back"}
-          </Link>
+          </button>
 
           {loading && (
             <div className="space-y-5">

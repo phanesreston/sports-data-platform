@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, Target } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -115,6 +116,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export default function LeaguePage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [league, setLeague]   = useState<LeagueMeta | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("fixtures");
@@ -194,9 +196,9 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <Link href="/football" className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
-            <ChevronLeft className="h-4 w-4" /> Football
-          </Link>
+          <button onClick={() => router.back()} className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
+            <ChevronLeft className="h-4 w-4" /> Back
+          </button>
 
           {!league && !notFound && (
             <div className="space-y-4">

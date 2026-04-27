@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Clock, ExternalLink } from "lucide-react";
 import type { OddsEvent, Sport } from "@/data/sampleOdds";
 import Header from "@/components/Header";
@@ -131,6 +132,7 @@ function TeamBlock({
 }
 
 export default function PredictionDetailPage({ params }: Props) {
+  const router = useRouter();
   const [event, setEvent]       = useState<OddsEvent | null>(null);
   const [loading, setLoading]   = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -153,10 +155,10 @@ export default function PredictionDetailPage({ params }: Props) {
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
-          <Link href="/" className="mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
+          <button onClick={() => router.back()} className="mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
             <ArrowLeft className="h-4 w-4" />
-            Back to Predictions
-          </Link>
+            Back
+          </button>
 
           {loading && (
             <div className="space-y-5">
