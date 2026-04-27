@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Clock, TrendingUp } from "lucide-react";
 import type { OddsEvent, Sport } from "@/data/sampleOdds";
@@ -9,6 +11,9 @@ import type { OddsEvent, Sport } from "@/data/sampleOdds";
 interface BetRow {
   eventId:       string;
   sport:         Sport;
+  league:        string;
+  leagueId?:     number;
+  leagueLogo?:   string;
   homeTeam:      string;
   awayTeam:      string;
   commenceTime:  string;
@@ -20,6 +25,8 @@ interface BetRow {
   edge:          number | null;
   rankScore:     number;
 }
+
+type GroupKey = string;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +54,9 @@ function extractBetRows(events: OddsEvent[]): BetRow[] {
       rows.push({
         eventId:       ev.id,
         sport:         ev.sport,
+        league:        ev.league,
+        leagueId:      ev.leagueId,
+        leagueLogo:    ev.leagueLogo,
         homeTeam:      ev.homeTeam,
         awayTeam:      ev.awayTeam,
         commenceTime:  ev.commenceTime,
@@ -120,13 +130,12 @@ function MiniBar({ probability }: { probability: number }) {
   );
 }
 
-function BetRow({ row, onClick }: { row: BetRow; onClick: () => void }) {
+function BetRowEl({ row, onClick }: { row: BetRow; onClick: () => void }) {
   return (
     <tr
       onClick={onClick}
       className="group cursor-pointer border-t border-bg-border transition-colors hover:bg-bg-surface"
     >
-      {/* Signal */}
       <td className="py-3 pl-4 pr-2 sm:pl-5">
         <div className="flex items-center gap-2">
           <SignalDot probability={row.probability} />
@@ -134,7 +143,6 @@ function BetRow({ row, onClick }: { row: BetRow; onClick: () => void }) {
         </div>
       </td>
 
-      {/* Match */}
       <td className="max-w-[160px] px-2 py-3 sm:max-w-none">
         <div className="truncate text-xs font-semibold text-white">
           {row.homeTeam} <span className="text-slate-600">vs</span> {row.awayTeam}
@@ -142,25 +150,21 @@ function BetRow({ row, onClick }: { row: BetRow; onClick: () => void }) {
         <div className="mt-0.5 text-[10px] text-slate-500">{row.marketName}</div>
       </td>
 
-      {/* Pick */}
       <td className="hidden px-2 py-3 md:table-cell">
         <span className="rounded-md bg-bg-border px-2 py-1 text-xs font-semibold text-slate-200">
           {row.pick}
         </span>
       </td>
 
-      {/* Confidence bar */}
       <td className="px-2 py-3">
         <MiniBar probability={row.probability} />
       </td>
 
-      {/* Odds */}
       <td className="hidden px-2 py-3 text-center sm:table-cell">
         <div className="text-sm font-bold text-white">{row.bestOdds.toFixed(2)}</div>
         <div className="text-[9px] text-slate-600">{row.bestBookmaker}</div>
       </td>
 
-      {/* Edge */}
       <td className="px-2 py-3 text-center">
         {row.edge !== null && row.edge > 0 ? (
           <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-bold text-amber-400">
@@ -171,7 +175,6 @@ function BetRow({ row, onClick }: { row: BetRow; onClick: () => void }) {
         )}
       </td>
 
-      {/* Time */}
       <td className="hidden py-3 pl-2 pr-4 text-right sm:table-cell sm:pr-5">
         <div className="flex items-center justify-end gap-1 text-[11px] text-slate-500">
           <Clock className="h-3 w-3" />
@@ -182,74 +185,124 @@ function BetRow({ row, onClick }: { row: BetRow; onClick: () => void }) {
   );
 }
 
+function GroupHeader({
+  groupBy, groupKey, rows, leagueId, leagueLogo, hideHeader,
+}: {
+  groupBy: "sport" | "league";
+  groupKey: GroupKey;
+  rows: BetRow[];
+  leagueId?: number;
+  leagueLogo?: string;
+  hideHeader: boolean;
+}) {
+  if (hideHeader) return null;
+
+  const label = groupBy === "sport"
+    ? (SPORT_LABELS[groupKey as Sport] ?? groupKey)
+    : groupKey;
+
+  const content = (
+    <div className="flex items-center justify-between border-b border-bg-border px-4 py-3 sm:px-5">
+      <div className="flex items-center gap-2.5">
+        {groupBy === "league" && leagueLogo && (
+          <div className="relative h-5 w-5 shrink-0">
+            <Image src={leagueLogo} alt="" fill className="object-contain" sizes="20px" />
+          </div>
+        )}
+        <span className="text-sm font-bold text-white">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <TrendingUp className="h-3.5 w-3.5 text-accent-green" />
+        <span className="text-xs text-slate-500">{rows.length} ranked {rows.length === 1 ? "pick" : "picks"}</span>
+        {groupBy === "league" && leagueId && (
+          <Link
+            href={`/leagues/${leagueId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="ml-1 text-[11px] font-semibold text-accent-green hover:underline"
+          >
+            View league →
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
+  return content;
+}
+
+function PicksTable({ rows, router }: { rows: BetRow[]; router: ReturnType<typeof useRouter> }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="border-b border-bg-border">
+            <th className="py-2.5 pl-4 pr-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:pl-5">Signal</th>
+            <th className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Match</th>
+            <th className="hidden px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 md:table-cell">Pick</th>
+            <th className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Confidence</th>
+            <th className="hidden px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:table-cell">Odds</th>
+            <th className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">Edge</th>
+            <th className="hidden py-2.5 pl-2 pr-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:table-cell sm:pr-5">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <BetRowEl
+              key={`${row.eventId}-${i}`}
+              row={row}
+              onClick={() => router.push(`/predictions/${row.eventId}`)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function BetRankingsTable({
   events,
   singleSport = false,
+  groupBy = "sport",
 }: {
   events: OddsEvent[];
   singleSport?: boolean;
+  groupBy?: "sport" | "league";
 }) {
   const router = useRouter();
   const allRows = extractBetRows(events);
 
   if (!allRows.length) return null;
 
-  // Group by sport, preserving rank order within each group
-  const grouped = new Map<Sport, BetRow[]>();
+  const grouped = new Map<GroupKey, BetRow[]>();
   for (const row of allRows) {
-    if (!grouped.has(row.sport)) grouped.set(row.sport, []);
-    grouped.get(row.sport)!.push(row);
+    const key = groupBy === "league" ? row.league : row.sport;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(row);
   }
 
   const groups = [...grouped.entries()];
+  const hideHeader = singleSport && groups.length === 1 && groupBy === "sport";
 
   return (
     <div className="space-y-6">
-      {groups.map(([sport, rows]) => (
-        <div key={sport} className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
-
-          {/* Sport header */}
-          {(!singleSport || groups.length > 1) && (
-            <div className="flex items-center justify-between border-b border-bg-border px-4 py-3 sm:px-5">
-              <span className="text-sm font-bold text-white">
-                {SPORT_LABELS[sport] ?? sport}
-              </span>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-3.5 w-3.5 text-accent-green" />
-                <span className="text-xs text-slate-500">{rows.length} ranked {rows.length === 1 ? "pick" : "picks"}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-bg-border">
-                  <th className="py-2.5 pl-4 pr-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:pl-5">Signal</th>
-                  <th className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Match</th>
-                  <th className="hidden px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 md:table-cell">Pick</th>
-                  <th className="px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">Confidence</th>
-                  <th className="hidden px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:table-cell">Odds</th>
-                  <th className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">Edge</th>
-                  <th className="hidden py-2.5 pl-2 pr-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-600 sm:table-cell sm:pr-5">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => (
-                  <BetRow
-                    key={`${row.eventId}-${i}`}
-                    row={row}
-                    onClick={() => router.push(`/predictions/${row.eventId}`)}
-                  />
-                ))}
-              </tbody>
-            </table>
+      {groups.map(([key, rows]) => {
+        const sample = rows[0];
+        return (
+          <div key={key} className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+            <GroupHeader
+              groupBy={groupBy}
+              groupKey={key}
+              rows={rows}
+              leagueId={groupBy === "league" ? sample.leagueId : undefined}
+              leagueLogo={groupBy === "league" ? sample.leagueLogo : undefined}
+              hideHeader={hideHeader}
+            />
+            <PicksTable rows={rows} router={router} />
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
