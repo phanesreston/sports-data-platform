@@ -99,7 +99,10 @@ export async function GET(req: NextRequest) {
   // teamLogoMap: name → { logo, id } for ALL upcoming fixtures (not just the enriched ones)
   const teamLogoMap: Record<string, { logo: string; id: number }> = {};
 
-  console.log(`[fixtures] season: ${SEASON}`);
+  // 30-day window — wide enough to capture all leagues' upcoming fixtures
+  const today     = new Date().toISOString().split("T")[0];
+  const nextMonth = new Date(Date.now() + 30 * 86_400_000).toISOString().split("T")[0];
+  console.log(`[fixtures] season: ${SEASON}  date range: ${today} → ${nextMonth}`);
 
   // Pre-seed teamLogoMap from full league team lists (exact API names + IDs).
   // Cached 24 h — one call per league per day. This ensures all 20 PL teams
@@ -130,7 +133,8 @@ export async function GET(req: NextRequest) {
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
       league:   league.id,
       season:   league.season,
-      next:     20,
+      from:     today,
+      to:       nextMonth,
       timezone: "UTC",
     });
 

@@ -84,6 +84,18 @@ const ODDS_API_SPORTS: Sport[] = [
   "hockey", "mma", "rugby", "afl", "basketball", "tennis",
 ];
 
+// Maps Odds API sport_key values to our internal league IDs and canonical names.
+// Used as a fallback when an Odds API event can't be matched to an API-Football fixture.
+const ODDS_SPORT_KEY_TO_LEAGUE: Record<string, { id: number; name: string }> = {
+  soccer_epl:                    { id: 39,  name: "Premier League"   },
+  soccer_spain_la_liga:          { id: 140, name: "La Liga"          },
+  soccer_germany_bundesliga:     { id: 78,  name: "Bundesliga"       },
+  soccer_italy_serie_a:          { id: 135, name: "Serie A"          },
+  soccer_france_ligue_one:       { id: 61,  name: "Ligue 1"          },
+  soccer_uefa_champs_league:     { id: 2,   name: "Champions League" },
+  soccer_uefa_europa_league:     { id: 3,   name: "Europa League"    },
+};
+
 /**
  * Fuzzy team name match: strips punctuation/spaces and checks whether
  * either string contains the other.
@@ -145,7 +157,7 @@ export async function GET(req: NextRequest) {
       >();
 
       if (oddsData?.events?.length && fixturesData?.fixtures) {
-        for (const raw of oddsData.events.slice(0, 10)) {
+        for (const raw of oddsData.events.slice(0, 50)) {
           const f = fixturesData.fixtures.find(
             (fx) =>
               fuzzyTeamMatch(fx.fixture.teams.home.name, raw.home_team) &&
@@ -159,8 +171,12 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      // Track which API-Football fixtures are matched to Odds API events, so
+      // non-matched leagues (La Liga, Serie A etc.) still get surfaced below.
+      const matchedFixtureIds = new Set<number>();
+
       if (oddsData?.events?.length) {
-        const rawSlice = oddsData.events.slice(0, 10);
+        const rawSlice = oddsData.events.slice(0, 50);
         console.log(`\n[events] processing ${rawSlice.length} Odds API events for ${s}:`);
 
         const transformed = rawSlice.map((raw) => {
@@ -176,6 +192,7 @@ export async function GET(req: NextRequest) {
 
           // Attach full fixture data (stats, IDs, logos) when exact fixture matches
           if (fixtureEntry) {
+            matchedFixtureIds.add(fixtureEntry.fixture.fixture.id);
             event.homeLogo    = fixtureEntry.fixture.teams.home.logo;
             event.awayLogo    = fixtureEntry.fixture.teams.away.logo;
             event.homeTeamId  = fixtureEntry.fixture.teams.home.id;
@@ -191,6 +208,14 @@ export async function GET(req: NextRequest) {
             event.awayLogo   = awayData?.logo;
             event.homeTeamId = homeData?.id;
             event.awayTeamId = awayData?.id;
+            // Fallback: infer leagueId from the Odds API sport_key when no fixture matched
+            if (!event.leagueId) {
+              const leagueInfo = ODDS_SPORT_KEY_TO_LEAGUE[raw.sport_key];
+              if (leagueInfo) {
+                event.leagueId = leagueInfo.id;
+                event.league   = leagueInfo.name;
+              }
+            }
             console.log(`[events]   ~ logoMap lookup: "${raw.home_team}" → ${homeData ? `matched "${homeData.matchedKey}" logo=${!!homeData.logo} id=${homeData.id}` : "✗ NOT FOUND"}`);
             console.log(`[events]   ~ logoMap lookup: "${raw.away_team}" → ${awayData ? `matched "${awayData.matchedKey}" logo=${!!awayData.logo} id=${awayData.id}` : "✗ NOT FOUND"}`);
           }
@@ -240,27 +265,40 @@ export async function GET(req: NextRequest) {
         }
 
         allEvents.push(...transformed);
-      } else if (fixturesData?.fixtures?.length) {
+      }
+
+      // Always add API-Football fixtures not matched to any Odds API event.
+      // The Odds API only covers soccer_epl, so La Liga, Serie A, Bundesliga etc.
+      // only appear here. When there are no Odds API events at all, every fixture
+      // is unmatched and this block acts as the sole data source.
+      if (fixturesData?.fixtures?.length) {
+        const fixtureOnlyCount = { added: 0 };
         for (const f of fixturesData.fixtures) {
-          allEvents.push({
-            id:          `apisports-${f.fixture.fixture.id}`,
-            sport:        s,
-            league:       f.fixture.league.name,
-            leagueId:     f.fixture.league.id,
-            leagueLogo:   f.fixture.league.logo,
-            homeTeam:     f.fixture.teams.home.name,
-            homeTeamId:   f.fixture.teams.home.id,
-            homeLogo:     f.fixture.teams.home.logo,
-            awayTeam:     f.fixture.teams.away.name,
-            awayTeamId:   f.fixture.teams.away.id,
-            awayLogo:     f.fixture.teams.away.logo,
-            commenceTime: f.fixture.fixture.date,
-            bookmakers:   [],
-            homeStats:    f.homeStats,
-            awayStats:    f.awayStats,
-            h2h:          f.h2h,
-            markets:      f.markets,
-          });
+          if (!matchedFixtureIds.has(f.fixture.fixture.id)) {
+            fixtureOnlyCount.added++;
+            allEvents.push({
+              id:          `apisports-${f.fixture.fixture.id}`,
+              sport:        s,
+              league:       f.fixture.league.name,
+              leagueId:     f.fixture.league.id,
+              leagueLogo:   f.fixture.league.logo,
+              homeTeam:     f.fixture.teams.home.name,
+              homeTeamId:   f.fixture.teams.home.id,
+              homeLogo:     f.fixture.teams.home.logo,
+              awayTeam:     f.fixture.teams.away.name,
+              awayTeamId:   f.fixture.teams.away.id,
+              awayLogo:     f.fixture.teams.away.logo,
+              commenceTime: f.fixture.fixture.date,
+              bookmakers:   [],
+              homeStats:    f.homeStats,
+              awayStats:    f.awayStats,
+              h2h:          f.h2h,
+              markets:      f.markets,
+            });
+          }
+        }
+        if (fixtureOnlyCount.added > 0) {
+          console.log(`[events] added ${fixtureOnlyCount.added} unmatched API-Football fixtures (non-EPL leagues)`);
         }
       }
     }

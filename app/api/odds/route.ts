@@ -3,10 +3,21 @@ import type { OddsApiEvent } from "@/lib/types";
 
 const BASE_URL = "https://api.the-odds-api.com/v4";
 
+// All football (soccer) league sport keys supported by The Odds API.
+// Fetched in parallel so a single /api/odds?sport=football call covers every league.
+const FOOTBALL_SPORT_KEYS = [
+  "soccer_epl",
+  "soccer_spain_la_liga",
+  "soccer_italy_serie_a",
+  "soccer_germany_bundesliga",
+  "soccer_france_ligue_one",
+  "soccer_uefa_champs_league",
+  "soccer_uefa_europa_league",
+];
+
 // Maps our internal sport keys to The Odds API sport keys.
-// The Odds API uses sport key in the URL path: /v4/sports/{sportKey}/odds
+// Football is handled separately above (multiple keys → merged response).
 const SPORT_KEY_MAP: Record<string, string> = {
-  football:          "soccer_epl",
   nba:               "basketball_nba",
   american_football: "americanfootball_nfl",
   baseball:          "baseball_mlb",
@@ -17,12 +28,44 @@ const SPORT_KEY_MAP: Record<string, string> = {
   tennis:            "tennis_atp_french_open",
   basketball:        "basketball_euroleague",
   cricket:           "cricket_test_match",
-  // formula1, handball, volleyball, horse_racing not covered by The Odds API
 };
 
 // Quota cost = regions × markets. Default to 1 region (uk) = 1 credit per call.
 // Override via ODDS_API_REGIONS env var e.g. "uk,eu" for more bookmakers (costs more).
 const DEFAULT_REGIONS = process.env.ODDS_API_REGIONS ?? "uk";
+
+async function fetchOddsForKey(
+  sportKey: string,
+  apiKey: string
+): Promise<{ events: OddsApiEvent[]; remaining: string | null; used: string | null; last: string | null }> {
+  const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
+  url.searchParams.set("apiKey", apiKey);
+  url.searchParams.set("regions", DEFAULT_REGIONS);
+  url.searchParams.set("markets", "h2h");
+  url.searchParams.set("oddsFormat", "decimal");
+  url.searchParams.set("dateFormat", "iso");
+
+  const res = await fetch(url.toString(), {
+    next: { revalidate: 300 },
+  });
+
+  if (res.status === 429) {
+    console.warn(`[Odds API] rate limited for ${sportKey}`);
+    return { events: [], remaining: null, used: null, last: null };
+  }
+  if (!res.ok) {
+    console.error(`[Odds API] ${sportKey} returned ${res.status}`);
+    return { events: [], remaining: null, used: null, last: null };
+  }
+
+  const events: OddsApiEvent[] = await res.json();
+  return {
+    events,
+    remaining: res.headers.get("x-requests-remaining"),
+    used:      res.headers.get("x-requests-used"),
+    last:      res.headers.get("x-requests-last"),
+  };
+}
 
 export async function GET(req: NextRequest) {
   const sport = req.nextUrl.searchParams.get("sport") ?? "football";
@@ -32,43 +75,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ events: [] });
   }
 
-  const sportKey = SPORT_KEY_MAP[sport];
-  if (!sportKey) {
-    return NextResponse.json({ events: [] });
-  }
-
   try {
-    // GET /v4/sports/{sport}/odds — apiKey as query param, not header
-    const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
-    url.searchParams.set("apiKey", apiKey);
-    url.searchParams.set("regions", DEFAULT_REGIONS);
-    url.searchParams.set("markets", "h2h");       // 1 market × 1 region = 1 credit
-    url.searchParams.set("oddsFormat", "decimal");
-    url.searchParams.set("dateFormat", "iso");
+    if (sport === "football") {
+      // Fetch all football leagues in parallel — each is a separate Odds API endpoint
+      const results = await Promise.all(
+        FOOTBALL_SPORT_KEYS.map((key) => fetchOddsForKey(key, apiKey))
+      );
 
-    const res = await fetch(url.toString(), {
-      next: { revalidate: 300 }, // cache 5 min — avoids burning quota on every page load
-    });
+      const allEvents: OddsApiEvent[] = results.flatMap((r) => r.events);
+      // Log quota from the last successful response
+      const last = results.findLast((r) => r.remaining !== null);
+      console.log(`[Odds API] football — ${allEvents.length} total events across ${FOOTBALL_SPORT_KEYS.length} leagues`);
+      if (last) {
+        console.log(`[Odds API] quota — used: ${last.used}, remaining: ${last.remaining}`);
+        if (last.remaining !== null && parseInt(last.remaining) < 10) {
+          console.warn(`[Odds API] ⚠ Low quota: ${last.remaining} credits remaining`);
+        }
+      }
 
-    if (res.status === 429) {
-      console.warn("[Odds API] rate limited");
-      return NextResponse.json({ events: [], error: "rate_limited" });
+      return NextResponse.json({ events: allEvents });
     }
 
-    if (!res.ok) {
-      console.error("[Odds API] error:", res.status, await res.text());
-      return NextResponse.json({ events: [], error: `status_${res.status}` });
+    // Non-football sports
+    const sportKey = SPORT_KEY_MAP[sport];
+    if (!sportKey) {
+      return NextResponse.json({ events: [] });
     }
 
-    // Response is a plain array — no wrapper unlike API-Football
-    const events: OddsApiEvent[] = await res.json();
-
-    // Log quota usage on every call so you can monitor free tier consumption
-    const remaining = res.headers.get("x-requests-remaining");
-    const used      = res.headers.get("x-requests-used");
-    const last      = res.headers.get("x-requests-last");
+    const { events, remaining, used, last } = await fetchOddsForKey(sportKey, apiKey);
     console.log(`[Odds API] quota — used: ${used}, remaining: ${remaining}, this call cost: ${last}`);
-
     if (remaining !== null && parseInt(remaining) < 10) {
       console.warn(`[Odds API] ⚠ Low quota: ${remaining} credits remaining`);
     }
