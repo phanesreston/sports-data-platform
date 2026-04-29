@@ -13,19 +13,23 @@ import {
   transformPredictionToMarkets,
   placeholderStats,
 } from "@/lib/transformers";
+import { currentSeason } from "@/lib/apifootball";
 import type { Market } from "@/lib/types";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
-// Top league IDs for football (stable — won't change between seasons)
+const SEASON = currentSeason();
+
+// All supported leagues — IDs are stable across seasons
 const FOOTBALL_LEAGUES = [
-  { id: 39,  name: "Premier League",      season: 2024 },
-  { id: 140, name: "La Liga",             season: 2024 },
-  { id: 135, name: "Serie A",             season: 2024 },
-  { id: 78,  name: "Bundesliga",          season: 2024 },
-  { id: 61,  name: "Ligue 1",             season: 2024 },
-  { id: 2,   name: "Champions League",    season: 2024 },
-];
+  { id: 39,  name: "Premier League"   },
+  { id: 140, name: "La Liga"          },
+  { id: 135, name: "Serie A"          },
+  { id: 78,  name: "Bundesliga"       },
+  { id: 61,  name: "Ligue 1"          },
+  { id: 2,   name: "Champions League" },
+  { id: 3,   name: "Europa League"    },
+].map((l) => ({ ...l, season: SEASON }));
 
 async function apiFetch<T>(
   path: string,
@@ -82,7 +86,7 @@ export async function GET(req: NextRequest) {
   // Determine which leagues to fetch
   const leagues = leagueParam
     ? FOOTBALL_LEAGUES.filter((l) => String(l.id) === leagueParam)
-    : FOOTBALL_LEAGUES.slice(0, 3); // default: top 3 leagues to keep quota low
+    : FOOTBALL_LEAGUES;
 
   console.log(`\n[fixtures] ── START ──────────────────────────────────────`);
   console.log(`[fixtures] leagues to fetch: ${leagues.map(l => `${l.name}(${l.id})`).join(", ")}`);
@@ -95,10 +99,7 @@ export async function GET(req: NextRequest) {
   // teamLogoMap: name → { logo, id } for ALL upcoming fixtures (not just the enriched ones)
   const teamLogoMap: Record<string, { logo: string; id: number }> = {};
 
-  // Date range: today → 7 days ahead (free plan doesn't support `next` param)
-  const today    = new Date().toISOString().split("T")[0];
-  const nextWeek = new Date(Date.now() + 7 * 86_400_000).toISOString().split("T")[0];
-  console.log(`[fixtures] date range: ${today} → ${nextWeek}`);
+  console.log(`[fixtures] season: ${SEASON}`);
 
   // Pre-seed teamLogoMap from full league team lists (exact API names + IDs).
   // Cached 24 h — one call per league per day. This ensures all 20 PL teams
@@ -129,8 +130,7 @@ export async function GET(req: NextRequest) {
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
       league:   league.id,
       season:   league.season,
-      from:     today,
-      to:       nextWeek,
+      next:     20,
       timezone: "UTC",
     });
 
@@ -149,8 +149,8 @@ export async function GET(req: NextRequest) {
       if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = { logo: f.teams.away.logo, id: f.teams.away.id };
     }
 
-    // Enrich only the first 3 fixtures with stats/H2H/predictions (quota-heavy)
-    const fixtures = upcomingFixtures.slice(0, 3);
+    // Enrich the first 10 fixtures with stats/H2H/predictions
+    const fixtures = upcomingFixtures.slice(0, 10);
     if (fixtures.length === 0) continue;
 
     console.log(`[fixtures]   enriching ${fixtures.length} fixture(s):`);

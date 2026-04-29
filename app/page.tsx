@@ -16,6 +16,8 @@ const LEAGUE_NAMES: Record<number, string> = {
   135: "Serie A",
   78:  "Bundesliga",
   61:  "Ligue 1",
+  2:   "Champions League",
+  3:   "Europa League",
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, currentSeason } from "@/lib/apifootball";
 
-const SEASON = 2024;
+const SEASON = currentSeason();
 
 export interface ApiStanding {
   rank: number;

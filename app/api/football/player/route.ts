@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, isRateLimited } from "@/lib/apifootball";
+import { apiFetch, unwrap, isRateLimited, currentSeason } from "@/lib/apifootball";
 
 export interface ApiPlayerFull {
   player: {
@@ -34,7 +34,7 @@ export interface ApiPlayerFull {
   }[];
 }
 
-const SEASONS = [2024, 2023, 2022];
+const SEASONS = [currentSeason(), 2024, 2023];
 
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");

@@ -2,6 +2,16 @@ import type { ApiFootballResponse } from "./types";
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
+/** Returns the current football season year.
+ *  The 2025/26 season starts in August 2025, so for any date before August
+ *  we're still in the previous season (2024/25 → 2024).
+ *  April 2026 → month=3 < 7 → returns 2025.
+ */
+export function currentSeason(): number {
+  const now = new Date();
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 // Maps Odds API / user-facing team names to the name API-Football stores them
 // under when no substring overlap exists. Add entries as mismatches appear in logs.
 export const TEAM_NAME_ALIASES: Record<string, string> = {

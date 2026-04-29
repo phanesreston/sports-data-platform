@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
+import { apiFetch, unwrap, currentSeason } from "@/lib/apifootball";
 
-const SEASON = 2024;
+const SEASON = currentSeason();
 
 export const TOP_LEAGUES = [
-  { id: 39,  name: "Premier League", country: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { id: 140, name: "La Liga",         country: "Spain",   flag: "🇪🇸" },
-  { id: 135, name: "Serie A",         country: "Italy",   flag: "🇮🇹" },
-  { id: 78,  name: "Bundesliga",      country: "Germany", flag: "🇩🇪" },
-  { id: 61,  name: "Ligue 1",         country: "France",  flag: "🇫🇷" },
+  { id: 39,  name: "Premier League",  country: "England",  flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: 140, name: "La Liga",          country: "Spain",    flag: "🇪🇸" },
+  { id: 135, name: "Serie A",          country: "Italy",    flag: "🇮🇹" },
+  { id: 78,  name: "Bundesliga",       country: "Germany",  flag: "🇩🇪" },
+  { id: 61,  name: "Ligue 1",          country: "France",   flag: "🇫🇷" },
+  { id: 2,   name: "Champions League", country: "Europe",   flag: "🏆" },
+  { id: 3,   name: "Europa League",    country: "Europe",   flag: "🇪🇺" },
 ];
 
 interface ApiLeagueInfo {

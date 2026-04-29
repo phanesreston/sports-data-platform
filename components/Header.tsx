@@ -11,14 +11,16 @@ const NAV_LINKS = [
   { label: "How It Works", href: "/how-it-works" },
 ];
 
-// Top European leagues — same IDs as TOP_LEAGUES in the API
+// Top European leagues + cups — same IDs as TOP_LEAGUES in the API
 const LEAGUE_TABS = [
-  { id: null, label: "All Leagues" },
+  { id: null, label: "All" },
   { id: 39,   label: "Premier League" },
   { id: 140,  label: "La Liga" },
   { id: 135,  label: "Serie A" },
   { id: 78,   label: "Bundesliga" },
   { id: 61,   label: "Ligue 1" },
+  { id: 2,    label: "Champions League" },
+  { id: 3,    label: "Europa League" },
 ];
 
 function NavLink({ href, label }: { href: string; label: string }) {

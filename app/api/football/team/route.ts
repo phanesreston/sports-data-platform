@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
+import { apiFetch, unwrap, currentSeason, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
 
 
 // Leagues to try for season stats (priority order)
 const STATS_LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3];
-const SEASON = 2024;
+const SEASON = currentSeason();
 
 interface ApiTeam {
   team: { id: number; name: string; code: string; country: string; founded: number; logo: string };
