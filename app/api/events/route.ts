@@ -199,6 +199,9 @@ export async function GET(req: NextRequest) {
             event.awayTeamId  = fixtureEntry.fixture.teams.away.id;
             event.leagueId    = fixtureEntry.fixture.league.id;
             event.leagueLogo  = fixtureEntry.fixture.league.logo;
+            // Normalize to the API-Football league name so all events for the same
+            // league share one name ("Premier League" not "English Premier League")
+            event.league      = fixtureEntry.fixture.league.name;
             console.log(`[events]   ✓ fixture match: "${raw.home_team}" vs "${raw.away_team}" → API names: "${fixtureEntry.fixture.teams.home.name}"(${fixtureEntry.fixture.teams.home.id}) vs "${fixtureEntry.fixture.teams.away.name}"(${fixtureEntry.fixture.teams.away.id})`);
           } else {
             // Fuzzy match against teamLogoMap (handles name variants)
@@ -274,28 +277,37 @@ export async function GET(req: NextRequest) {
       if (fixturesData?.fixtures?.length) {
         const fixtureOnlyCount = { added: 0 };
         for (const f of fixturesData.fixtures) {
-          if (!matchedFixtureIds.has(f.fixture.fixture.id)) {
-            fixtureOnlyCount.added++;
-            allEvents.push({
-              id:          `apisports-${f.fixture.fixture.id}`,
-              sport:        s,
-              league:       f.fixture.league.name,
-              leagueId:     f.fixture.league.id,
-              leagueLogo:   f.fixture.league.logo,
-              homeTeam:     f.fixture.teams.home.name,
-              homeTeamId:   f.fixture.teams.home.id,
-              homeLogo:     f.fixture.teams.home.logo,
-              awayTeam:     f.fixture.teams.away.name,
-              awayTeamId:   f.fixture.teams.away.id,
-              awayLogo:     f.fixture.teams.away.logo,
-              commenceTime: f.fixture.fixture.date,
-              bookmakers:   [],
-              homeStats:    f.homeStats,
-              awayStats:    f.awayStats,
-              h2h:          f.h2h,
-              markets:      f.markets,
-            });
-          }
+          if (matchedFixtureIds.has(f.fixture.fixture.id)) continue;
+          // Also skip if an existing event already represents this match — handles
+          // cases where the Odds API name doesn't fuzzy-match the API-Football name
+          // (e.g. "Atletico Madrid" vs "Atlético Madrid") so the ID wasn't tracked
+          // above but the game would still appear twice.
+          const homeN = f.fixture.teams.home.name;
+          const awayN = f.fixture.teams.away.name;
+          const alreadyCovered = allEvents.some(
+            (e) => fuzzyTeamMatch(e.homeTeam, homeN) && fuzzyTeamMatch(e.awayTeam, awayN)
+          );
+          if (alreadyCovered) continue;
+          fixtureOnlyCount.added++;
+          allEvents.push({
+            id:          `apisports-${f.fixture.fixture.id}`,
+            sport:        s,
+            league:       f.fixture.league.name,
+            leagueId:     f.fixture.league.id,
+            leagueLogo:   f.fixture.league.logo,
+            homeTeam:     f.fixture.teams.home.name,
+            homeTeamId:   f.fixture.teams.home.id,
+            homeLogo:     f.fixture.teams.home.logo,
+            awayTeam:     f.fixture.teams.away.name,
+            awayTeamId:   f.fixture.teams.away.id,
+            awayLogo:     f.fixture.teams.away.logo,
+            commenceTime: f.fixture.fixture.date,
+            bookmakers:   [],
+            homeStats:    f.homeStats,
+            awayStats:    f.awayStats,
+            h2h:          f.h2h,
+            markets:      f.markets,
+          });
         }
         if (fixtureOnlyCount.added > 0) {
           console.log(`[events] added ${fixtureOnlyCount.added} unmatched API-Football fixtures (non-EPL leagues)`);
