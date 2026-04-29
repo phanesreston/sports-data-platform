@@ -2,23 +2,28 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { Menu, X, Zap, Search } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
 
 const NAV_LINKS = [
   { label: "Picks",        href: "/" },
-  { label: "Football",     href: "/football" },
   { label: "How It Works", href: "/how-it-works" },
+];
+
+// Top European leagues — same IDs as TOP_LEAGUES in the API
+const LEAGUE_TABS = [
+  { id: null, label: "All Leagues" },
+  { id: 39,   label: "Premier League" },
+  { id: 140,  label: "La Liga" },
+  { id: 135,  label: "Serie A" },
+  { id: 78,   label: "Bundesliga" },
+  { id: 61,   label: "Ligue 1" },
 ];
 
 function NavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
-  const isActive =
-    href === "/"
-      ? pathname === "/"
-      : pathname.startsWith(href);
-
+  const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
   return (
     <Link
       href={href}
@@ -31,23 +36,27 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function FootballSubNav() {
-  const pathname = usePathname();
+function LeagueSubNav() {
+  const pathname     = usePathname();
+  const searchParams = useSearchParams();
 
-  const tabs = [
-    { label: "All Picks",  href: "/" },
-    { label: "Football Hub", href: "/football" },
-  ];
+  // Tabs only apply on the root picks page
+  const onHome        = pathname === "/";
+  const activeLeague  = onHome ? searchParams.get("league") : null;
 
   return (
-    <div className="flex items-center gap-0.5 pb-0.5">
-      {tabs.map((tab) => {
-        const isActive = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+    <div className="flex items-center gap-0.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {LEAGUE_TABS.map((tab) => {
+        const href     = tab.id === null ? "/" : `/?league=${tab.id}`;
+        const isActive = tab.id === null
+          ? onHome && !activeLeague
+          : onHome && activeLeague === String(tab.id);
+
         return (
           <Link
-            key={tab.href}
-            href={tab.href}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+            key={tab.id ?? "all"}
+            href={href}
+            className={`flex shrink-0 items-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-all whitespace-nowrap ${
               isActive
                 ? "bg-accent-green/15 text-accent-green"
                 : "text-slate-400 hover:bg-bg-border hover:text-white"
@@ -62,8 +71,8 @@ function FootballSubNav() {
 }
 
 export default function Header() {
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen,    setMenuOpen]   = useState(false);
+  const [searchOpen,  setSearchOpen] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -127,17 +136,19 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Sub-nav */}
+        {/* League sub-nav */}
         <div className="border-t border-bg-border/60">
           <div className="mx-auto max-w-7xl px-4 py-1 sm:px-6 lg:px-8">
             <Suspense fallback={
-              <div className="flex gap-0.5 pb-0.5">
-                {["All Picks", "Football Hub"].map((l) => (
-                  <span key={l} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-500">{l}</span>
+              <div className="flex gap-0.5 overflow-hidden pb-0.5">
+                {LEAGUE_TABS.map((t) => (
+                  <span key={t.id ?? "all"} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-600 whitespace-nowrap">
+                    {t.label}
+                  </span>
                 ))}
               </div>
             }>
-              <FootballSubNav />
+              <LeagueSubNav />
             </Suspense>
           </div>
         </div>
@@ -155,6 +166,19 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            <div className="mt-3 border-t border-bg-border pt-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-600">Leagues</p>
+              {LEAGUE_TABS.filter((t) => t.id !== null).map((tab) => (
+                <Link
+                  key={tab.id}
+                  href={`/?league=${tab.id}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="block py-2 text-sm font-medium text-slate-400 hover:text-white"
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </header>

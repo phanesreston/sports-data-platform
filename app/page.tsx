@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Activity, TrendingUp, Zap, BarChart2 } from "lucide-react";
 import type { OddsEvent } from "@/data/sampleOdds";
 import Header from "@/components/Header";
@@ -8,6 +9,14 @@ import Footer from "@/components/Footer";
 import SignalCard from "@/components/SignalCard";
 import AnalyticsTicker from "@/components/AnalyticsTicker";
 import BetRankingsTable from "@/components/BetRankingsTable";
+
+const LEAGUE_NAMES: Record<number, string> = {
+  39:  "Premier League",
+  140: "La Liga",
+  135: "Serie A",
+  78:  "Bundesliga",
+  61:  "Ligue 1",
+};
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -63,6 +72,11 @@ function Skeleton() {
 // ── main content ──────────────────────────────────────────────────────────────
 
 function DashboardContent() {
+  const searchParams = useSearchParams();
+  const leagueParam  = searchParams.get("league");
+  const selectedLeagueId   = leagueParam ? parseInt(leagueParam, 10) : null;
+  const selectedLeagueName = selectedLeagueId ? (LEAGUE_NAMES[selectedLeagueId] ?? null) : null;
+
   const [events, setEvents]   = useState<OddsEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -80,41 +94,50 @@ function DashboardContent() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Filter to selected league when a tab is active
+  const filtered = useMemo(() => {
+    if (!selectedLeagueId) return events;
+    return events.filter(
+      (e) => e.leagueId === selectedLeagueId ||
+             (selectedLeagueName && e.league === selectedLeagueName)
+    );
+  }, [events, selectedLeagueId, selectedLeagueName]);
+
   const strongSignals = useMemo(
-    () => events.filter((e) => (getTopPick(e)?.probability ?? 0) >= 65),
-    [events]
+    () => filtered.filter((e) => (getTopPick(e)?.probability ?? 0) >= 65),
+    [filtered]
   );
   const valueBets = useMemo(
-    () => events.filter((e) => (getEdge(e) ?? 0) > 3),
-    [events]
+    () => filtered.filter((e) => (getEdge(e) ?? 0) > 3),
+    [filtered]
   );
   const topConfidence = useMemo(
-    () => Math.max(0, ...events.map((e) => getTopPick(e)?.probability ?? 0)),
-    [events]
+    () => Math.max(0, ...filtered.map((e) => getTopPick(e)?.probability ?? 0)),
+    [filtered]
   );
 
   const topSignalEvents = useMemo(
     () =>
-      [...events]
+      [...filtered]
         .filter((e) => (getTopPick(e)?.probability ?? 0) >= 58)
         .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
         .slice(0, 3),
-    [events]
+    [filtered]
   );
 
   const valueBetEvents = useMemo(() => {
     const signalIds = new Set(topSignalEvents.map((e) => e.id));
-    return [...events]
+    return [...filtered]
       .filter((e) => !signalIds.has(e.id) && (getEdge(e) ?? 0) > 3)
       .sort((a, b) => (getEdge(b) ?? 0) - (getEdge(a) ?? 0))
       .slice(0, 3);
-  }, [events, topSignalEvents]);
+  }, [filtered, topSignalEvents]);
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      {!loading && events.length > 0 && <AnalyticsTicker events={events} />}
+      {!loading && filtered.length > 0 && <AnalyticsTicker events={filtered} />}
 
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -123,10 +146,12 @@ function DashboardContent() {
           <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
-                ⚽ Football Intelligence
+                {selectedLeagueName ?? "Sports Intelligence"}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Analyst-grade signals across every upcoming fixture
+                {selectedLeagueName
+                  ? `Analyst-grade signals for ${selectedLeagueName} fixtures`
+                  : "Analyst-grade signals across every upcoming fixture"}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
@@ -151,9 +176,9 @@ function DashboardContent() {
           </div>
 
           {/* KPI row */}
-          {!loading && events.length > 0 && (
+          {!loading && filtered.length > 0 && (
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <KpiTile icon={BarChart2}  label="Fixtures analysed" value={events.length}           sub="across all leagues" />
+              <KpiTile icon={BarChart2}  label="Fixtures analysed" value={filtered.length}         sub={selectedLeagueName ?? "across all leagues"} />
               <KpiTile icon={Zap}        label="Strong signals"    value={strongSignals.length}    sub="≥65% confidence" highlight={strongSignals.length > 0} />
               <KpiTile icon={TrendingUp} label="Value bets"        value={valueBets.length}        sub=">3% edge vs market" />
               <KpiTile icon={Activity}   label="Top confidence"    value={topConfidence > 0 ? `${topConfidence}%` : "—"} sub="highest single pick" />
@@ -181,15 +206,19 @@ function DashboardContent() {
           )}
 
           {/* Empty state */}
-          {!loading && events.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center">
               <span className="text-3xl">📊</span>
-              <p className="mt-3 text-sm text-slate-500">No football fixtures found.</p>
+              <p className="mt-3 text-sm text-slate-500">
+                {selectedLeagueName
+                  ? `No upcoming fixtures found for ${selectedLeagueName}.`
+                  : "No football fixtures found."}
+              </p>
             </div>
           )}
 
           {/* Top Signals */}
-          {!loading && topSignalEvents.length > 0 && (
+          {!loading && filtered.length > 0 && topSignalEvents.length > 0 && (
             <section className="mb-8">
               <div className="mb-4 flex items-center gap-3">
                 <Zap className="h-4 w-4 text-accent-green" />
@@ -225,7 +254,7 @@ function DashboardContent() {
           )}
 
           {/* Ranked Picks by League */}
-          {!loading && events.length > 0 && (
+          {!loading && filtered.length > 0 && (
             <section>
               <div className="mb-4 flex items-center gap-3">
                 <BarChart2 className="h-4 w-4 text-slate-500" />
@@ -235,7 +264,11 @@ function DashboardContent() {
                 <div className="flex-1 border-t border-bg-border" />
                 <span className="text-xs text-slate-600">Most favourable first</span>
               </div>
-              <BetRankingsTable events={events} groupBy="league" singleSport />
+              <BetRankingsTable
+                events={filtered}
+                groupBy="league"
+                singleSport={selectedLeagueId !== null}
+              />
             </section>
           )}
 
