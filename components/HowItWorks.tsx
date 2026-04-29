@@ -6,7 +6,7 @@ const sections = [
     icon: Database,
     title: "We gather the data",
     paragraphs: [
-      "Every prediction on WeLikeSportz starts with raw data. We collect form guides, head-to-head records, and match statistics from across all major leagues and competitions worldwide.",
+      "Every prediction on WeLikeSportz starts with raw data. We collect form guides, head-to-head records, and match statistics from across the top European football leagues — Premier League, La Liga, Bundesliga, Serie A, Ligue 1, and more.",
       "This includes each team's last five results, their average goals scored and conceded, and the full historical record between the two sides — giving us a reliable picture of how teams have been performing and how they match up against each other.",
     ],
   },
@@ -42,7 +42,7 @@ export default function HowItWorks() {
           How It Works
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-slate-400">
-          WeLikeSportz turns raw match data into clear, probability-based
+          WeLikeSportz turns raw football data into clear, probability-based
           predictions. Here&apos;s exactly what we do and how we do it — no
           black box, no jargon.
         </p>
