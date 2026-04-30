@@ -1,5 +1,12 @@
 "use client";
 
+// Team profile page — /teams/[id]
+// The route accepts either a numeric team ID (e.g. /teams/33) or a team name
+// (e.g. /teams/Manchester%20United). It displays three tabs:
+//   Overview — season stats, first 6 squad players, next fixture prediction card
+//   Squad    — full squad grouped by position (Goalkeepers, Defenders, …)
+//   Fixtures — past results + upcoming matches with season selector
+
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,16 +20,19 @@ import type { OddsEvent } from "@/data/sampleOdds";
 
 type Tab = "overview" | "squad" | "fixtures";
 
+// Season year: August+ = new season has started
 const CURRENT_SEASON = (() => {
   const now = new Date();
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 })();
 const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
 
+// seasonLabel — formats a season year as "2024/25"
 function seasonLabel(s: number) {
   return `${s}/${String(s + 1).slice(2)}`;
 }
 
+// Tailwind classes for win/draw/loss result badges
 const RESULT_STYLES = {
   W: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   D: "bg-bg-border text-slate-400 border-bg-border",
@@ -59,10 +69,12 @@ interface Fixture {
   goals: { home: number | null; away: number | null };
 }
 
+// Skeleton — animated grey placeholder shown while data is loading
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
 
+// FormBadge — small coloured square showing W / D / L, used in the hero form strip
 function FormBadge({ result }: { result: "W" | "D" | "L" }) {
   return (
     <span className={`flex h-7 w-7 items-center justify-center rounded-md border text-xs font-bold ${RESULT_STYLES[result]}`}>
@@ -71,6 +83,7 @@ function FormBadge({ result }: { result: "W" | "D" | "L" }) {
   );
 }
 
+// PlayerCard — clickable card for one squad member linking to their athlete page
 function PlayerCard({ player }: { player: SquadPlayer }) {
   return (
     <Link
@@ -90,12 +103,17 @@ function PlayerCard({ player }: { player: SquadPlayer }) {
   );
 }
 
+// FixtureRow — one match row in the Fixtures tab.
+// Computes the result (W/D/L) from the team's perspective based on whether
+// it was the home or away side, then colour-codes the left border and the score.
 function FixtureRow({ f, teamId }: { f: Fixture; teamId: number }) {
   const date = new Date(f.fixture.date);
-  const isHome    = f.teams.home.id === teamId;
+  const isHome     = f.teams.home.id === teamId;
   const isFinished = ["FT", "AET", "PEN"].includes(f.fixture.status.short);
+  // Any status that isn't a pre-match or terminal status is treated as live
   const isLive     = !["NS", "TBD", "FT", "AET", "PEN", "PST", "CANC", "SUSP"].includes(f.fixture.status.short);
 
+  // Determine W/D/L from this team's perspective
   let result: "W" | "D" | "L" | null = null;
   if (isFinished && f.goals.home !== null && f.goals.away !== null) {
     const scored    = isHome ? f.goals.home : f.goals.away;
@@ -103,6 +121,7 @@ function FixtureRow({ f, teamId }: { f: Fixture; teamId: number }) {
     result = scored > conceded ? "W" : scored === conceded ? "D" : "L";
   }
 
+  // Left-border accent colour matches the result (green win, red loss, grey draw)
   const resultBg =
     result === "W" ? "border-l-emerald-500/50" :
     result === "L" ? "border-l-red-500/40" :
@@ -178,17 +197,21 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [notFound, setNotFound]   = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
-  // Season for fixtures tab
+  // Which season to show in the Fixtures tab
   const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON);
 
-  // Real fixtures from API-Football
+  // Fixtures fetched from API-Football (next 10 upcoming + last 15 results)
   const [teamFixtures, setTeamFixtures] = useState<{ upcoming: Fixture[]; recent: Fixture[] } | null>(null);
   const [fixturesLoading, setFixturesLoading] = useState(false);
-  const [fixturesLoadedFor, setFixturesLoadedFor] = useState<string>(""); // "teamId:season"
+  // String guard — "teamId:season" — prevents re-fetching when the user switches tabs
+  const [fixturesLoadedFor, setFixturesLoadedFor] = useState<string>("");
 
+  // The route accepts both /teams/33 (numeric ID) and /teams/Manchester%20United (name)
   const teamName = decodeURIComponent(params.id);
 
-  // Load team data + next fixture prediction card
+  // Load team profile and next fixture prediction card in parallel on mount.
+  // The prediction card comes from the betting events API (which has odds), so
+  // we do a fuzzy name match between the team's canonical name and event team names.
   useEffect(() => {
     const isNumeric = /^\d+$/.test(params.id);
     const query = isNumeric ? `id=${params.id}` : `name=${encodeURIComponent(teamName)}`;
@@ -201,6 +224,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         if (!teamData || teamData.error) { setNotFound(true); return; }
         setData(teamData);
         const name = teamData.team.name;
+        // Normalise to lowercase alphanumeric for fuzzy matching
+        // (e.g. "Man Utd" vs "Manchester United" both reduce to "manutd"/"manchesterunited"
+        //  so we also check substring inclusion in both directions)
         const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
         const nn = norm(name);
         const match = (eventsData.events as OddsEvent[]).find(
@@ -215,7 +241,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       .finally(() => setLoading(false));
   }, [params.id, teamName]);
 
-  // Load team fixtures when fixtures tab is open
+  // Fixtures tab load — fires when the tab is first opened or the season changes.
+  // Uses the "loadedFor" string to skip re-fetching if we already have the data.
   useEffect(() => {
     if (activeTab !== "fixtures" || !data?.team?.id) return;
     const key = `${data.team.id}:${selectedSeason}`;
@@ -232,12 +259,15 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       .finally(() => setFixturesLoading(false));
   }, [activeTab, data?.team?.id, selectedSeason, fixturesLoadedFor]);
 
+  // handleSeasonChange — clears the "loaded for" guard and fixture data so the
+  // useEffect above knows it needs to re-fetch for the new season.
   function handleSeasonChange(s: number) {
     setSelectedSeason(s);
-    setFixturesLoadedFor(""); // force reload
+    setFixturesLoadedFor("");
     setTeamFixtures(null);
   }
 
+  // Last 5 form characters from the team stats (e.g. ["W","W","D","L","W"])
   const formChars = (data?.stats?.form ?? "").slice(-5).split("") as ("W" | "D" | "L")[];
   const teamId = data?.team?.id ?? 0;
 

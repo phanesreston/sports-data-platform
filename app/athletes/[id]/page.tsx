@@ -1,5 +1,14 @@
 "use client";
 
+// Athlete (player) profile page — /athletes/[id]
+// Displays a rich player profile: hero with photo/badges/average rating,
+// key metric cards (appearances, minutes, goals, assists, cards), position-aware
+// stat bars, per-90 metrics, a by-competition breakdown table, and quick links
+// to the player's team and league pages.
+//
+// The page auto-discovers the most recent season that has data, and a season
+// selector lets the user switch between the last 3 seasons.
+
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,11 +20,13 @@ import TeamLogo from "@/components/TeamLogo";
 
 // ── season helpers ────────────────────────────────────────────────────────────
 
+// Season year: August onwards means we're in the new season (e.g. Aug 2024 → season 2024)
 const CURRENT_SEASON = (() => {
   const now = new Date();
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 })();
 const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
+// seasonLabel — formats a season year as "2024/25"
 function seasonLabel(s: number) { return `${s}/${String(s + 1).slice(2)}`; }
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -44,16 +55,23 @@ interface PlayerData {
 
 // ── stat helpers ──────────────────────────────────────────────────────────────
 
+// pct — calculates a safe percentage, returning null if either argument is null or
+// the denominator is zero (avoids divide-by-zero errors in stat bars).
 function pct(num: number | null, den: number | null): number | null {
   if (num === null || den === null || den === 0) return null;
   return Math.round((num / den) * 100);
 }
 
+// per90 — normalises a counting stat to a per-90-minutes rate.
+// Returns a string like "0.45" for display. Returns null if we have no minutes data.
 function per90(value: number | null, minutes: number | null): string | null {
   if (value === null || !minutes) return null;
   return ((value / minutes) * 90).toFixed(2);
 }
 
+// sumStat — sums a nested stat field across all competition entries.
+// A player who appeared in 3 competitions has 3 stats entries; this adds them up.
+// Returns null if none of the entries have the field populated (vs. returning 0).
 function sumStat<K extends keyof PlayerStats>(
   stats: PlayerStats[], key: K, sub: keyof PlayerStats[K]
 ): number | null {
@@ -66,6 +84,8 @@ function sumStat<K extends keyof PlayerStats>(
   return any ? total : null;
 }
 
+// avgRating — computes the average API-Football rating across competitions that have one.
+// The API provides ratings as decimal strings like "7.35", so we parseFloat them.
 function avgRating(stats: PlayerStats[]): string | null {
   const rated = stats.filter(s => s.games.rating);
   if (!rated.length) return null;
@@ -75,14 +95,20 @@ function avgRating(stats: PlayerStats[]): string | null {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
+// Skeleton — animated grey placeholder shown while data is loading
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
 
+// StatBar — a labelled horizontal progress bar.
+// max sets the scale (e.g. 200 saves for GK, 40 goals for attacker).
+// highlight=true switches the bar and number to accent-green for key stats.
+// Returns null if the value is null so bars with no data simply disappear.
 function StatBar({ label, value, max, suffix = "", highlight = false }: {
   label: string; value: number | null; max: number; suffix?: string; highlight?: boolean;
 }) {
   if (value === null) return null;
+  // Clamp to [0, 100] so outliers (e.g. 150 saves) don't overflow the bar
   const pctFill = Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div className="flex items-center gap-3 py-1">
@@ -100,10 +126,13 @@ function StatBar({ label, value, max, suffix = "", highlight = false }: {
   );
 }
 
+// PctBar — shorthand for a StatBar that always uses max=100 and suffix="%" (for percentages)
 function PctBar({ label, value, highlight = false }: { label: string; value: number | null; highlight?: boolean }) {
   return <StatBar label={label} value={value} max={100} suffix="%" highlight={highlight} />;
 }
 
+// BigStat — a large number card used in the key metrics row at the top of the page.
+// sub is an optional smaller label beneath (e.g. "0.45/90" for goals per 90).
 function BigStat({ label, value, sub }: { label: string; value: string | number | null; sub?: string }) {
   return (
     <div className="flex flex-col items-center rounded-xl border border-bg-border bg-bg-card px-4 py-4 text-center shadow-sm">
@@ -114,6 +143,8 @@ function BigStat({ label, value, sub }: { label: string; value: string | number 
   );
 }
 
+// SectionTitle — a small icon + ALL-CAPS label with a horizontal rule,
+// used as dividers between stat sections inside the stat bars panel.
 function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="mb-4 flex items-center gap-2">
@@ -126,6 +157,11 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 
 // ── position-aware stat sections ──────────────────────────────────────────────
 
+// PositionStats — renders the correct stat bars for the player's position.
+// Goalkeepers see shot-stopping stats; defenders see defensive/passing;
+// midfielders see creation/ball-carrying; attackers see shooting/ball-carrying.
+// All outfield players also get a Per-90 grid (when they have >90 mins played)
+// and a Discipline section. Stats are aggregated across all competitions.
 function PositionStats({ stats, position, minutes }: {
   stats: PlayerStats[]; position: string; minutes: number | null;
 }) {
@@ -290,11 +326,12 @@ export default function AthletePage({ params }: { params: { id: string } }) {
   const [data, setData]           = useState<PlayerData | null>(null);
   const [activeSeason, setActiveSeason] = useState<number>(CURRENT_SEASON);
   const [loading, setLoading]     = useState(true);
-  const [seasonLoading, setSeasonLoading] = useState(false);
+  const [seasonLoading, setSeasonLoading] = useState(false); // dimming overlay during season switch
   const [notFound, setNotFound]   = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
 
-  // Initial load — let API decide season
+  // Initial load — no season param so the API tries current, current-1, current-2
+  // and returns the first season that has data, along with which season it found.
   useEffect(() => {
     fetch(`/api/football/player?id=${params.id}`)
       .then(async (r) => {
@@ -305,13 +342,15 @@ export default function AthletePage({ params }: { params: { id: string } }) {
         if (!json) { if (!rateLimited) setNotFound(true); return; }
         if (json.error) { setNotFound(true); return; }
         setData(json.player);
+        // Pre-select the season selector to whichever season the API found data in
         if (json.season) setActiveSeason(json.season);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [params.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Season-switch load
+  // loadSeason — triggered by the season selector buttons; fetches a specific season.
+  // Does nothing if the same season is already shown or a load is in progress.
   function loadSeason(s: number) {
     if (s === activeSeason || seasonLoading) return;
     setActiveSeason(s);
@@ -323,17 +362,22 @@ export default function AthletePage({ params }: { params: { id: string } }) {
       })
       .then((json) => {
         if (json?.player) setData(json.player);
+        // If there's no data for that season, we keep the previous data showing
       })
       .catch(() => {})
       .finally(() => setSeasonLoading(false));
   }
 
+  // primaryStats — the first competition entry, used for team/league badges in the hero.
+  // A player registered in 3 competitions still has one "primary" club.
   const primaryStats = data?.statistics?.[0] ?? null;
   const teamName     = primaryStats?.team?.name ?? "";
   const position     = primaryStats?.games.position ?? "";
   const isGK         = position === "Goalkeeper";
 
-  // Aggregate across all competitions for the selected season
+  // Aggregate totals across all competitions for the key metrics row.
+  // We sum across entries so a player with Premier League + Champions League appearances
+  // shows combined totals, not just one competition's numbers.
   const stats = data?.statistics ?? [];
   const totalMins = stats.reduce((n, s) => n + (s.games.minutes ?? 0), 0) || null;
   const totalApps = stats.reduce((n, s) => n + (s.games.appearences ?? 0), 0) || null;

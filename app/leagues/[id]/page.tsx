@@ -1,5 +1,10 @@
 "use client";
 
+// League hub page — /leagues/[id]
+// Displays a tabbed dashboard for a football league: Overview (current round
+// fixtures + condensed table + form guide), Fixtures (gameweek navigation),
+// Standings (full table with All / Home / Away toggle), Teams, and Top Players.
+
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,24 +17,38 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 type Tab = "overview" | "fixtures" | "standings" | "teams" | "players";
+// Which split of the standings to display: overall, home-only, or away-only
 type StandingsView = "all" | "home" | "away";
 
+// Football seasons run Aug–May, so season 2024 means the 2024/25 campaign.
+// Month >= 7 (August) means we're in the new season; otherwise it's still last year's.
 const CURRENT_SEASON = (() => {
   const now = new Date();
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 })();
 const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
 
+// seasonLabel — formats a season year as "2024/25"
 function seasonLabel(s: number) {
   return `${s}/${String(s + 1).slice(2)}`;
 }
+
+// formatRound — converts the API's verbose round string ("Regular Season - 28")
+// into the shorter gameweek format ("GW 28") shown in the UI.
+// Non-standard strings (e.g. "Relegation Round") are returned unchanged.
 function formatRound(round: string): string {
   const m = round.match(/Regular Season - (\d+)/);
   return m ? `GW ${m[1]}` : round;
 }
+
+// formPts — calculates points earned in the last 5 matches from a form string
+// like "WWDLW". Used to sort the Form Guide leaderboard.
 function formPts(form: string): number {
   return form.slice(-5).split("").reduce((n, c) => n + (c === "W" ? 3 : c === "D" ? 1 : 0), 0);
 }
+
+// getStreak — reads the form string from right (most recent) and counts how many
+// consecutive results share the same outcome. Returns null if the form is empty.
 function getStreak(form: string): { type: "W" | "D" | "L"; count: number } | null {
   if (!form) return null;
   const chars = form.split("").reverse();
@@ -47,16 +66,21 @@ function getStreak(form: string): { type: "W" | "D" | "L"; count: number } | nul
 interface LeagueMeta {
   id: number; name: string; country: string; flag: string; logo: string; season: number;
 }
+
+// SplitRecord — the played/won/drawn/lost/goals breakdown for one context
+// (overall, home, or away). The standings API provides all three per team.
 interface SplitRecord {
   played: number; win: number; draw: number; lose: number;
   goals: { for: number; against: number };
 }
+
 interface Standing {
   rank: number;
   team: { id: number; name: string; logo: string };
   points: number; goalsDiff: number; form: string; description: string | null;
   all: SplitRecord; home: SplitRecord; away: SplitRecord;
 }
+
 interface TopScorer {
   player: { id: number; name: string; photo: string; nationality: string; age: number };
   statistics: {
@@ -66,6 +90,7 @@ interface TopScorer {
     goals: { total: number | null; assists: number | null };
   }[];
 }
+
 interface Fixture {
   fixture: { id: number; date: string; status: { short: string } };
   league: { round: string };
@@ -75,6 +100,7 @@ interface Fixture {
   };
   goals: { home: number | null; away: number | null };
 }
+
 interface TeamEntry {
   team: { id: number; name: string; logo: string; founded: number | null; country: string };
   venue: { name: string; city: string; capacity: number | null };
@@ -82,12 +108,17 @@ interface TeamEntry {
 
 // ─── small components ─────────────────────────────────────────────────────────
 
+// Skeleton — animated grey placeholder shown while data is loading
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
+
+// EmptyState — centred message when an API returns no data
 function EmptyState({ message }: { message: string }) {
   return <div className="flex items-center justify-center py-16"><p className="text-sm text-slate-500">{message}</p></div>;
 }
+
+// SectionLabel — the small ALL-CAPS divider headers inside cards (e.g. "Results", "Upcoming")
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 border-b border-bg-border px-5 py-3">
@@ -96,6 +127,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// FormPills — renders the last N results from a form string as coloured W/D/L squares.
+// Green = win, grey = draw, red = loss.
 function FormPills({ form, last = 5 }: { form: string; last?: number }) {
   return (
     <div className="flex gap-0.5">
@@ -110,6 +143,8 @@ function FormPills({ form, last = 5 }: { form: string; last?: number }) {
   );
 }
 
+// StreakBadge — shows a compact "W3" / "D1" badge when a team has 2+ consecutive same results.
+// Intentionally hidden for single-match streaks to reduce noise.
 function StreakBadge({ form }: { form: string }) {
   const s = getStreak(form);
   if (!s || s.count < 2) return null;
@@ -122,6 +157,8 @@ function StreakBadge({ form }: { form: string }) {
   );
 }
 
+// ZONE_COLORS — maps keywords from the API's "description" field (e.g. "Promotion to
+// Champions League") to a left-border colour on the standings table row.
 const ZONE_COLORS: Record<string, string> = {
   "champions league": "border-l-[3px] border-l-blue-500",
   "europa league":    "border-l-[3px] border-l-orange-400",
@@ -129,6 +166,9 @@ const ZONE_COLORS: Record<string, string> = {
   "relegation":       "border-l-[3px] border-l-red-500",
   "promotion":        "border-l-[3px] border-l-emerald-500",
 };
+
+// zoneClass — converts a row's description string into the matching border CSS class.
+// Falls back to a transparent border so the layout stays consistent for undescribed rows.
 function zoneClass(d: string | null) {
   if (!d) return "border-l-[3px] border-l-transparent";
   const l = d.toLowerCase();
@@ -136,8 +176,13 @@ function zoneClass(d: string | null) {
   return "border-l-[3px] border-l-transparent";
 }
 
+// FixtureRow — one match row used in both the Overview and Fixtures tabs.
+// showScore=true shows the final score (for finished matches);
+// showScore=false shows the scheduled kickoff time (for upcoming matches).
+// Live matches show a pulsing red "LIVE" badge regardless of showScore.
 function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
   const date = new Date(f.fixture.date);
+  // Anything that isn't a terminal or pre-match status is considered live
   const isLive = !["NS", "TBD", "FT", "AET", "PEN", "PST", "CANC", "SUSP"].includes(f.fixture.status.short);
   return (
     <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-bg-border transition-colors">
@@ -190,37 +235,39 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
-  // Season state
+  // Which season the user has selected in the hero season-picker
   const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON);
 
-  // Overview tab state
+  // ── Overview tab state ──────────────────────────────────────────────────────
   const [overviewFixtures, setOverviewFixtures] = useState<Fixture[] | null>(null);
   const [overviewRound, setOverviewRound]       = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading]   = useState(false);
+  // Tracks which league:season combination was last loaded so switching tabs
+  // doesn't re-fetch data that's already in state.
   const overviewLoadedFor = useRef<string>("");
 
-  // Rounds + fixtures tab state
-  const [rounds, setRounds]           = useState<string[]>([]);
-  const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  // ── Fixtures tab state ──────────────────────────────────────────────────────
+  const [rounds, setRounds]           = useState<string[]>([]);        // all round strings for the season
+  const [selectedRound, setSelectedRound] = useState<string | null>(null); // the gameweek currently shown
   const [roundsLoading, setRoundsLoading] = useState(false);
   const roundsLoadedFor = useRef<string>("");
   const [roundFixtures, setRoundFixtures] = useState<{ upcoming: Fixture[]; recent: Fixture[]; live: Fixture[]; all: Fixture[] } | null>(null);
   const [fixturesLoading, setFixturesLoading] = useState(false);
 
-  // Standings state
+  // ── Standings state ─────────────────────────────────────────────────────────
   const [standings, setStandings]           = useState<Standing[] | null>(null);
   const [standingsLoading, setStandingsLoading] = useState(false);
   const standingsLoadedFor = useRef<string>("");
   const [standingsView, setStandingsView]   = useState<StandingsView>("all");
 
-  // Other tab state
+  // ── Players / Teams tab state ───────────────────────────────────────────────
   const [topScorers, setTopScorers] = useState<TopScorer[] | null>(null);
   const [topAssists, setTopAssists] = useState<TopScorer[] | null>(null);
   const [playersLoading, setPlayersLoading] = useState(false);
   const [teams, setTeams]           = useState<TeamEntry[] | null>(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
 
-  // League meta
+  // Fetch league name, logo, and country — runs once when the page loads
   useEffect(() => {
     fetch(`/api/football/leagues?id=${params.id}`)
       .then((r) => r.ok ? r.json() : null)
@@ -228,7 +275,8 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .catch(() => setNotFound(true));
   }, [params.id]);
 
-  // Standings (shared between overview + standings tabs)
+  // Standings are shared by the Overview and Standings tabs to avoid double-fetching.
+  // The useRef "loadedFor" pattern prevents refetching when the user switches tabs.
   useEffect(() => {
     if (activeTab !== "overview" && activeTab !== "standings") return;
     const key = `${params.id}:${selectedSeason}`;
@@ -243,7 +291,9 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setStandingsLoading(false));
   }, [activeTab, params.id, selectedSeason]);
 
-  // Overview: current round fixtures
+  // Overview fixtures — two sequential fetches:
+  // 1) get all rounds + the current round name
+  // 2) get all fixtures for that specific round
   useEffect(() => {
     if (activeTab !== "overview") return;
     const key = `${params.id}:${selectedSeason}`;
@@ -255,6 +305,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       try {
         const rr = await fetch(`/api/football/rounds?league=${params.id}&season=${selectedSeason}`);
         const { rounds: r, current } = await rr.json();
+        // Fall back to the last round if the API can't determine which is current
         const round = current ?? r[r.length - 1] ?? null;
         setOverviewRound(round);
         if (!round) { setOverviewFixtures([]); return; }
@@ -271,7 +322,8 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
     })();
   }, [activeTab, params.id, selectedSeason]);
 
-  // Fixtures tab: rounds list
+  // Fixtures tab: load the complete rounds list then pre-select the current round.
+  // Only fires once per league+season combination thanks to roundsLoadedFor.
   useEffect(() => {
     if (activeTab !== "fixtures") return;
     const key = `${params.id}:${selectedSeason}`;
@@ -291,7 +343,8 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setRoundsLoading(false));
   }, [params.id, selectedSeason, activeTab]);
 
-  // Fixtures tab: per-round fixtures
+  // Fixtures tab: fetch the actual fixture list whenever the selected round changes.
+  // Runs every time selectedRound changes (via the Prev / Next buttons or dropdown).
   useEffect(() => {
     if (!selectedRound || activeTab !== "fixtures") return;
     setFixturesLoading(true);
@@ -303,7 +356,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setFixturesLoading(false));
   }, [params.id, selectedSeason, selectedRound, activeTab]);
 
-  // Teams
+  // Teams tab: load once, then keep in state for the session (no season dependency)
   useEffect(() => {
     if (activeTab !== "teams" || teams !== null) return;
     setTeamsLoading(true);
@@ -313,7 +366,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setTeamsLoading(false));
   }, [activeTab, params.id, teams]);
 
-  // Players
+  // Players tab: load top scorers + top assists together from one endpoint
   useEffect(() => {
     if (activeTab !== "players" || topScorers !== null) return;
     setPlayersLoading(true);
@@ -323,6 +376,8 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setPlayersLoading(false));
   }, [activeTab, params.id, selectedSeason, topScorers]);
 
+  // handleSeasonChange — resets all per-season data and the "loadedFor" guards
+  // so every useEffect knows it needs to re-fetch for the new season.
   function handleSeasonChange(s: number) {
     setSelectedSeason(s);
     overviewLoadedFor.current = "";
@@ -344,11 +399,14 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
     { key: "players",   label: "Top Players", icon: Trophy          },
   ];
 
+  // roundIdx — the position of the currently selected round in the full rounds array.
+  // Used to enable/disable the Prev and Next navigation buttons.
   const roundIdx = rounds.indexOf(selectedRound ?? "");
   const canPrev  = roundIdx > 0;
   const canNext  = roundIdx < rounds.length - 1;
 
-  // Form-sorted standings for overview
+  // formLeaders — standings sorted by last-5 form points descending, used for the
+  // Form Guide section on the Overview tab.
   const formLeaders = standings ? [...standings].sort((a, b) => formPts(b.form) - formPts(a.form)) : [];
 
   return (
