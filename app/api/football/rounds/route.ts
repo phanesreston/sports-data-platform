@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
   if (!league) return NextResponse.json({ rounds: [], current: null });
 
   const [allRes, currentRes] = await Promise.all([
-    apiFetch<string>("/leagues/rounds", { league, season }, 3600),
-    apiFetch<string>("/leagues/rounds", { league, season, current: "true" }, 300),
+    apiFetch<string>("/fixtures/rounds", { league, season }, 3600),
+    apiFetch<string>("/fixtures/rounds", { league, season, current: "true" }, 300),
   ]);
 
   const rounds = unwrap(allRes) ?? [];
