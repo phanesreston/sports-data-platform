@@ -1,14 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Target } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 type Tab = "fixtures" | "standings" | "teams" | "players";
+
+const CURRENT_SEASON = (() => {
+  const now = new Date();
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+})();
+const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
+
+function seasonLabel(s: number) {
+  return `${s}/${String(s + 1).slice(2)}`;
+}
+
+function formatRound(round: string): string {
+  const m = round.match(/Regular Season - (\d+)/);
+  if (m) return `GW ${m[1]}`;
+  return round;
+}
 
 interface LeagueMeta {
   id: number; name: string; country: string; flag: string; logo: string; season: number;
@@ -68,8 +84,10 @@ function FormDots({ form }: { form: string }) {
     </div>
   );
 }
+
 function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
   const date = new Date(f.fixture.date);
+  const isLive = !["NS", "TBD", "FT", "AET", "PEN", "PST", "CANC", "SUSP"].includes(f.fixture.status.short);
   return (
     <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-bg-border transition-colors">
       <div className="w-28 shrink-0 text-xs text-slate-500">
@@ -77,7 +95,7 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
         <p className="text-[10px]">{f.league.round}</p>
       </div>
       <Link href={`/teams/${encodeURIComponent(f.teams.home.name)}`} className="flex flex-1 items-center justify-end gap-2 group">
-        <span className={`truncate text-sm font-semibold text-right group-hover:text-accent-green ${f.teams.home.winner ? "text-white" : "text-slate-400"}`}>
+        <span className={`truncate text-sm font-semibold text-right group-hover:text-accent-green ${f.teams.home.winner ? "text-white" : showScore ? "text-slate-400" : "text-slate-300"}`}>
           {f.teams.home.name}
         </span>
         <div className="relative h-6 w-6 shrink-0">
@@ -85,8 +103,12 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
         </div>
       </Link>
       <div className="w-16 shrink-0 text-center">
-        {showScore && f.goals.home !== null ? (
-          <span className="rounded-md bg-bg-border px-2.5 py-1 text-sm font-extrabold text-white">
+        {isLive ? (
+          <span className="rounded-md bg-red-500/10 px-2 py-1 text-xs font-bold text-red-400 ring-1 ring-red-500/20">
+            LIVE
+          </span>
+        ) : showScore && f.goals.home !== null ? (
+          <span className="rounded-md bg-bg-border px-2.5 py-1 text-sm font-extrabold text-white tabular-nums">
             {f.goals.home} – {f.goals.away}
           </span>
         ) : (
@@ -99,7 +121,7 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
         <div className="relative h-6 w-6 shrink-0">
           <Image src={f.teams.away.logo} alt="" fill className="object-contain" sizes="24px" />
         </div>
-        <span className={`truncate text-sm font-semibold group-hover:text-accent-green ${f.teams.away.winner ? "text-white" : "text-slate-400"}`}>
+        <span className={`truncate text-sm font-semibold group-hover:text-accent-green ${f.teams.away.winner ? "text-white" : showScore ? "text-slate-400" : "text-slate-300"}`}>
           {f.teams.away.name}
         </span>
       </Link>
@@ -117,22 +139,33 @@ function EmptyState({ message }: { message: string }) {
 
 export default function LeaguePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [league, setLeague]   = useState<LeagueMeta | null>(null);
+  const [league, setLeague]     = useState<LeagueMeta | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("fixtures");
 
-  // Tab data states
-  const [standings, setStandings] = useState<Standing[] | null>(null);
-  const [standingsLoading, setStandingsLoading] = useState(false);
-  const [topScorers, setTopScorers] = useState<TopScorer[] | null>(null);
-  const [topAssists, setTopAssists]   = useState<TopScorer[] | null>(null);
-  const [playersLoading, setPlayersLoading] = useState(false);
-  const [fixtures, setFixtures]   = useState<{ upcoming: Fixture[]; recent: Fixture[] } | null>(null);
+  // Season state
+  const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON);
+
+  // Rounds state
+  const [rounds, setRounds]           = useState<string[]>([]);
+  const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  const [roundsLoading, setRoundsLoading] = useState(false);
+  const roundsLoadedFor = useRef<string>(""); // "leagueId:season"
+
+  // Fixtures state (per-round)
+  const [roundFixtures, setRoundFixtures] = useState<{ upcoming: Fixture[]; recent: Fixture[]; live: Fixture[]; all: Fixture[] } | null>(null);
   const [fixturesLoading, setFixturesLoading] = useState(false);
-  const [teams, setTeams]         = useState<TeamEntry[] | null>(null);
+
+  // Other tab data
+  const [standings, setStandings]       = useState<Standing[] | null>(null);
+  const [standingsLoading, setStandingsLoading] = useState(false);
+  const [topScorers, setTopScorers]     = useState<TopScorer[] | null>(null);
+  const [topAssists, setTopAssists]     = useState<TopScorer[] | null>(null);
+  const [playersLoading, setPlayersLoading] = useState(false);
+  const [teams, setTeams]               = useState<TeamEntry[] | null>(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
 
-  // Always load league meta on mount — uses the same working endpoint as the landing page
+  // League meta
   useEffect(() => {
     fetch(`/api/football/leagues?id=${params.id}`)
       .then((r) => r.ok ? r.json() : null)
@@ -143,25 +176,65 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .catch(() => setNotFound(true));
   }, [params.id]);
 
-  // Lazy: fixtures
+  // Load rounds when fixtures tab is active and season/league changes
   useEffect(() => {
-    if (activeTab !== "fixtures" || fixtures !== null) return;
+    if (activeTab !== "fixtures") return;
+    const key = `${params.id}:${selectedSeason}`;
+    if (roundsLoadedFor.current === key) return;
+    roundsLoadedFor.current = key;
+
+    setRoundsLoading(true);
+    setRounds([]);
+    setSelectedRound(null);
+    setRoundFixtures(null);
+
+    fetch(`/api/football/rounds?league=${params.id}&season=${selectedSeason}`)
+      .then((r) => r.ok ? r.json() : { rounds: [], current: null })
+      .then(({ rounds: r, current }: { rounds: string[]; current: string | null }) => {
+        setRounds(r);
+        setSelectedRound(current ?? r[r.length - 1] ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setRoundsLoading(false));
+  }, [params.id, selectedSeason, activeTab]);
+
+  // Load fixtures when round changes
+  useEffect(() => {
+    if (!selectedRound) return;
     setFixturesLoading(true);
-    fetch(`/api/football/league-fixtures?league=${params.id}`)
-      .then((r) => r.ok ? r.json() : { upcoming: [], recent: [] })
-      .then((d) => setFixtures({ upcoming: d.upcoming ?? [], recent: d.recent ?? [] }))
+    setRoundFixtures(null);
+    fetch(
+      `/api/football/league-fixtures?league=${params.id}&season=${selectedSeason}&round=${encodeURIComponent(selectedRound)}`
+    )
+      .then((r) => r.ok ? r.json() : { upcoming: [], recent: [], live: [], all: [] })
+      .then((d) => setRoundFixtures({
+        upcoming: d.upcoming ?? [],
+        recent:   d.recent ?? [],
+        live:     d.live ?? [],
+        all:      d.all ?? [],
+      }))
+      .catch(() => {})
       .finally(() => setFixturesLoading(false));
-  }, [activeTab, params.id, fixtures]);
+  }, [params.id, selectedSeason, selectedRound]);
+
+  // When season selector changes, reset round data and force re-load
+  function handleSeasonChange(s: number) {
+    setSelectedSeason(s);
+    roundsLoadedFor.current = ""; // force reload
+    setRounds([]);
+    setSelectedRound(null);
+    setRoundFixtures(null);
+  }
 
   // Lazy: standings
   useEffect(() => {
     if (activeTab !== "standings" || standings !== null) return;
     setStandingsLoading(true);
-    fetch(`/api/football/standings?league=${params.id}`)
+    fetch(`/api/football/standings?league=${params.id}&season=${selectedSeason}`)
       .then((r) => r.ok ? r.json() : null)
       .then((d) => setStandings(d?.standings ?? []))
       .finally(() => setStandingsLoading(false));
-  }, [activeTab, params.id, standings]);
+  }, [activeTab, params.id, selectedSeason, standings]);
 
   // Lazy: teams
   useEffect(() => {
@@ -177,11 +250,11 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (activeTab !== "players" || topScorers !== null) return;
     setPlayersLoading(true);
-    fetch(`/api/football/topscorers?league=${params.id}`)
+    fetch(`/api/football/topscorers?league=${params.id}&season=${selectedSeason}`)
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { setTopScorers(d?.topScorers ?? []); setTopAssists(d?.topAssists ?? []); })
       .finally(() => setPlayersLoading(false));
-  }, [activeTab, params.id, topScorers]);
+  }, [activeTab, params.id, selectedSeason, topScorers]);
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "fixtures",  label: "Fixtures"    },
@@ -189,6 +262,10 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
     { key: "teams",     label: "Team List"   },
     { key: "players",   label: "Top Players" },
   ];
+
+  const roundIdx    = rounds.indexOf(selectedRound ?? "");
+  const canPrev     = roundIdx > 0;
+  const canNext     = roundIdx < rounds.length - 1;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -221,19 +298,41 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
               {/* Hero */}
               <div className="mb-6 overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
                 <div className="h-1.5 w-full bg-emerald-200" />
-                <div className="flex items-center gap-5 p-6 sm:p-8">
-                  <div className="relative h-16 w-16 shrink-0">
-                    {league.logo ? (
-                      <Image src={league.logo} alt={league.name} fill className="object-contain" sizes="64px" />
-                    ) : (
-                      <span className="text-4xl">{league.flag}</span>
-                    )}
+                <div className="flex flex-wrap items-center justify-between gap-4 p-6 sm:p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="relative h-16 w-16 shrink-0">
+                      {league.logo ? (
+                        <Image src={league.logo} alt={league.name} fill className="object-contain" sizes="64px" />
+                      ) : (
+                        <span className="text-4xl">{league.flag}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{league.name}</h1>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {league.flag} {league.country} · {seasonLabel(selectedSeason)} Season
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{league.name}</h1>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {league.flag} {league.country} · {league.season}/{String(league.season + 1).slice(2)} Season
-                    </p>
+
+                  {/* Season selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Season</span>
+                    <div className="flex rounded-lg border border-bg-border bg-bg-base overflow-hidden">
+                      {SEASONS.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleSeasonChange(s)}
+                          className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            selectedSeason === s
+                              ? "bg-accent-green text-white"
+                              : "text-slate-400 hover:text-white hover:bg-bg-border"
+                          }`}
+                        >
+                          {seasonLabel(s)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -259,36 +358,93 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
 
               {/* ── Fixtures ── */}
               {activeTab === "fixtures" && (
-                <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
-                  {fixturesLoading ? (
-                    <div className="space-y-1 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
-                  ) : (
-                    <>
-                      {(fixtures?.upcoming.length ?? 0) > 0 && (
-                        <>
-                          <div className="border-b border-bg-border px-5 py-3">
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Upcoming</p>
-                          </div>
-                          <div className="divide-y divide-bg-border">
-                            {fixtures!.upcoming.map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={false} />)}
-                          </div>
-                        </>
+                <div className="space-y-4">
+                  {/* Round navigation */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedRound(rounds[roundIdx - 1])}
+                      disabled={!canPrev || roundsLoading}
+                      className="flex items-center gap-1 rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-500 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Prev
+                    </button>
+
+                    <div className="flex-1">
+                      {rounds.length > 0 ? (
+                        <select
+                          value={selectedRound ?? ""}
+                          onChange={(e) => setSelectedRound(e.target.value)}
+                          className="w-full rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-1 focus:ring-accent-green"
+                        >
+                          {rounds.map((r) => (
+                            <option key={r} value={r}>{formatRound(r)}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex h-9 items-center justify-center rounded-lg border border-bg-border bg-bg-card">
+                          <span className="text-sm text-slate-500">
+                            {roundsLoading ? "Loading rounds…" : "No rounds available"}
+                          </span>
+                        </div>
                       )}
-                      {(fixtures?.recent.length ?? 0) > 0 && (
-                        <>
-                          <div className={`border-b border-bg-border px-5 py-3 ${fixtures?.upcoming.length ? "border-t" : ""}`}>
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Recent Results</p>
-                          </div>
-                          <div className="divide-y divide-bg-border">
-                            {[...(fixtures?.recent ?? [])].reverse().map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
-                          </div>
-                        </>
-                      )}
-                      {fixtures && !fixtures.upcoming.length && !fixtures.recent.length && (
-                        <EmptyState message="No fixtures available for this season" />
-                      )}
-                    </>
-                  )}
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedRound(rounds[roundIdx + 1])}
+                      disabled={!canNext || roundsLoading}
+                      className="flex items-center gap-1 rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-500 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Fixture list */}
+                  <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+                    {fixturesLoading || roundsLoading ? (
+                      <div className="space-y-1 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
+                    ) : !roundFixtures || roundFixtures.all.length === 0 ? (
+                      <EmptyState message={selectedRound ? `No fixtures found for ${formatRound(selectedRound)}` : "Select a round to view fixtures"} />
+                    ) : (
+                      <>
+                        {/* Live */}
+                        {roundFixtures.live.length > 0 && (
+                          <>
+                            <div className="flex items-center gap-2 border-b border-bg-border px-5 py-3">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                              <p className="text-xs font-bold uppercase tracking-widest text-red-400">Live</p>
+                            </div>
+                            <div className="divide-y divide-bg-border">
+                              {roundFixtures.live.map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Results */}
+                        {roundFixtures.recent.length > 0 && (
+                          <>
+                            <div className={`border-b border-bg-border px-5 py-3 ${roundFixtures.live.length ? "border-t" : ""}`}>
+                              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Results</p>
+                            </div>
+                            <div className="divide-y divide-bg-border">
+                              {[...roundFixtures.recent].reverse().map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Upcoming */}
+                        {roundFixtures.upcoming.length > 0 && (
+                          <>
+                            <div className={`border-b border-bg-border px-5 py-3 ${roundFixtures.recent.length || roundFixtures.live.length ? "border-t" : ""}`}>
+                              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Upcoming</p>
+                            </div>
+                            <div className="divide-y divide-bg-border">
+                              {roundFixtures.upcoming.map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={false} />)}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
