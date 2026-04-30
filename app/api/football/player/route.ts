@@ -34,14 +34,16 @@ export interface ApiPlayerFull {
   }[];
 }
 
-const SEASONS = [currentSeason(), 2024, 2023];
+const FALLBACK_SEASONS = [currentSeason(), currentSeason() - 1, currentSeason() - 2];
 
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  for (const season of SEASONS) {
-    // Short revalidate (60s) so rate-limit errors are never cached for long
+  const seasonParam = req.nextUrl.searchParams.get("season");
+  const seasons = seasonParam ? [Number(seasonParam)] : FALLBACK_SEASONS;
+
+  for (const season of seasons) {
     const raw = await apiFetch<ApiPlayerFull>("/players", { id, season }, 60);
 
     if (isRateLimited(raw)) {
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
     const res = unwrap(raw);
     if (res?.length) {
       console.log(`[player] found player ${id} in season ${season}`);
-      return NextResponse.json({ player: res[0] });
+      return NextResponse.json({ player: res[0], season });
     }
 
     console.log(`[player] no data for player ${id} season ${season}, trying next`);
