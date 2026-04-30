@@ -112,6 +112,12 @@ function getBestOdds(bks: OddsEvent["bookmakers"]) {
   };
 }
 
+function fuzzyMatch(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const an = norm(a), bn = norm(b);
+  return an === bn || an.includes(bn) || bn.includes(an);
+}
+
 function formatKickoff(iso: string) {
   const diff = new Date(iso).getTime() - Date.now();
   if (diff < 0) return "In progress";
@@ -199,6 +205,20 @@ function SectionLabel({ icon: Icon, children }: { icon: React.ElementType; child
   );
 }
 
+// ── H2H types ─────────────────────────────────────────────────────────────────
+
+interface H2HMatch {
+  date: string;
+  homeTeam: string;
+  homeLogo: string;
+  homeScore: number | null;
+  awayTeam: string;
+  awayLogo: string;
+  awayScore: number | null;
+  winner: "home" | "away" | "draw" | null;
+  league: string;
+}
+
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export default function PredictionDetailPage({ params }: Props) {
@@ -223,7 +243,7 @@ export default function PredictionDetailPage({ params }: Props) {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 
           <button
             onClick={() => router.back()}
@@ -282,6 +302,19 @@ function EventDetail({ event }: { event: OddsEvent }) {
   const best      = getBestOdds(event.bookmakers);
   const totalH2H  = event.h2h.homeWins + event.h2h.draws + event.h2h.awayWins;
   const hasDrawOdds = event.bookmakers.some((b) => b.draw != null);
+
+  const [h2hMatches, setH2hMatches] = useState<H2HMatch[]>([]);
+  const [h2hLoading, setH2hLoading] = useState(false);
+
+  useEffect(() => {
+    if (event.sport !== "football" || !event.homeTeamId || !event.awayTeamId) return;
+    setH2hLoading(true);
+    fetch(`/api/football/h2h?home=${event.homeTeamId}&away=${event.awayTeamId}&last=5`)
+      .then((r) => r.json())
+      .then((d: { matches: H2HMatch[] }) => setH2hMatches(d.matches ?? []))
+      .catch(() => {})
+      .finally(() => setH2hLoading(false));
+  }, [event.homeTeamId, event.awayTeamId, event.sport]);
 
   const homeScore = getFormScore(event.homeStats.form);
   const awayScore = getFormScore(event.awayStats.form);
@@ -407,8 +440,26 @@ function EventDetail({ event }: { event: OddsEvent }) {
                 </div>
               )}
 
-              {/* H2H */}
-              {totalH2H > 0 && (
+              {/* H2H summary (live) */}
+              {h2hMatches.length > 0 && (() => {
+                const hw = h2hMatches.filter((m) => {
+                  const isHome = fuzzyMatch(m.homeTeam, event.homeTeam);
+                  return isHome ? m.winner === "home" : m.winner === "away";
+                }).length;
+                const draws = h2hMatches.filter((m) => m.winner === "draw").length;
+                const aw = h2hMatches.length - hw - draws;
+                return (
+                  <div className="flex items-center justify-between rounded-lg border border-bg-border bg-bg-card px-3 py-2.5">
+                    <span className="text-xs text-slate-500">H2H (last {h2hMatches.length})</span>
+                    <span className="text-xs font-bold text-white">
+                      <span className="text-emerald-400">{hw}W</span>
+                      {draws > 0 && <span className="text-slate-500"> {draws}D </span>}
+                      <span className="text-red-400"> {aw}L</span>
+                    </span>
+                  </div>
+                );
+              })()}
+              {h2hMatches.length === 0 && totalH2H > 0 && (
                 <div className="flex items-center justify-between rounded-lg border border-bg-border bg-bg-card px-3 py-2.5">
                   <span className="text-xs text-slate-500">H2H (last {totalH2H})</span>
                   <span className="text-xs font-bold text-white">
@@ -490,54 +541,86 @@ function EventDetail({ event }: { event: OddsEvent }) {
           />
         </div>
 
-        {/* H2H visual */}
-        {totalH2H > 0 && (
-          <div className="rounded-xl border border-bg-border bg-bg-base p-4">
-            <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <TeamLogo logo={event.homeLogo} name={event.homeTeam} size={14} className="rounded" />
-                {event.homeTeam}
-              </span>
-              <span className="font-semibold">Last {totalH2H} meetings</span>
-              <span className="flex items-center gap-1.5">
-                {event.awayTeam}
-                <TeamLogo logo={event.awayLogo} name={event.awayTeam} size={14} className="rounded" />
-              </span>
-            </div>
-
-            {/* H/D/A split bar */}
-            <div className="flex h-4 overflow-hidden rounded-full">
-              <div
-                className="flex items-center justify-center bg-emerald-500/40 text-[10px] font-bold text-emerald-300 transition-all"
-                style={{ width: `${(event.h2h.homeWins / totalH2H) * 100}%` }}
-              >
-                {event.h2h.homeWins > 0 && event.h2h.homeWins}
-              </div>
-              {event.h2h.draws > 0 && (
-                <div
-                  className="flex items-center justify-center bg-slate-700 text-[10px] font-bold text-slate-400 transition-all"
-                  style={{ width: `${(event.h2h.draws / totalH2H) * 100}%` }}
-                >
-                  {event.h2h.draws}
-                </div>
-              )}
-              <div
-                className="flex items-center justify-center bg-red-500/30 text-[10px] font-bold text-red-400 transition-all"
-                style={{ width: `${(event.h2h.awayWins / totalH2H) * 100}%` }}
-              >
-                {event.h2h.awayWins > 0 && event.h2h.awayWins}
-              </div>
-            </div>
-
-            <div className="mt-2 flex justify-between text-[11px]">
-              <span className="font-semibold text-emerald-400">{event.h2h.homeWins}W</span>
-              {event.h2h.draws > 0 && (
-                <span className="text-slate-500">{event.h2h.draws} draw{event.h2h.draws !== 1 ? "s" : ""}</span>
-              )}
-              <span className="font-semibold text-red-400">{event.h2h.awayWins}W</span>
-            </div>
+        {/* H2H — live match results */}
+        <div className="rounded-xl border border-bg-border bg-bg-base p-4">
+          <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+            <span className="font-semibold text-slate-400">Recent meetings</span>
+            {h2hMatches.length > 0 && (() => {
+              const hw = h2hMatches.filter((m) => {
+                const referenceIsHome = fuzzyMatch(m.homeTeam, event.homeTeam);
+                return referenceIsHome ? m.winner === "home" : m.winner === "away";
+              }).length;
+              const draws = h2hMatches.filter((m) => m.winner === "draw").length;
+              const aw = h2hMatches.length - hw - draws;
+              return (
+                <span className="flex items-center gap-2 text-[11px]">
+                  <span className="font-bold text-emerald-400">{hw}W</span>
+                  {draws > 0 && <span className="text-slate-500">{draws}D</span>}
+                  <span className="font-bold text-red-400">{aw}W</span>
+                </span>
+              );
+            })()}
           </div>
-        )}
+
+          {h2hLoading && (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-9 animate-pulse rounded-lg bg-bg-border" />
+              ))}
+            </div>
+          )}
+
+          {!h2hLoading && h2hMatches.length === 0 && (
+            <p className="text-xs text-slate-600">
+              {event.homeTeamId && event.awayTeamId
+                ? "No recent H2H matches found."
+                : "Team IDs not available for H2H lookup."}
+            </p>
+          )}
+
+          {!h2hLoading && h2hMatches.length > 0 && (
+            <div className="space-y-1.5">
+              {h2hMatches.map((m, i) => {
+                const referenceIsHome = fuzzyMatch(m.homeTeam, event.homeTeam);
+                const referenceWon =
+                  (referenceIsHome && m.winner === "home") ||
+                  (!referenceIsHome && m.winner === "away");
+                const isDraw = m.winner === "draw";
+                const rowBg = referenceWon
+                  ? "bg-emerald-500/5 border-emerald-500/15"
+                  : isDraw
+                  ? "bg-bg-border border-transparent"
+                  : "bg-red-500/5 border-red-500/15";
+                const scoreColor = referenceWon
+                  ? "text-emerald-400"
+                  : isDraw
+                  ? "text-slate-400"
+                  : "text-red-400";
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${rowBg}`}
+                  >
+                    <span className="w-16 shrink-0 text-slate-600">
+                      {new Date(m.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                    </span>
+                    <span className="flex flex-1 items-center gap-1.5 truncate">
+                      <TeamLogo logo={m.homeLogo} name={m.homeTeam} size={14} className="rounded shrink-0" />
+                      <span className="truncate text-slate-300">{m.homeTeam}</span>
+                    </span>
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 font-extrabold tabular-nums ${scoreColor}`}>
+                      {m.homeScore ?? "–"} – {m.awayScore ?? "–"}
+                    </span>
+                    <span className="flex flex-1 items-center justify-end gap-1.5 truncate">
+                      <span className="truncate text-slate-300">{m.awayTeam}</span>
+                      <TeamLogo logo={m.awayLogo} name={m.awayTeam} size={14} className="rounded shrink-0" />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── All Markets ──────────────────────────────────────────────────────── */}
