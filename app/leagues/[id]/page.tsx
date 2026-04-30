@@ -4,11 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Target } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Target,
+  LayoutDashboard, Calendar, BarChart2, Users, Trophy, TrendingUp,
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-type Tab = "fixtures" | "standings" | "teams" | "players";
+type Tab = "overview" | "fixtures" | "standings" | "teams" | "players";
+type StandingsView = "all" | "home" | "away";
 
 const CURRENT_SEASON = (() => {
   const now = new Date();
@@ -19,21 +23,39 @@ const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
 function seasonLabel(s: number) {
   return `${s}/${String(s + 1).slice(2)}`;
 }
-
 function formatRound(round: string): string {
   const m = round.match(/Regular Season - (\d+)/);
-  if (m) return `GW ${m[1]}`;
-  return round;
+  return m ? `GW ${m[1]}` : round;
 }
+function formPts(form: string): number {
+  return form.slice(-5).split("").reduce((n, c) => n + (c === "W" ? 3 : c === "D" ? 1 : 0), 0);
+}
+function getStreak(form: string): { type: "W" | "D" | "L"; count: number } | null {
+  if (!form) return null;
+  const chars = form.split("").reverse();
+  const type = chars[0] as "W" | "D" | "L";
+  let count = 0;
+  for (const c of chars) {
+    if (c === type) count++;
+    else break;
+  }
+  return count > 0 ? { type, count } : null;
+}
+
+// ─── interfaces ───────────────────────────────────────────────────────────────
 
 interface LeagueMeta {
   id: number; name: string; country: string; flag: string; logo: string; season: number;
+}
+interface SplitRecord {
+  played: number; win: number; draw: number; lose: number;
+  goals: { for: number; against: number };
 }
 interface Standing {
   rank: number;
   team: { id: number; name: string; logo: string };
   points: number; goalsDiff: number; form: string; description: string | null;
-  all: { played: number; win: number; draw: number; lose: number; goals: { for: number; against: number } };
+  all: SplitRecord; home: SplitRecord; away: SplitRecord;
 }
 interface TopScorer {
   player: { id: number; name: string; photo: string; nationality: string; age: number };
@@ -58,31 +80,60 @@ interface TeamEntry {
   venue: { name: string; city: string; capacity: number | null };
 }
 
+// ─── small components ─────────────────────────────────────────────────────────
+
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse rounded bg-bg-border ${className}`} />;
 }
-
-const ZONE_COLORS: Record<string, string> = {
-  "champions league": "border-l-4 border-l-blue-500",
-  "europa league":    "border-l-4 border-l-orange-400",
-  "conference":       "border-l-4 border-l-teal-400",
-  "relegation":       "border-l-4 border-l-red-400",
-  "promotion":        "border-l-4 border-l-emerald-500",
-};
-function zoneClass(d: string | null) {
-  if (!d) return "";
-  const l = d.toLowerCase();
-  for (const [k, c] of Object.entries(ZONE_COLORS)) if (l.includes(k)) return c;
-  return "";
+function EmptyState({ message }: { message: string }) {
+  return <div className="flex items-center justify-center py-16"><p className="text-sm text-slate-500">{message}</p></div>;
 }
-function FormDots({ form }: { form: string }) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-bg-border px-5 py-3">
+      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{children}</p>
+    </div>
+  );
+}
+
+function FormPills({ form, last = 5 }: { form: string; last?: number }) {
   return (
     <div className="flex gap-0.5">
-      {form.slice(-5).split("").map((c, i) => (
-        <span key={i} className={`h-2 w-2 rounded-full ${c === "W" ? "bg-emerald-500" : c === "D" ? "bg-slate-600" : "bg-red-400"}`} />
+      {form.slice(-last).split("").map((c, i) => (
+        <span key={i} className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-extrabold ${
+          c === "W" ? "bg-emerald-500/15 text-emerald-400" :
+          c === "D" ? "bg-slate-600/50 text-slate-400" :
+                      "bg-red-500/15 text-red-400"
+        }`}>{c}</span>
       ))}
     </div>
   );
+}
+
+function StreakBadge({ form }: { form: string }) {
+  const s = getStreak(form);
+  if (!s || s.count < 2) return null;
+  const cls = s.type === "W" ? "bg-emerald-500/10 text-emerald-400" :
+              s.type === "D" ? "bg-slate-600/50 text-slate-400" : "bg-red-500/10 text-red-400";
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-[10px] font-extrabold ${cls}`}>
+      {s.type}{s.count}
+    </span>
+  );
+}
+
+const ZONE_COLORS: Record<string, string> = {
+  "champions league": "border-l-[3px] border-l-blue-500",
+  "europa league":    "border-l-[3px] border-l-orange-400",
+  "conference":       "border-l-[3px] border-l-teal-400",
+  "relegation":       "border-l-[3px] border-l-red-500",
+  "promotion":        "border-l-[3px] border-l-emerald-500",
+};
+function zoneClass(d: string | null) {
+  if (!d) return "border-l-[3px] border-l-transparent";
+  const l = d.toLowerCase();
+  for (const [k, c] of Object.entries(ZONE_COLORS)) if (l.includes(k)) return c;
+  return "border-l-[3px] border-l-transparent";
 }
 
 function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
@@ -90,23 +141,23 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
   const isLive = !["NS", "TBD", "FT", "AET", "PEN", "PST", "CANC", "SUSP"].includes(f.fixture.status.short);
   return (
     <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-bg-border transition-colors">
-      <div className="w-28 shrink-0 text-xs text-slate-500">
+      <div className="w-24 shrink-0 text-xs text-slate-500">
         <p>{date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>
         <p className="text-[10px]">{f.league.round}</p>
       </div>
-      <Link href={`/teams/${encodeURIComponent(f.teams.home.name)}`} className="flex flex-1 items-center justify-end gap-2 group">
+      <Link href={`/teams/${encodeURIComponent(f.teams.home.name)}`} className="flex flex-1 items-center justify-end gap-2 group min-w-0">
         <span className={`truncate text-sm font-semibold text-right group-hover:text-accent-green ${f.teams.home.winner ? "text-white" : showScore ? "text-slate-400" : "text-slate-300"}`}>
           {f.teams.home.name}
         </span>
-        <div className="relative h-6 w-6 shrink-0">
-          <Image src={f.teams.home.logo} alt="" fill className="object-contain" sizes="24px" />
-        </div>
+        {f.teams.home.logo && (
+          <div className="relative h-6 w-6 shrink-0">
+            <Image src={f.teams.home.logo} alt="" fill className="object-contain" sizes="24px" />
+          </div>
+        )}
       </Link>
       <div className="w-16 shrink-0 text-center">
         {isLive ? (
-          <span className="rounded-md bg-red-500/10 px-2 py-1 text-xs font-bold text-red-400 ring-1 ring-red-500/20">
-            LIVE
-          </span>
+          <span className="rounded-md bg-red-500/10 px-2 py-1 text-xs font-bold text-red-400 ring-1 ring-red-500/20">LIVE</span>
         ) : showScore && f.goals.home !== null ? (
           <span className="rounded-md bg-bg-border px-2.5 py-1 text-sm font-extrabold text-white tabular-nums">
             {f.goals.home} – {f.goals.away}
@@ -117,10 +168,12 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
           </span>
         )}
       </div>
-      <Link href={`/teams/${encodeURIComponent(f.teams.away.name)}`} className="flex flex-1 items-center gap-2 group">
-        <div className="relative h-6 w-6 shrink-0">
-          <Image src={f.teams.away.logo} alt="" fill className="object-contain" sizes="24px" />
-        </div>
+      <Link href={`/teams/${encodeURIComponent(f.teams.away.name)}`} className="flex flex-1 items-center gap-2 group min-w-0">
+        {f.teams.away.logo && (
+          <div className="relative h-6 w-6 shrink-0">
+            <Image src={f.teams.away.logo} alt="" fill className="object-contain" sizes="24px" />
+          </div>
+        )}
         <span className={`truncate text-sm font-semibold group-hover:text-accent-green ${f.teams.away.winner ? "text-white" : showScore ? "text-slate-400" : "text-slate-300"}`}>
           {f.teams.away.name}
         </span>
@@ -129,65 +182,105 @@ function FixtureRow({ f, showScore }: { f: Fixture; showScore: boolean }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <p className="text-sm text-slate-500">{message}</p>
-    </div>
-  );
-}
+// ─── main page ────────────────────────────────────────────────────────────────
 
 export default function LeaguePage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [league, setLeague]     = useState<LeagueMeta | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("fixtures");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   // Season state
   const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON);
 
-  // Rounds state
+  // Overview tab state
+  const [overviewFixtures, setOverviewFixtures] = useState<Fixture[] | null>(null);
+  const [overviewRound, setOverviewRound]       = useState<string | null>(null);
+  const [overviewLoading, setOverviewLoading]   = useState(false);
+  const overviewLoadedFor = useRef<string>("");
+
+  // Rounds + fixtures tab state
   const [rounds, setRounds]           = useState<string[]>([]);
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
   const [roundsLoading, setRoundsLoading] = useState(false);
-  const roundsLoadedFor = useRef<string>(""); // "leagueId:season"
-
-  // Fixtures state (per-round)
+  const roundsLoadedFor = useRef<string>("");
   const [roundFixtures, setRoundFixtures] = useState<{ upcoming: Fixture[]; recent: Fixture[]; live: Fixture[]; all: Fixture[] } | null>(null);
   const [fixturesLoading, setFixturesLoading] = useState(false);
 
-  // Other tab data
-  const [standings, setStandings]       = useState<Standing[] | null>(null);
+  // Standings state
+  const [standings, setStandings]           = useState<Standing[] | null>(null);
   const [standingsLoading, setStandingsLoading] = useState(false);
-  const [topScorers, setTopScorers]     = useState<TopScorer[] | null>(null);
-  const [topAssists, setTopAssists]     = useState<TopScorer[] | null>(null);
+  const standingsLoadedFor = useRef<string>("");
+  const [standingsView, setStandingsView]   = useState<StandingsView>("all");
+
+  // Other tab state
+  const [topScorers, setTopScorers] = useState<TopScorer[] | null>(null);
+  const [topAssists, setTopAssists] = useState<TopScorer[] | null>(null);
   const [playersLoading, setPlayersLoading] = useState(false);
-  const [teams, setTeams]               = useState<TeamEntry[] | null>(null);
+  const [teams, setTeams]           = useState<TeamEntry[] | null>(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
 
   // League meta
   useEffect(() => {
     fetch(`/api/football/leagues?id=${params.id}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (!d?.league) { setNotFound(true); return; }
-        setLeague(d.league);
-      })
+      .then((d) => { if (!d?.league) { setNotFound(true); return; } setLeague(d.league); })
       .catch(() => setNotFound(true));
   }, [params.id]);
 
-  // Load rounds when fixtures tab is active and season/league changes
+  // Standings (shared between overview + standings tabs)
+  useEffect(() => {
+    if (activeTab !== "overview" && activeTab !== "standings") return;
+    const key = `${params.id}:${selectedSeason}`;
+    if (standingsLoadedFor.current === key) return;
+    standingsLoadedFor.current = key;
+    setStandingsLoading(true);
+    setStandings(null);
+    fetch(`/api/football/standings?league=${params.id}&season=${selectedSeason}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => setStandings(d?.standings ?? []))
+      .catch(() => setStandings([]))
+      .finally(() => setStandingsLoading(false));
+  }, [activeTab, params.id, selectedSeason]);
+
+  // Overview: current round fixtures
+  useEffect(() => {
+    if (activeTab !== "overview") return;
+    const key = `${params.id}:${selectedSeason}`;
+    if (overviewLoadedFor.current === key) return;
+    overviewLoadedFor.current = key;
+    setOverviewLoading(true);
+    setOverviewFixtures(null);
+    (async () => {
+      try {
+        const rr = await fetch(`/api/football/rounds?league=${params.id}&season=${selectedSeason}`);
+        const { rounds: r, current } = await rr.json();
+        const round = current ?? r[r.length - 1] ?? null;
+        setOverviewRound(round);
+        if (!round) { setOverviewFixtures([]); return; }
+        const fr = await fetch(
+          `/api/football/league-fixtures?league=${params.id}&season=${selectedSeason}&round=${encodeURIComponent(round)}`
+        );
+        const d = await fr.json();
+        setOverviewFixtures(d.all ?? []);
+      } catch {
+        setOverviewFixtures([]);
+      } finally {
+        setOverviewLoading(false);
+      }
+    })();
+  }, [activeTab, params.id, selectedSeason]);
+
+  // Fixtures tab: rounds list
   useEffect(() => {
     if (activeTab !== "fixtures") return;
     const key = `${params.id}:${selectedSeason}`;
     if (roundsLoadedFor.current === key) return;
     roundsLoadedFor.current = key;
-
     setRoundsLoading(true);
     setRounds([]);
     setSelectedRound(null);
     setRoundFixtures(null);
-
     fetch(`/api/football/rounds?league=${params.id}&season=${selectedSeason}`)
       .then((r) => r.ok ? r.json() : { rounds: [], current: null })
       .then(({ rounds: r, current }: { rounds: string[]; current: string | null }) => {
@@ -198,45 +291,19 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setRoundsLoading(false));
   }, [params.id, selectedSeason, activeTab]);
 
-  // Load fixtures when round changes
+  // Fixtures tab: per-round fixtures
   useEffect(() => {
-    if (!selectedRound) return;
+    if (!selectedRound || activeTab !== "fixtures") return;
     setFixturesLoading(true);
     setRoundFixtures(null);
-    fetch(
-      `/api/football/league-fixtures?league=${params.id}&season=${selectedSeason}&round=${encodeURIComponent(selectedRound)}`
-    )
+    fetch(`/api/football/league-fixtures?league=${params.id}&season=${selectedSeason}&round=${encodeURIComponent(selectedRound)}`)
       .then((r) => r.ok ? r.json() : { upcoming: [], recent: [], live: [], all: [] })
-      .then((d) => setRoundFixtures({
-        upcoming: d.upcoming ?? [],
-        recent:   d.recent ?? [],
-        live:     d.live ?? [],
-        all:      d.all ?? [],
-      }))
+      .then((d) => setRoundFixtures({ upcoming: d.upcoming ?? [], recent: d.recent ?? [], live: d.live ?? [], all: d.all ?? [] }))
       .catch(() => {})
       .finally(() => setFixturesLoading(false));
-  }, [params.id, selectedSeason, selectedRound]);
+  }, [params.id, selectedSeason, selectedRound, activeTab]);
 
-  // When season selector changes, reset round data and force re-load
-  function handleSeasonChange(s: number) {
-    setSelectedSeason(s);
-    roundsLoadedFor.current = ""; // force reload
-    setRounds([]);
-    setSelectedRound(null);
-    setRoundFixtures(null);
-  }
-
-  // Lazy: standings
-  useEffect(() => {
-    if (activeTab !== "standings" || standings !== null) return;
-    setStandingsLoading(true);
-    fetch(`/api/football/standings?league=${params.id}&season=${selectedSeason}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => setStandings(d?.standings ?? []))
-      .finally(() => setStandingsLoading(false));
-  }, [activeTab, params.id, selectedSeason, standings]);
-
-  // Lazy: teams
+  // Teams
   useEffect(() => {
     if (activeTab !== "teams" || teams !== null) return;
     setTeamsLoading(true);
@@ -246,7 +313,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setTeamsLoading(false));
   }, [activeTab, params.id, teams]);
 
-  // Lazy: players
+  // Players
   useEffect(() => {
     if (activeTab !== "players" || topScorers !== null) return;
     setPlayersLoading(true);
@@ -256,16 +323,33 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
       .finally(() => setPlayersLoading(false));
   }, [activeTab, params.id, selectedSeason, topScorers]);
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: "fixtures",  label: "Fixtures"    },
-    { key: "standings", label: "Standings"   },
-    { key: "teams",     label: "Team List"   },
-    { key: "players",   label: "Top Players" },
+  function handleSeasonChange(s: number) {
+    setSelectedSeason(s);
+    overviewLoadedFor.current = "";
+    standingsLoadedFor.current = "";
+    roundsLoadedFor.current = "";
+    setStandings(null);
+    setOverviewFixtures(null);
+    setOverviewRound(null);
+    setRounds([]);
+    setSelectedRound(null);
+    setRoundFixtures(null);
+  }
+
+  const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
+    { key: "overview",  label: "Overview",    icon: LayoutDashboard },
+    { key: "fixtures",  label: "Fixtures",    icon: Calendar        },
+    { key: "standings", label: "Standings",   icon: BarChart2       },
+    { key: "teams",     label: "Teams",       icon: Users           },
+    { key: "players",   label: "Top Players", icon: Trophy          },
   ];
 
-  const roundIdx    = rounds.indexOf(selectedRound ?? "");
-  const canPrev     = roundIdx > 0;
-  const canNext     = roundIdx < rounds.length - 1;
+  const roundIdx = rounds.indexOf(selectedRound ?? "");
+  const canPrev  = roundIdx > 0;
+  const canNext  = roundIdx < rounds.length - 1;
+
+  // Form-sorted standings for overview
+  const formLeaders = standings ? [...standings].sort((a, b) => formPts(b.form) - formPts(a.form)) : [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -301,11 +385,10 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                 <div className="flex flex-wrap items-center justify-between gap-4 p-6 sm:p-8">
                   <div className="flex items-center gap-5">
                     <div className="relative h-16 w-16 shrink-0">
-                      {league.logo ? (
-                        <Image src={league.logo} alt={league.name} fill className="object-contain" sizes="64px" />
-                      ) : (
-                        <span className="text-4xl">{league.flag}</span>
-                      )}
+                      {league.logo
+                        ? <Image src={league.logo} alt={league.name} fill className="object-contain" sizes="64px" />
+                        : <span className="text-4xl">{league.flag}</span>
+                      }
                     </div>
                     <div>
                       <h1 className="text-2xl font-extrabold text-white sm:text-3xl">{league.name}</h1>
@@ -314,20 +397,13 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                       </p>
                     </div>
                   </div>
-
                   {/* Season selector */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500">Season</span>
-                    <div className="flex rounded-lg border border-bg-border bg-bg-base overflow-hidden">
+                    <div className="flex overflow-hidden rounded-lg border border-bg-border bg-bg-base">
                       {SEASONS.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleSeasonChange(s)}
-                          className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                            selectedSeason === s
-                              ? "bg-accent-green text-white"
-                              : "text-slate-400 hover:text-white hover:bg-bg-border"
-                          }`}
+                        <button key={s} onClick={() => handleSeasonChange(s)}
+                          className={`px-3 py-1.5 text-xs font-semibold transition-colors ${selectedSeason === s ? "bg-accent-green text-white" : "text-slate-400 hover:bg-bg-border hover:text-white"}`}
                         >
                           {seasonLabel(s)}
                         </button>
@@ -340,77 +416,206 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
               {/* Tabs */}
               <div className="mb-6 border-b border-bg-border">
                 <div className="-mb-px flex gap-1 overflow-x-auto">
-                  {TABS.map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setActiveTab(key)}
-                      className={`flex shrink-0 items-center border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-                        activeTab === key
-                          ? "border-accent-green text-accent-green"
-                          : "border-transparent text-slate-500 hover:text-slate-200"
+                  {TABS.map(({ key, label, icon: Icon }) => (
+                    <button key={key} onClick={() => setActiveTab(key)}
+                      className={`flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                        activeTab === key ? "border-accent-green text-accent-green" : "border-transparent text-slate-500 hover:text-slate-200"
                       }`}
                     >
-                      {label}
+                      <Icon className="h-3.5 w-3.5" />{label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* ── Fixtures ── */}
+              {/* ── Overview ─────────────────────────────────────────────── */}
+              {activeTab === "overview" && (
+                <div className="space-y-6">
+
+                  {/* Current round fixtures */}
+                  <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b border-bg-border px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                          {overviewRound ? formatRound(overviewRound) : "Current Round"}
+                        </p>
+                      </div>
+                      <button onClick={() => setActiveTab("fixtures")} className="text-xs font-semibold text-accent-green hover:underline">
+                        All fixtures →
+                      </button>
+                    </div>
+
+                    {overviewLoading ? (
+                      <div className="space-y-1 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
+                    ) : !overviewFixtures?.length ? (
+                      <EmptyState message="No fixtures for current round" />
+                    ) : (
+                      <div className="divide-y divide-bg-border">
+                        {overviewFixtures.map((f) => {
+                          const isFinished = ["FT", "AET", "PEN"].includes(f.fixture.status.short);
+                          return <FixtureRow key={f.fixture.id} f={f} showScore={isFinished} />;
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Live league table */}
+                  <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b border-bg-border px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <BarChart2 className="h-3.5 w-3.5 text-slate-500" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">League Table</p>
+                      </div>
+                      <button onClick={() => setActiveTab("standings")} className="text-xs font-semibold text-accent-green hover:underline">
+                        Full table →
+                      </button>
+                    </div>
+
+                    {standingsLoading ? (
+                      <div className="space-y-1 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-11" />)}</div>
+                    ) : !standings?.length ? (
+                      <EmptyState message="Standings not available" />
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-bg-border text-left text-[11px] text-slate-500">
+                              <th className="w-8 px-4 py-2.5 font-medium">#</th>
+                              <th className="px-4 py-2.5 font-medium">Team</th>
+                              <th className="px-3 py-2.5 text-center font-medium">P</th>
+                              <th className="hidden px-3 py-2.5 text-center font-medium sm:table-cell">GD</th>
+                              <th className="px-3 py-2.5 text-center font-bold">Pts</th>
+                              <th className="px-4 py-2.5 font-medium">Form</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-bg-border">
+                            {standings.map((row) => (
+                              <tr key={row.team.id} className={`transition-colors hover:bg-bg-border ${zoneClass(row.description)}`}>
+                                <td className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500">{row.rank}</td>
+                                <td className="px-4 py-2.5">
+                                  <Link href={`/teams/${encodeURIComponent(row.team.name)}`} className="group flex items-center gap-2">
+                                    {row.team.logo && (
+                                      <div className="relative h-5 w-5 shrink-0">
+                                        <Image src={row.team.logo} alt="" fill className="object-contain" sizes="20px" />
+                                      </div>
+                                    )}
+                                    <span className="truncate font-semibold text-white group-hover:text-accent-green">{row.team.name}</span>
+                                  </Link>
+                                </td>
+                                <td className="px-3 py-2.5 text-center text-slate-400">{row.all.played}</td>
+                                <td className={`hidden px-3 py-2.5 text-center font-medium sm:table-cell ${row.goalsDiff > 0 ? "text-emerald-500" : row.goalsDiff < 0 ? "text-red-400" : "text-slate-500"}`}>
+                                  {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
+                                </td>
+                                <td className="px-3 py-2.5 text-center font-extrabold text-white">{row.points}</td>
+                                <td className="px-4 py-2.5"><FormPills form={row.form} /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Zone legend */}
+                    {standings && standings.length > 0 && (
+                      <div className="flex flex-wrap gap-4 border-t border-bg-border px-5 py-3 text-xs text-slate-500">
+                        <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-blue-500" />Champions League</span>
+                        <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-orange-400" />Europa League</span>
+                        <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-red-500" />Relegation</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Form guide */}
+                  {formLeaders.length > 0 && (
+                    <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+                      <div className="flex items-center gap-2 border-b border-bg-border px-5 py-3">
+                        <TrendingUp className="h-3.5 w-3.5 text-slate-500" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Form Guide — Last 5</p>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-bg-border text-left text-[11px] text-slate-500">
+                              <th className="w-8 px-4 py-2.5 font-medium">#</th>
+                              <th className="px-4 py-2.5 font-medium">Team</th>
+                              <th className="px-4 py-2.5 font-medium">Last 5</th>
+                              <th className="px-3 py-2.5 text-center font-medium">Pts</th>
+                              <th className="px-4 py-2.5 font-medium">Streak</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-bg-border">
+                            {formLeaders.map((row, i) => {
+                              const pts = formPts(row.form);
+                              const ptsColor = pts >= 13 ? "text-emerald-400" : pts >= 9 ? "text-amber-400" : pts <= 3 ? "text-red-400" : "text-slate-400";
+                              return (
+                                <tr key={row.team.id} className="transition-colors hover:bg-bg-border">
+                                  <td className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500">{i + 1}</td>
+                                  <td className="px-4 py-2.5">
+                                    <Link href={`/teams/${encodeURIComponent(row.team.name)}`} className="group flex items-center gap-2">
+                                      {row.team.logo && (
+                                        <div className="relative h-5 w-5 shrink-0">
+                                          <Image src={row.team.logo} alt="" fill className="object-contain" sizes="20px" />
+                                        </div>
+                                      )}
+                                      <span className="truncate font-semibold text-white group-hover:text-accent-green">{row.team.name}</span>
+                                    </Link>
+                                  </td>
+                                  <td className="px-4 py-2.5"><FormPills form={row.form} /></td>
+                                  <td className={`px-3 py-2.5 text-center text-sm font-extrabold tabular-nums ${ptsColor}`}>{pts}/15</td>
+                                  <td className="px-4 py-2.5"><StreakBadge form={row.form} /></td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Fixtures ─────────────────────────────────────────────── */}
               {activeTab === "fixtures" && (
                 <div className="space-y-4">
                   {/* Round navigation */}
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSelectedRound(rounds[roundIdx - 1])}
-                      disabled={!canPrev || roundsLoading}
+                    <button onClick={() => setSelectedRound(rounds[roundIdx - 1])} disabled={!canPrev || roundsLoading}
                       className="flex items-center gap-1 rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-500 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       <ChevronLeft className="h-4 w-4" /> Prev
                     </button>
-
                     <div className="flex-1">
                       {rounds.length > 0 ? (
-                        <select
-                          value={selectedRound ?? ""}
-                          onChange={(e) => setSelectedRound(e.target.value)}
+                        <select value={selectedRound ?? ""} onChange={(e) => setSelectedRound(e.target.value)}
                           className="w-full rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-1 focus:ring-accent-green"
                         >
-                          {rounds.map((r) => (
-                            <option key={r} value={r}>{formatRound(r)}</option>
-                          ))}
+                          {rounds.map((r) => <option key={r} value={r}>{formatRound(r)}</option>)}
                         </select>
                       ) : (
                         <div className="flex h-9 items-center justify-center rounded-lg border border-bg-border bg-bg-card">
-                          <span className="text-sm text-slate-500">
-                            {roundsLoading ? "Loading rounds…" : "No rounds available"}
-                          </span>
+                          <span className="text-sm text-slate-500">{roundsLoading ? "Loading rounds…" : "No rounds available"}</span>
                         </div>
                       )}
                     </div>
-
-                    <button
-                      onClick={() => setSelectedRound(rounds[roundIdx + 1])}
-                      disabled={!canNext || roundsLoading}
+                    <button onClick={() => setSelectedRound(rounds[roundIdx + 1])} disabled={!canNext || roundsLoading}
                       className="flex items-center gap-1 rounded-lg border border-bg-border bg-bg-card px-3 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-500 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                     >
                       Next <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
 
-                  {/* Fixture list */}
                   <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
                     {fixturesLoading || roundsLoading ? (
                       <div className="space-y-1 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
                     ) : !roundFixtures || roundFixtures.all.length === 0 ? (
-                      <EmptyState message={selectedRound ? `No fixtures found for ${formatRound(selectedRound)}` : "Select a round to view fixtures"} />
+                      <EmptyState message={selectedRound ? `No fixtures for ${formatRound(selectedRound)}` : "Select a round"} />
                     ) : (
                       <>
-                        {/* Live */}
                         {roundFixtures.live.length > 0 && (
                           <>
                             <div className="flex items-center gap-2 border-b border-bg-border px-5 py-3">
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
                               <p className="text-xs font-bold uppercase tracking-widest text-red-400">Live</p>
                             </div>
                             <div className="divide-y divide-bg-border">
@@ -418,25 +623,17 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                             </div>
                           </>
                         )}
-
-                        {/* Results */}
                         {roundFixtures.recent.length > 0 && (
                           <>
-                            <div className={`border-b border-bg-border px-5 py-3 ${roundFixtures.live.length ? "border-t" : ""}`}>
-                              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Results</p>
-                            </div>
+                            <SectionLabel>Results</SectionLabel>
                             <div className="divide-y divide-bg-border">
                               {[...roundFixtures.recent].reverse().map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
                             </div>
                           </>
                         )}
-
-                        {/* Upcoming */}
                         {roundFixtures.upcoming.length > 0 && (
                           <>
-                            <div className={`border-b border-bg-border px-5 py-3 ${roundFixtures.recent.length || roundFixtures.live.length ? "border-t" : ""}`}>
-                              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Upcoming</p>
-                            </div>
+                            <SectionLabel>Upcoming</SectionLabel>
                             <div className="divide-y divide-bg-border">
                               {roundFixtures.upcoming.map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={false} />)}
                             </div>
@@ -448,71 +645,96 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {/* ── Standings ── */}
+              {/* ── Standings ────────────────────────────────────────────── */}
               {activeTab === "standings" && (
-                <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
-                  {standingsLoading ? (
-                    <div className="space-y-1 p-4">{Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
-                  ) : !standings?.length ? (
-                    <EmptyState message="Standings not available" />
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-bg-border text-left text-xs text-slate-500">
-                              <th className="w-8 px-4 py-3 font-medium">#</th>
-                              <th className="px-4 py-3 font-medium">Team</th>
-                              <th className="px-3 py-3 text-center font-medium">P</th>
-                              <th className="px-3 py-3 text-center font-medium">W</th>
-                              <th className="px-3 py-3 text-center font-medium">D</th>
-                              <th className="px-3 py-3 text-center font-medium">L</th>
-                              <th className="px-3 py-3 text-center font-medium">GF</th>
-                              <th className="px-3 py-3 text-center font-medium">GA</th>
-                              <th className="px-3 py-3 text-center font-medium">GD</th>
-                              <th className="px-3 py-3 text-center font-bold font-medium">Pts</th>
-                              <th className="px-4 py-3 font-medium">Form</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-bg-border">
-                            {standings.map((row) => (
-                              <tr key={row.team.id} className={`transition-colors hover:bg-bg-border ${zoneClass(row.description)}`}>
-                                <td className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{row.rank}</td>
-                                <td className="px-4 py-3">
-                                  <Link href={`/teams/${encodeURIComponent(row.team.name)}`} className="group flex items-center gap-2.5">
-                                    <div className="relative h-6 w-6 shrink-0">
-                                      <Image src={row.team.logo} alt={row.team.name} fill className="object-contain" sizes="24px" />
-                                    </div>
-                                    <span className="font-semibold text-white group-hover:text-accent-green">{row.team.name}</span>
-                                  </Link>
-                                </td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.played}</td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.win}</td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.draw}</td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.lose}</td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.goals.for}</td>
-                                <td className="px-3 py-3 text-center text-slate-400">{row.all.goals.against}</td>
-                                <td className={`px-3 py-3 text-center font-medium ${row.goalsDiff > 0 ? "text-emerald-600" : row.goalsDiff < 0 ? "text-red-500" : "text-slate-500"}`}>
-                                  {row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}
-                                </td>
-                                <td className="px-3 py-3 text-center font-extrabold text-white">{row.points}</td>
-                                <td className="px-4 py-3"><FormDots form={row.form} /></td>
+                <div className="space-y-6">
+                  <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
+                    {/* All / Home / Away toggle */}
+                    <div className="flex items-center justify-between border-b border-bg-border px-5 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">League Table</p>
+                      <div className="flex overflow-hidden rounded-lg border border-bg-border bg-bg-base">
+                        {(["all", "home", "away"] as StandingsView[]).map((v) => (
+                          <button key={v} onClick={() => setStandingsView(v)}
+                            className={`px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${standingsView === v ? "bg-accent-green text-white" : "text-slate-400 hover:bg-bg-border hover:text-white"}`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {standingsLoading ? (
+                      <div className="space-y-1 p-4">{Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+                    ) : !standings?.length ? (
+                      <EmptyState message="Standings not available" />
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-bg-border text-left text-xs text-slate-500">
+                                <th className="w-8 px-4 py-3 font-medium">#</th>
+                                <th className="px-4 py-3 font-medium">Team</th>
+                                <th className="px-3 py-3 text-center font-medium">P</th>
+                                <th className="px-3 py-3 text-center font-medium">W</th>
+                                <th className="px-3 py-3 text-center font-medium">D</th>
+                                <th className="px-3 py-3 text-center font-medium">L</th>
+                                <th className="px-3 py-3 text-center font-medium">GF</th>
+                                <th className="px-3 py-3 text-center font-medium">GA</th>
+                                <th className="px-3 py-3 text-center font-medium">GD</th>
+                                <th className="px-3 py-3 text-center font-bold">Pts</th>
+                                <th className="px-4 py-3 font-medium">Form</th>
+                                <th className="px-3 py-3 font-medium">Streak</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="flex flex-wrap gap-4 border-t border-bg-border px-4 py-3 text-xs text-slate-500">
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-1 rounded-full bg-blue-500" />Champions League</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-1 rounded-full bg-orange-400" />Europa League</span>
-                        <span className="flex items-center gap-1.5"><span className="h-3 w-1 rounded-full bg-red-400" />Relegation</span>
-                      </div>
-                    </>
-                  )}
+                            </thead>
+                            <tbody className="divide-y divide-bg-border">
+                              {standings.map((row) => {
+                                const rec = standingsView === "home" ? row.home : standingsView === "away" ? row.away : row.all;
+                                const pts = standingsView === "all" ? row.points : rec.win * 3 + rec.draw;
+                                const gd  = rec.goals.for - rec.goals.against;
+                                return (
+                                  <tr key={row.team.id} className={`transition-colors hover:bg-bg-border ${standingsView === "all" ? zoneClass(row.description) : "border-l-[3px] border-l-transparent"}`}>
+                                    <td className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{row.rank}</td>
+                                    <td className="px-4 py-3">
+                                      <Link href={`/teams/${encodeURIComponent(row.team.name)}`} className="group flex items-center gap-2.5">
+                                        {row.team.logo && (
+                                          <div className="relative h-6 w-6 shrink-0">
+                                            <Image src={row.team.logo} alt="" fill className="object-contain" sizes="24px" />
+                                          </div>
+                                        )}
+                                        <span className="font-semibold text-white group-hover:text-accent-green">{row.team.name}</span>
+                                      </Link>
+                                    </td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.played}</td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.win}</td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.draw}</td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.lose}</td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.goals.for}</td>
+                                    <td className="px-3 py-3 text-center text-slate-400">{rec.goals.against}</td>
+                                    <td className={`px-3 py-3 text-center font-medium ${gd > 0 ? "text-emerald-500" : gd < 0 ? "text-red-400" : "text-slate-500"}`}>
+                                      {gd > 0 ? `+${gd}` : gd}
+                                    </td>
+                                    <td className="px-3 py-3 text-center font-extrabold text-white">{pts}</td>
+                                    <td className="px-4 py-3"><FormPills form={row.form} /></td>
+                                    <td className="px-3 py-3"><StreakBadge form={row.form} /></td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex flex-wrap gap-4 border-t border-bg-border px-4 py-3 text-xs text-slate-500">
+                          <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-blue-500" />Champions League</span>
+                          <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-orange-400" />Europa League</span>
+                          <span className="flex items-center gap-1.5"><span className="h-3 w-0.5 rounded-full bg-red-500" />Relegation</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* ── Team List ── */}
+              {/* ── Teams ────────────────────────────────────────────────── */}
               {activeTab === "teams" && (
                 <div className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
                   {teamsLoading ? (
@@ -522,14 +744,14 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                   ) : (
                     <div className="divide-y divide-bg-border">
                       {teams.map((t) => (
-                        <Link
-                          key={t.team.id}
-                          href={`/teams/${encodeURIComponent(t.team.name)}`}
+                        <Link key={t.team.id} href={`/teams/${encodeURIComponent(t.team.name)}`}
                           className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-bg-border"
                         >
-                          <div className="relative h-10 w-10 shrink-0">
-                            <Image src={t.team.logo} alt={t.team.name} fill className="object-contain" sizes="40px" />
-                          </div>
+                          {t.team.logo && (
+                            <div className="relative h-10 w-10 shrink-0">
+                              <Image src={t.team.logo} alt={t.team.name} fill className="object-contain" sizes="40px" />
+                            </div>
+                          )}
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-semibold text-white group-hover:text-accent-green">{t.team.name}</p>
                             <p className="text-xs text-slate-500">
@@ -547,7 +769,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {/* ── Top Players ── */}
+              {/* ── Top Players ──────────────────────────────────────────── */}
               {activeTab === "players" && (
                 <div className="space-y-6">
                   {[
@@ -555,9 +777,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                     { label: "Top Assists", list: topAssists, key: "assists" as const, unit: "assists" },
                   ].map(({ label, list, key, unit }) => (
                     <div key={label} className="overflow-hidden rounded-2xl border border-bg-border bg-bg-card shadow-sm">
-                      <div className="border-b border-bg-border px-5 py-3">
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">{label}</p>
-                      </div>
+                      <SectionLabel>{label}</SectionLabel>
                       {playersLoading ? (
                         <div className="space-y-1 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
                       ) : !list?.length ? (
@@ -565,26 +785,28 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                       ) : (
                         <div className="divide-y divide-bg-border">
                           {list.map((item, i) => {
-                            const stat = item.statistics[0];
+                            const stat  = item.statistics[0];
                             const value = key === "total" ? stat?.goals.total : stat?.goals.assists;
                             return (
                               <div key={item.player.id} className="flex items-center gap-4 px-5 py-3.5">
                                 <span className="w-6 shrink-0 text-center text-sm font-bold text-slate-600">{i + 1}</span>
                                 <Link href={`/athletes/${item.player.id}`} className="group flex flex-1 items-center gap-3">
-                                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-bg-border">
-                                    <Image src={item.player.photo} alt={item.player.name} fill className="object-cover" sizes="40px" />
-                                  </div>
+                                  {item.player.photo ? (
+                                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-bg-border">
+                                      <Image src={item.player.photo} alt={item.player.name} fill className="object-cover" sizes="40px" />
+                                    </div>
+                                  ) : (
+                                    <div className="h-10 w-10 shrink-0 rounded-full bg-bg-border" />
+                                  )}
                                   <div className="min-w-0 flex-1">
                                     <p className="truncate font-semibold text-white group-hover:text-accent-green">{item.player.name}</p>
                                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                                      {stat?.team && (
-                                        <>
-                                          <div className="relative h-3.5 w-3.5">
-                                            <Image src={stat.team.logo} alt="" fill className="object-contain" sizes="14px" />
-                                          </div>
-                                          <span>{stat.team.name}</span>
-                                        </>
+                                      {stat?.team?.logo && (
+                                        <div className="relative h-3.5 w-3.5">
+                                          <Image src={stat.team.logo} alt="" fill className="object-contain" sizes="14px" />
+                                        </div>
                                       )}
+                                      {stat?.team && <span>{stat.team.name}</span>}
                                       {stat?.games.appearences != null && <><span>·</span><span>{stat.games.appearences} apps</span></>}
                                     </div>
                                   </div>
