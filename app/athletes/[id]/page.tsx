@@ -135,13 +135,19 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                   <div className="flex flex-wrap items-start gap-6">
                     {/* Headshot */}
                     <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-bg-border shadow-sm">
-                      <Image
-                        src={data.player.photo}
-                        alt={data.player.name}
-                        fill
-                        className="object-cover"
-                        sizes="128px"
-                      />
+                      {data.player.photo ? (
+                        <Image
+                          src={data.player.photo}
+                          alt={data.player.name}
+                          fill
+                          className="object-cover"
+                          sizes="128px"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <User className="h-16 w-16 text-slate-600" />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex-1">
@@ -154,9 +160,11 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                         )}
                         {primaryStats?.league && (
                           <Link href={`/leagues/${primaryStats.league.id}`} className="flex items-center gap-1.5 rounded-md border border-bg-border px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-white">
-                            <div className="relative h-4 w-4">
-                              <Image src={primaryStats.league.logo} alt="" fill className="object-contain" sizes="16px" />
-                            </div>
+                            {primaryStats.league.logo && (
+                              <div className="relative h-4 w-4">
+                                <Image src={primaryStats.league.logo} alt="" fill className="object-contain" sizes="16px" />
+                              </div>
+                            )}
                             {primaryStats.league.name}
                           </Link>
                         )}
@@ -195,9 +203,11 @@ export default function AthletePage({ params }: { params: { id: string } }) {
               {data.statistics.map((stats, i) => (
                 <div key={i} className="mb-6">
                   <div className="mb-4 flex items-center gap-3">
-                    <div className="relative h-5 w-5">
-                      <Image src={stats.league.logo} alt="" fill className="object-contain" sizes="20px" />
-                    </div>
+                    {stats.league.logo && (
+                      <div className="relative h-5 w-5">
+                        <Image src={stats.league.logo} alt="" fill className="object-contain" sizes="20px" />
+                      </div>
+                    )}
                     <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                       {stats.league.name} {stats.league.season}/{String(stats.league.season + 1).slice(2)}
                     </span>
