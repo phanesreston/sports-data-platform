@@ -532,6 +532,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [teamStats,          setTeamStats]          = useState<RawStats | null>(null);
   const [statsLoading,       setStatsLoading]       = useState(false);
   const [statsSelectedSeason, setStatsSelectedSeason] = useState(CURRENT_SEASON);
+  const [statsActualSeason,  setStatsActualSeason]  = useState<number | null>(null);
   const statsLoadedFor = useRef<string>("");
 
   const teamName = decodeURIComponent(params.id);
@@ -627,7 +628,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     setTeamStats(null);
     fetch(`/api/football/team-season-stats?team=${data.team.id}&league=${data.stats.league.id}&season=${statsSelectedSeason}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => setTeamStats(d?.stats ?? null))
+      .then((d) => { setTeamStats(d?.stats ?? null); setStatsActualSeason(d?.season ?? null); })
       .catch(() => {})
       .finally(() => setStatsLoading(false));
   }, [activeTab, data, statsSelectedSeason]);
@@ -1076,12 +1077,19 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                 <div className="space-y-6">
                   {/* Season selector */}
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Season Statistics</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                      Season Statistics
+                      {statsActualSeason != null && statsActualSeason !== statsSelectedSeason && (
+                        <span className="ml-2 font-normal normal-case text-slate-600">
+                          (showing {seasonLabel(statsActualSeason)})
+                        </span>
+                      )}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-500">Season</span>
                       <div className="flex overflow-hidden rounded-lg border border-bg-border bg-bg-base">
                         {SEASONS.map((s) => (
-                          <button key={s} onClick={() => { setStatsSelectedSeason(s); statsLoadedFor.current = ""; setTeamStats(null); }}
+                          <button key={s} onClick={() => { setStatsSelectedSeason(s); statsLoadedFor.current = ""; setTeamStats(null); setStatsActualSeason(null); }}
                             className={`px-3 py-1.5 text-xs font-semibold transition-colors ${statsSelectedSeason === s ? "bg-accent-green text-white" : "text-slate-400 hover:text-white hover:bg-bg-border"}`}
                           >
                             {seasonLabel(s)}
