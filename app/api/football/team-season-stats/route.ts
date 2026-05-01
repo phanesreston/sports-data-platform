@@ -16,7 +16,11 @@ async function fetchStats(team: string, league: string, season: number) {
     { team, league, season: String(season) },
     3600
   );
-  return (res as { response?: unknown[] } | null)?.response?.[0] ?? null;
+  // /teams/statistics returns response as a plain object, not an array.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = (res as any)?.response;
+  if (!raw) return null;
+  return Array.isArray(raw) ? (raw[0] ?? null) : raw;
 }
 
 export async function GET(req: NextRequest) {

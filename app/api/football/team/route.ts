@@ -132,7 +132,13 @@ export async function GET(req: NextRequest) {
     ),
   ]);
 
-  const stats = unwrap(statsRes)?.[0] ?? null;
+  // /teams/statistics returns response as a plain object, not an array,
+  // so unwrap() (which checks .length) always returns null for this endpoint.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const statsRaw = (statsRes as any)?.response;
+  const stats: ApiTeamStats | null = statsRaw
+    ? (Array.isArray(statsRaw) ? (statsRaw[0] ?? null) : statsRaw)
+    : null;
   const squad = unwrap(squadRes)?.[0]?.players ?? [];
   console.log(`[team] stats: ${stats ? "✓" : "✗ missing"}  squad: ${squad.length} players`);
   console.log(`[team] ── DONE returning "${team.name}" ──\n`);
