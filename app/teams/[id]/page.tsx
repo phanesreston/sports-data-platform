@@ -653,7 +653,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const teamTopAssist = topAssists?.find( (p) => p.statistics[0]?.team.id === teamId) ?? null;
 
   // Find the lineup that belongs to this team
-  const myLineup = lineupData?.lineups.find((l) => l.team.id === teamId) ?? null;
+  const myLineup = lineupData?.lineups?.find((l) => l.team.id === teamId) ?? null;
 
   const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview",  label: "Overview",  icon: BarChart3  },
