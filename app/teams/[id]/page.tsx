@@ -47,6 +47,8 @@ interface SquadPlayer {
 interface TeamData {
   team:  { id: number; name: string; country: string; founded: number; logo: string };
   venue: { name: string; city: string; capacity: number };
+  // league is always populated from the leagues endpoint, even when stats is null
+  league: { id: number; name: string; logo: string } | null;
   stats: {
     form: string;
     league: { id: number; name: string; logo: string };
@@ -567,7 +569,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (activeTab !== "overview" || !data?.team?.id) return;
     const teamId   = data.team.id;
-    const leagueId = data.stats?.league?.id;
+    const leagueId = data.league?.id ?? data.stats?.league?.id;
 
     // Standings — only load once per league (they don't change per team)
     if (leagueId && standingsLoadedFor.current !== String(leagueId)) {
@@ -620,13 +622,14 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
   // ── stats tab: load full stats when season or tab changes ─────────────────────
   useEffect(() => {
-    if (activeTab !== "stats" || !data?.team?.id || !data?.stats?.league?.id) return;
-    const key = `${data.team.id}:${data.stats.league.id}:${statsSelectedSeason}`;
+    const leagueId = data?.league?.id ?? data?.stats?.league?.id;
+    if (activeTab !== "stats" || !data?.team?.id || !leagueId) return;
+    const key = `${data.team.id}:${leagueId}:${statsSelectedSeason}`;
     if (statsLoadedFor.current === key) return;
     statsLoadedFor.current = key;
     setStatsLoading(true);
     setTeamStats(null);
-    fetch(`/api/football/team-season-stats?team=${data.team.id}&league=${data.stats.league.id}&season=${statsSelectedSeason}`)
+    fetch(`/api/football/team-season-stats?team=${data.team.id}&league=${leagueId}&season=${statsSelectedSeason}`)
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { setTeamStats(d?.stats ?? null); setStatsActualSeason(d?.season ?? null); })
       .catch(() => {})
@@ -703,12 +706,15 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                       <div>
                         <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{data.team.name}</h1>
                         <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                          {data.stats?.league && (
-                            <Link href={`/leagues/${data.stats.league.id}`} className="flex items-center gap-1.5 hover:text-slate-200 transition-colors">
-                              <div className="relative h-4 w-4"><Image src={data.stats.league.logo} alt="" fill className="object-contain" sizes="16px" /></div>
-                              {data.stats.league.name}
-                            </Link>
-                          )}
+                          {(data.league ?? data.stats?.league) && (() => {
+                            const lg = data.league ?? data.stats!.league;
+                            return (
+                              <Link href={`/leagues/${lg.id}`} className="flex items-center gap-1.5 hover:text-slate-200 transition-colors">
+                                <div className="relative h-4 w-4"><Image src={lg.logo} alt="" fill className="object-contain" sizes="16px" /></div>
+                                {lg.name}
+                              </Link>
+                            );
+                          })()}
                           <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{data.venue.city}</span>
                           <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Est. {data.team.founded}</span>
                           <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{data.venue.name}</span>

@@ -113,9 +113,11 @@ export async function GET(req: NextRequest) {
     await apiFetch<ApiLeagueForTeam>("/leagues", { team: team.id, current: "true" }, 3600)
   );
   console.log(`[team] leagues for team ${team.id}: ${leaguesRes?.map(l => `${l.league.name}(${l.league.id})`).join(", ") || "none"}`);
-  const currentLeagueId =
-    leaguesRes?.find((l) => STATS_LEAGUE_PRIORITY.includes(l.league.id))?.league.id ??
-    leaguesRes?.[0]?.league.id;
+  const leagueEntry =
+    leaguesRes?.find((l) => STATS_LEAGUE_PRIORITY.includes(l.league.id)) ??
+    leaguesRes?.[0] ??
+    null;
+  const currentLeagueId = leagueEntry?.league.id;
   console.log(`[team] using league ${currentLeagueId} for stats`);
 
   // ── Step 3: stats + squad in parallel ───────────────────────────────────────
@@ -142,5 +144,9 @@ export async function GET(req: NextRequest) {
     Forwards:    squad.filter((p) => p.position === "Attacker"),
   };
 
-  return NextResponse.json({ team, venue, stats, squad: grouped });
+  // Always include the resolved league at the top level so the Stats tab can
+  // fetch /team-season-stats even when the initial stats call returns null.
+  const league = stats?.league ?? (leagueEntry ? { id: leagueEntry.league.id, name: leagueEntry.league.name, logo: leagueEntry.league.logo } : null);
+
+  return NextResponse.json({ team, venue, stats, league, squad: grouped });
 }
