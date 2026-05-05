@@ -6,12 +6,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiFetch, unwrap, currentSeason } from "@/lib/apifootball";
 
-// currentSeason() returns the current football season year (e.g. 2024 for 2024/25).
-// Players must be searched within a season, so we always use the current one.
-const SEASON = currentSeason();
-
-// Raw shapes returned by the API-Football v3 endpoints ─────────────────────────
-
 interface ApiTeamResult {
   team:  { id: number; name: string; country: string; logo: string };
   venue: { city: string };
@@ -33,17 +27,19 @@ interface ApiLeagueResult {
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
 
-  // Require at least 2 characters to avoid hammering the API with single-letter queries
   if (q.length < 2) return NextResponse.json({ teams: [], players: [], leagues: [] });
 
-  // Fan out all three searches in parallel — no dependency between them
+  const season = currentSeason();
+
   const [teamsRes, playersRes, leaguesRes] = await Promise.all([
     apiFetch<ApiTeamResult>("/teams", { search: q }, 3600),
-    apiFetch<ApiPlayerResult>("/players", { search: q, season: SEASON }, 3600),
+    // Player name search requires min 3 chars and a season
+    q.length >= 3
+      ? apiFetch<ApiPlayerResult>("/players", { search: q, season }, 3600)
+      : Promise.resolve(null),
     apiFetch<ApiLeagueResult>("/leagues", { search: q }, 3600),
   ]);
 
-  // Slice to the top 5 teams, reshape to only what the UI needs
   const teams = (unwrap(teamsRes) ?? []).slice(0, 5).map((t) => ({
     id:      t.team.id,
     name:    t.team.name,
@@ -52,8 +48,6 @@ export async function GET(req: NextRequest) {
     city:    t.venue?.city ?? "",
   }));
 
-  // For each player we take the first statistics entry (their primary club/league)
-  // to get position and team info, then slice to 5 results.
   const players = (unwrap(playersRes) ?? []).slice(0, 5).map((p) => {
     const stat = p.statistics?.[0];
     return {
@@ -66,8 +60,6 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // Filter to type === "League" so cups/tournaments don't clutter the results,
-  // then take the top 4 to keep the modal compact.
   const leagues = (unwrap(leaguesRes) ?? [])
     .filter((l) => l.league.type === "League")
     .slice(0, 4)

@@ -12,11 +12,8 @@ interface TeamResult {
   id: number; name: string; logo: string; country: string;
 }
 
-interface PlayerResult {
-  id: number; name: string; photo: string; nationality: string;
-  team: { id: number; name: string; logo: string } | null;
-  league: { id: number; name: string; logo: string } | null;
-  position: string | null;
+interface SquadPlayer {
+  id: number; name: string; position: string; number: number | null; photo: string;
 }
 
 interface H2HMatch {
@@ -97,18 +94,17 @@ function StatCard({ label, value, sub, highlight }: {
   );
 }
 
-// Reusable team/player search input with dropdown
-function SearchBox<T extends { id: number; name: string }>({
-  placeholder, value, onChange, results, onSelect, onClear, loading, renderItem,
+// Reusable team search input with dropdown
+function TeamSearchBox({
+  placeholder, value, onChange, results, onSelect, onClear, loading,
 }: {
   placeholder: string;
   value: string;
   onChange: (q: string) => void;
-  results: T[];
-  onSelect: (item: T) => void;
+  results: TeamResult[];
+  onSelect: (item: TeamResult) => void;
   onClear: () => void;
   loading: boolean;
-  renderItem: (item: T) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -142,11 +138,105 @@ function SearchBox<T extends { id: number; name: string }>({
       )}
       {open && results.length > 0 && (
         <div className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-white/10 bg-bg-card shadow-xl">
-          {results.map((item) => (
-            <button key={item.id} onClick={() => { onSelect(item); setOpen(false); }}
+          {results.map((t) => (
+            <button key={t.id} onClick={() => { onSelect(t); setOpen(false); }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/5"
             >
-              {renderItem(item)}
+              {t.logo && <div className="relative h-6 w-6 shrink-0"><Image src={t.logo} alt="" fill className="object-contain" sizes="24px" /></div>}
+              <div>
+                <p className="text-sm font-semibold text-white">{t.name}</p>
+                <p className="text-xs text-slate-500">{t.country}</p>
+              </div>
+              <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-600" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Squad player picker — shows after a team is selected in Player mode
+function PlayerPicker({
+  squad, loading, selected, onSelect, onClear,
+}: {
+  squad: SquadPlayer[];
+  loading: boolean;
+  selected: SquadPlayer | null;
+  onSelect: (p: SquadPlayer) => void;
+  onClear: () => void;
+}) {
+  const [filter, setFilter] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // Reset filter when squad changes
+  useEffect(() => { setFilter(""); }, [squad]);
+
+  const filtered = squad.filter((p) =>
+    !filter || p.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex h-12 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-slate-500">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-accent-green" />
+        Loading squad…
+      </div>
+    );
+  }
+
+  if (squad.length === 0) return null;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+        <User className="h-4 w-4 text-slate-500" />
+      </div>
+      <input
+        value={selected ? selected.name : filter}
+        onChange={(e) => {
+          setFilter(e.target.value);
+          if (selected) onClear();
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Filter players…"
+        className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-9 text-sm text-white placeholder-slate-600 outline-none transition focus:border-accent-green/50 focus:ring-2 focus:ring-accent-green/20"
+      />
+      {(selected || filter) && (
+        <button
+          onClick={() => { onClear(); setFilter(""); setOpen(false); }}
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-200"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+      {open && !selected && filtered.length > 0 && (
+        <div className="absolute z-50 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-white/10 bg-bg-card shadow-xl [scrollbar-width:thin]">
+          {filtered.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => { onSelect(p); setFilter(""); setOpen(false); }}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/5"
+            >
+              {p.photo && (
+                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
+                  <Image src={p.photo} alt="" fill className="object-cover" sizes="28px" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{p.name}</p>
+                <p className="text-xs text-slate-500">
+                  {p.position}{p.number != null ? ` · #${p.number}` : ""}
+                </p>
+              </div>
               <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-600" />
             </button>
           ))}
@@ -180,19 +270,16 @@ function TeamH2HView({ matches, team1, team2 }: {
         </div>
         <div className="p-5">
           <div className="mb-4 flex items-center justify-between gap-4">
-            {/* Team 1 */}
             <div className="flex flex-col items-center gap-2 text-center">
               {team1.logo && <div className="relative h-12 w-12"><Image src={team1.logo} alt="" fill className="object-contain" sizes="48px" /></div>}
               <p className="text-sm font-bold text-white">{team1.name}</p>
               <p className="text-3xl font-extrabold text-accent-green">{s1.wins}</p>
               <p className="text-xs text-slate-500">wins</p>
             </div>
-            {/* Centre */}
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="text-2xl font-extrabold text-white">{s1.draws}</p>
               <p className="text-xs font-semibold text-slate-500">draws</p>
             </div>
-            {/* Team 2 */}
             <div className="flex flex-col items-center gap-2 text-center">
               {team2.logo && <div className="relative h-12 w-12"><Image src={team2.logo} alt="" fill className="object-contain" sizes="48px" /></div>}
               <p className="text-sm font-bold text-white">{team2.name}</p>
@@ -200,8 +287,6 @@ function TeamH2HView({ matches, team1, team2 }: {
               <p className="text-xs text-slate-500">wins</p>
             </div>
           </div>
-
-          {/* Win % bar */}
           {matches.length > 0 && (
             <div className="flex h-2 overflow-hidden rounded-full">
               <div className="bg-accent-green/70 transition-all" style={{ width: `${(s1.wins / matches.length) * 100}%` }} />
@@ -288,12 +373,12 @@ function TeamH2HView({ matches, team1, team2 }: {
 
 // ── player H2H display ─────────────────────────────────────────────────────────
 
-function PlayerH2HView({ summary, appearances, player, opponent, playerTeamId }: {
+function PlayerH2HView({ summary, appearances, player, playerTeam, opponent }: {
   summary: PlayerSummary;
   appearances: PlayerAppearance[];
-  player: PlayerResult;
+  player: SquadPlayer;
+  playerTeam: TeamResult;
   opponent: TeamResult;
-  playerTeamId: number;
 }) {
   return (
     <div className="space-y-5">
@@ -307,8 +392,8 @@ function PlayerH2HView({ summary, appearances, player, opponent, playerTeamId }:
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-extrabold text-white">{player.name}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            {player.team?.logo && <div className="relative h-4 w-4 shrink-0"><Image src={player.team.logo} alt="" fill className="object-contain" sizes="16px" /></div>}
-            <span>{player.team?.name}</span>
+            {playerTeam.logo && <div className="relative h-4 w-4 shrink-0"><Image src={playerTeam.logo} alt="" fill className="object-contain" sizes="16px" /></div>}
+            <span>{playerTeam.name}</span>
             {player.position && <><span className="text-slate-700">·</span><span className="rounded bg-white/8 px-1.5 py-0.5 font-semibold">{player.position}</span></>}
           </div>
         </div>
@@ -406,24 +491,30 @@ function PlayerH2HView({ summary, appearances, player, opponent, playerTeamId }:
 export default function H2HPage() {
   const [mode, setMode] = useState<Mode>("teams");
 
-  // team searches
+  // team mode — team 1
   const [query1, setQuery1] = useState("");
   const [results1, setResults1] = useState<TeamResult[]>([]);
   const [loading1, setLoading1] = useState(false);
   const [team1, setTeam1] = useState<TeamResult | null>(null);
 
+  // shared — team 2 / opponent
   const [query2, setQuery2] = useState("");
   const [results2, setResults2] = useState<TeamResult[]>([]);
   const [loading2, setLoading2] = useState(false);
   const [team2, setTeam2] = useState<TeamResult | null>(null);
 
-  // player search
-  const [playerQuery, setPlayerQuery] = useState("");
-  const [playerResults, setPlayerResults] = useState<PlayerResult[]>([]);
-  const [playerLoading, setPlayerLoading] = useState(false);
-  const [player, setPlayer] = useState<PlayerResult | null>(null);
+  // player mode — player's team
+  const [pTeamQuery, setPTeamQuery] = useState("");
+  const [pTeamResults, setPTeamResults] = useState<TeamResult[]>([]);
+  const [pTeamLoading, setPTeamLoading] = useState(false);
+  const [playerTeam, setPlayerTeam] = useState<TeamResult | null>(null);
 
-  // data
+  // player mode — squad + selected player
+  const [squad, setSquad] = useState<SquadPlayer[]>([]);
+  const [squadLoading, setSquadLoading] = useState(false);
+  const [player, setPlayer] = useState<SquadPlayer | null>(null);
+
+  // results
   const [h2hMatches, setH2hMatches] = useState<H2HMatch[] | null>(null);
   const [h2hLoading, setH2hLoading] = useState(false);
   const [playerH2H, setPlayerH2H] = useState<{ summary: PlayerSummary; appearances: PlayerAppearance[] } | null>(null);
@@ -434,7 +525,7 @@ export default function H2HPage() {
   const db2 = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dbP = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced team search 1
+  // Debounced team search 1 (Teams mode left)
   useEffect(() => {
     if (query1.length < 2) { setResults1([]); return; }
     if (db1.current) clearTimeout(db1.current);
@@ -447,7 +538,7 @@ export default function H2HPage() {
     }, 300);
   }, [query1]);
 
-  // Debounced team search 2
+  // Debounced team search 2 (opponent — both modes)
   useEffect(() => {
     if (query2.length < 2) { setResults2([]); return; }
     if (db2.current) clearTimeout(db2.current);
@@ -460,18 +551,30 @@ export default function H2HPage() {
     }, 300);
   }, [query2]);
 
-  // Debounced player search
+  // Debounced player-team search (Player mode left)
   useEffect(() => {
-    if (playerQuery.length < 3) { setPlayerResults([]); return; }
+    if (pTeamQuery.length < 2) { setPTeamResults([]); return; }
     if (dbP.current) clearTimeout(dbP.current);
     dbP.current = setTimeout(() => {
-      setPlayerLoading(true);
-      fetch(`/api/football/player-search?q=${encodeURIComponent(playerQuery)}`)
-        .then((r) => r.ok ? r.json() : { players: [] })
-        .then((d) => setPlayerResults(d.players ?? []))
-        .finally(() => setPlayerLoading(false));
+      setPTeamLoading(true);
+      fetch(`/api/football/search?q=${encodeURIComponent(pTeamQuery)}`)
+        .then((r) => r.ok ? r.json() : { teams: [] })
+        .then((d) => setPTeamResults(d.teams ?? []))
+        .finally(() => setPTeamLoading(false));
     }, 300);
-  }, [playerQuery]);
+  }, [pTeamQuery]);
+
+  // Fetch squad when playerTeam is set
+  useEffect(() => {
+    if (!playerTeam) { setSquad([]); return; }
+    setSquadLoading(true);
+    setPlayer(null);
+    fetch(`/api/football/team-squad?team=${playerTeam.id}`)
+      .then((r) => r.ok ? r.json() : { players: [] })
+      .then((d) => setSquad(d.players ?? []))
+      .catch(() => setSquad([]))
+      .finally(() => setSquadLoading(false));
+  }, [playerTeam]);
 
   // Fetch team H2H when both teams selected
   useEffect(() => {
@@ -484,25 +587,34 @@ export default function H2HPage() {
       .finally(() => setH2hLoading(false));
   }, [team1, team2, mode]);
 
-  // Fetch player H2H when player + opponent selected
+  // Fetch player H2H when player + playerTeam + opponent are all set
   useEffect(() => {
-    if (mode !== "player" || !player || !team2 || !player.team) return;
+    if (mode !== "player" || !player || !playerTeam || !team2) return;
     setPlayerH2H(null); setError(null); setPlayerH2HLoading(true);
-    fetch(`/api/football/player-h2h?player=${player.id}&team1=${player.team.id}&team2=${team2.id}`)
+    fetch(`/api/football/player-h2h?player=${player.id}&team1=${playerTeam.id}&team2=${team2.id}`)
       .then((r) => r.ok ? r.json() : { appearances: [], summary: null })
       .then((d) => {
-        if (d.summary) setPlayerH2H({ summary: d.summary, appearances: d.appearances });
-        else setPlayerH2H({ summary: { appearances: 0, goals: 0, assists: 0, minutesPlayed: 0, avgMinutesPerGame: 0, goalsPerGame: 0, assistsPerGame: 0, shotsOnTarget: 0, keyPasses: 0, avgRating: null }, appearances: [] });
+        if (d.summary) {
+          setPlayerH2H({ summary: d.summary, appearances: d.appearances });
+        } else {
+          setPlayerH2H({
+            summary: { appearances: 0, goals: 0, assists: 0, minutesPlayed: 0, avgMinutesPerGame: 0, goalsPerGame: 0, assistsPerGame: 0, shotsOnTarget: 0, keyPasses: 0, avgRating: null },
+            appearances: [],
+          });
+        }
       })
       .catch(() => setError("Failed to load player data."))
       .finally(() => setPlayerH2HLoading(false));
-  }, [player, team2, mode]);
+  }, [player, playerTeam, team2, mode]);
 
   const clearAll = useCallback(() => {
-    setTeam1(null); setTeam2(null); setPlayer(null);
-    setQuery1(""); setQuery2(""); setPlayerQuery("");
+    setTeam1(null); setTeam2(null);
+    setQuery1(""); setQuery2("");
+    setResults1([]); setResults2([]);
+    setPlayerTeam(null); setPlayer(null);
+    setPTeamQuery(""); setPTeamResults([]);
+    setSquad([]);
     setH2hMatches(null); setPlayerH2H(null); setError(null);
-    setResults1([]); setResults2([]); setPlayerResults([]);
   }, []);
 
   const switchMode = useCallback((m: Mode) => {
@@ -512,7 +624,7 @@ export default function H2HPage() {
   const isLoading = h2hLoading || playerH2HLoading;
   const hasResult = mode === "teams"
     ? (h2hMatches !== null && team1 && team2)
-    : (playerH2H !== null && player && team2);
+    : (playerH2H !== null && player && playerTeam && team2);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -543,12 +655,13 @@ export default function H2HPage() {
           </div>
 
           {/* Search inputs */}
-          <div className="mb-6 grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-            {/* Left: team 1 or player */}
+          <div className="mb-6 grid items-start gap-3 sm:grid-cols-[1fr_auto_1fr]">
+
+            {/* Left side */}
             {mode === "teams" ? (
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Team</label>
-                <SearchBox<TeamResult>
+                <TeamSearchBox
                   placeholder="Search team…"
                   value={team1 ? team1.name : query1}
                   onChange={(q) => { setQuery1(q); if (team1) { setTeam1(null); setH2hMatches(null); } }}
@@ -556,51 +669,50 @@ export default function H2HPage() {
                   loading={loading1}
                   onSelect={(t) => { setTeam1(t); setQuery1(t.name); setResults1([]); }}
                   onClear={() => { setTeam1(null); setQuery1(""); setH2hMatches(null); }}
-                  renderItem={(t) => (
-                    <>
-                      {t.logo && <div className="relative h-6 w-6 shrink-0"><Image src={t.logo} alt="" fill className="object-contain" sizes="24px" /></div>}
-                      <div><p className="text-sm font-semibold text-white">{t.name}</p><p className="text-xs text-slate-500">{t.country}</p></div>
-                    </>
-                  )}
                 />
               </div>
             ) : (
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player</label>
-                <SearchBox<PlayerResult>
-                  placeholder="Search player…"
-                  value={player ? player.name : playerQuery}
-                  onChange={(q) => { setPlayerQuery(q); if (player) { setPlayer(null); setPlayerH2H(null); } }}
-                  results={playerResults}
-                  loading={playerLoading}
-                  onSelect={(p) => { setPlayer(p); setPlayerQuery(p.name); setPlayerResults([]); }}
-                  onClear={() => { setPlayer(null); setPlayerQuery(""); setPlayerH2H(null); }}
-                  renderItem={(p) => (
-                    <>
-                      {p.photo && <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full"><Image src={p.photo} alt="" fill className="object-cover" sizes="28px" /></div>}
-                      <div>
-                        <p className="text-sm font-semibold text-white">{p.name}</p>
-                        <p className="text-xs text-slate-500">{p.team?.name}{p.position ? ` · ${p.position}` : ""}</p>
-                      </div>
-                    </>
-                  )}
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player&apos;s Team</label>
+                  <TeamSearchBox
+                    placeholder="Search team…"
+                    value={playerTeam ? playerTeam.name : pTeamQuery}
+                    onChange={(q) => { setPTeamQuery(q); if (playerTeam) { setPlayerTeam(null); setPlayer(null); setPlayerH2H(null); } }}
+                    results={pTeamResults}
+                    loading={pTeamLoading}
+                    onSelect={(t) => { setPlayerTeam(t); setPTeamQuery(t.name); setPTeamResults([]); }}
+                    onClear={() => { setPlayerTeam(null); setPTeamQuery(""); setPlayer(null); setSquad([]); setPlayerH2H(null); }}
+                  />
+                </div>
+                {playerTeam && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player</label>
+                    <PlayerPicker
+                      squad={squad}
+                      loading={squadLoading}
+                      selected={player}
+                      onSelect={(p) => { setPlayer(p); setPlayerH2H(null); }}
+                      onClear={() => { setPlayer(null); setPlayerH2H(null); }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
             {/* VS divider */}
-            <div className="flex items-end justify-center pb-1">
+            <div className="flex items-center justify-center pt-7">
               <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5">
                 <span className="text-xs font-bold text-slate-500">VS</span>
               </div>
             </div>
 
-            {/* Right: team 2 (opponent) */}
+            {/* Right: opponent */}
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">
                 {mode === "teams" ? "Opponent" : "Opponent Team"}
               </label>
-              <SearchBox<TeamResult>
+              <TeamSearchBox
                 placeholder="Search opponent…"
                 value={team2 ? team2.name : query2}
                 onChange={(q) => { setQuery2(q); if (team2) { setTeam2(null); setH2hMatches(null); setPlayerH2H(null); } }}
@@ -608,12 +720,6 @@ export default function H2HPage() {
                 loading={loading2}
                 onSelect={(t) => { setTeam2(t); setQuery2(t.name); setResults2([]); }}
                 onClear={() => { setTeam2(null); setQuery2(""); setH2hMatches(null); setPlayerH2H(null); }}
-                renderItem={(t) => (
-                  <>
-                    {t.logo && <div className="relative h-6 w-6 shrink-0"><Image src={t.logo} alt="" fill className="object-contain" sizes="24px" /></div>}
-                    <div><p className="text-sm font-semibold text-white">{t.name}</p><p className="text-xs text-slate-500">{t.country}</p></div>
-                  </>
-                )}
               />
             </div>
           </div>
@@ -645,7 +751,7 @@ export default function H2HPage() {
             )
           )}
 
-          {!isLoading && !error && mode === "player" && playerH2H && player && team2 && (
+          {!isLoading && !error && mode === "player" && playerH2H && player && playerTeam && team2 && (
             playerH2H.appearances.length === 0 ? (
               <div className="rounded-2xl border border-white/8 bg-white/3 py-16 text-center">
                 <User className="mx-auto mb-3 h-10 w-10 text-slate-700" />
@@ -657,8 +763,8 @@ export default function H2HPage() {
                 summary={playerH2H.summary}
                 appearances={playerH2H.appearances}
                 player={player}
+                playerTeam={playerTeam}
                 opponent={team2}
-                playerTeamId={player.team?.id ?? 0}
               />
             )
           )}
@@ -667,7 +773,13 @@ export default function H2HPage() {
             <div className="mt-16 text-center">
               <Swords className="mx-auto mb-4 h-14 w-14 text-slate-800" />
               <p className="text-lg font-semibold text-slate-400">
-                {mode === "teams" ? "Select two teams to compare their H2H record" : "Select a player and an opponent to see their record"}
+                {mode === "teams"
+                  ? "Select two teams to compare their H2H record"
+                  : !playerTeam
+                    ? "Start by selecting the player's team"
+                    : !player
+                      ? "Now select a player from the squad"
+                      : "Select an opponent to see the H2H record"}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 {mode === "teams" ? "Shows up to 20 historical meetings with stats breakdown." : "Shows goals, assists, ratings and more across all H2H matches."}
