@@ -52,6 +52,17 @@ const CURRENT_SEASON = (() => {
 const SEASONS = [CURRENT_SEASON, CURRENT_SEASON - 1, CURRENT_SEASON - 2];
 function seasonLabel(s: number) { return `${s}/${String(s + 1).slice(2)}`; }
 
+// Domestic leagues only — the Odds API historical endpoint has reliable
+// pre-match odds for these. Cups and European competition are excluded
+// until we have a database to store their odds separately.
+const DOMESTIC_LEAGUE_IDS = new Set([
+  39,  // Premier League
+  140, // La Liga
+  135, // Serie A
+  78,  // Bundesliga
+  61,  // Ligue 1
+]);
+
 const STRATEGIES: Record<Strategy, {
   label: string;
   description: string;
@@ -314,7 +325,10 @@ export default function StrategyTesterPage() {
     fetch(`/api/football/team-results?team=${team.id}&season=${season}`)
       .then((r) => r.ok ? r.json() : { fixtures: [] })
       .then(async (d) => {
-        const loaded: FixtureResult[] = d.fixtures ?? [];
+        const all: FixtureResult[] = d.fixtures ?? [];
+        // Only keep domestic league games — cups and European competition
+        // are excluded until we have database-backed historical odds for them.
+        const loaded = all.filter((f) => DOMESTIC_LEAGUE_IDS.has(f.league.id));
         setFixtures(loaded);
         if (loaded.length === 0) return;
 
@@ -512,14 +526,18 @@ export default function StrategyTesterPage() {
                     ) : oddsError ? (
                       <p className="text-xs text-red-400">{oddsError}</p>
                     ) : oddsMap ? (
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Sparkles className="h-3.5 w-3.5 text-accent-green" />
-                        <span>
-                          Actual bookmaker odds loaded —{" "}
-                          <span className="text-slate-300 font-semibold">{stats?.total ?? 0}/{fixtures.length} games</span> with odds
-                          {stats?.skipped ? `, ${stats.skipped} excluded (no data)` : ""}
-                          {stats?.avgOdds ? ` · avg ${stats.avgOdds}x` : ""}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="h-3.5 w-3.5 text-accent-green" />
+                          <span>
+                            Actual bookmaker odds loaded —{" "}
+                            <span className="text-slate-300 font-semibold">{stats?.total ?? 0}/{fixtures.length} games</span> with odds
+                            {stats?.skipped ? `, ${stats.skipped} excluded (no data)` : ""}
+                            {stats?.avgOdds ? ` · avg ${stats.avgOdds}x` : ""}
+                          </span>
                         </span>
+                        <span className="text-slate-700">·</span>
+                        <span className="text-slate-600">Domestic league only — cups &amp; European games excluded</span>
                       </div>
                     ) : null}
                   </div>
