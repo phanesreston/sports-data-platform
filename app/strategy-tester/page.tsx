@@ -320,8 +320,18 @@ export default function StrategyTesterPage() {
 
         setOddsLoading(true);
         try {
-          const ids = loaded.map((f) => f.id).join(",");
-          const res = await fetch(`/api/football/fixture-odds?fixtures=${ids}`);
+          const fixtures = loaded.map((f) => ({
+            id:       f.id,
+            date:     f.date,
+            homeTeam: f.homeTeam.name,
+            awayTeam: f.awayTeam.name,
+            leagueId: f.league.id,
+          }));
+          const res = await fetch("/api/football/historical-odds", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ fixtures }),
+          });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
           const map: Record<number, FixtureOdds | null> = {};
