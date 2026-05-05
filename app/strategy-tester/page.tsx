@@ -55,15 +55,14 @@ function seasonLabel(s: number) { return `${s}/${String(s + 1).slice(2)}`; }
 const STRATEGIES: Record<Strategy, {
   label: string;
   description: string;
-  defaultOdds: number;
   hitLabel: string;
   icon: React.ElementType;
   oddsKey: keyof FixtureOdds;
 }> = {
-  win:    { label: "Back to Win",           description: "Bet on the team to win every single match",    defaultOdds: 2.00, hitLabel: "Wins",     icon: TrendingUp, oddsKey: "home"   },
-  draw:   { label: "Back the Draw",         description: "Bet every match ends level",                   defaultOdds: 3.40, hitLabel: "Draws",    icon: Activity,   oddsKey: "draw"   },
-  over25: { label: "Over 2.5 Goals",        description: "Bet on 3 or more total goals in every match",  defaultOdds: 1.80, hitLabel: "Over 2.5", icon: Target,     oddsKey: "over25" },
-  btts:   { label: "Both Teams to Score",   description: "Bet both teams get on the scoresheet",         defaultOdds: 1.85, hitLabel: "BTTS Yes", icon: Zap,        oddsKey: "btts"   },
+  win:    { label: "Back to Win",           description: "Bet on the team to win every single match",    hitLabel: "Wins",     icon: TrendingUp, oddsKey: "home"   },
+  draw:   { label: "Back the Draw",         description: "Bet every match ends level",                   hitLabel: "Draws",    icon: Activity,   oddsKey: "draw"   },
+  over25: { label: "Over 2.5 Goals",        description: "Bet on 3 or more total goals in every match",  hitLabel: "Over 2.5", icon: Target,     oddsKey: "over25" },
+  btts:   { label: "Both Teams to Score",   description: "Bet both teams get on the scoresheet",         hitLabel: "BTTS Yes", icon: Zap,        oddsKey: "btts"   },
 };
 
 const RESULT_STYLES = {
@@ -83,7 +82,7 @@ function getHit(f: FixtureResult, strategy: Strategy): boolean {
   }
 }
 
-// Returns the actual odds for this fixture + strategy combo, or null if unavailable.
+// Returns the actual bookmaker odds for this fixture + strategy, or null if unavailable.
 function getActualOdds(
   f: FixtureResult,
   strategy: Strategy,
@@ -105,27 +104,28 @@ function getActualOdds(
 
 interface GameRecord {
   fixtureId: number;
-  oddsUsed: number;
-  isActualOdds: boolean;
+  oddsUsed: number | null; // null = no odds available, game excluded from P&L
   hit: boolean;
   pnl: number;
   running: number;
+  skipped: boolean;
 }
 
 interface BacktestStats {
   totalPnL: number;
   roi: number;
   hits: number;
-  total: number;
+  total: number;      // games with odds (counted toward P&L)
+  totalGames: number; // all games
+  skipped: number;    // games excluded due to missing odds
   strikeRate: number;
   breakEvenOdds: number;
+  avgOdds: number | null;
   cumulativePnL: number[];
   homeHits: number; homeTotal: number; homePnL: number;
   awayHits: number; awayTotal: number; awayPnL: number;
   maxWinStreak: number;
   maxLoseStreak: number;
-  gamesWithActualOdds: number;
-  avgActualOdds: number | null;
   games: GameRecord[];
 }
 
@@ -133,27 +133,31 @@ function runBacktest(
   fixtures: FixtureResult[],
   strategy: Strategy,
   betAmount: number,
-  defaultOdds: number,
   oddsMap: Record<number, FixtureOdds | null> | null
 ): BacktestStats {
   let totalPnL = 0, homePnL = 0, awayPnL = 0;
   let hits = 0, homeHits = 0, awayHits = 0, homeTotal = 0, awayTotal = 0;
   let curWin = 0, curLose = 0, maxWin = 0, maxLose = 0;
-  let actualOddsSum = 0, actualOddsCount = 0;
+  let oddsSum = 0, oddsCount = 0, skipped = 0;
   const cumulativePnL: number[] = [];
   const games: GameRecord[] = [];
 
   for (const f of fixtures) {
-    const hit       = getHit(f, strategy);
-    const actual    = getActualOdds(f, strategy, oddsMap);
-    const oddsUsed  = actual ?? defaultOdds;
-    const isActual  = actual !== null;
-    const pnl       = hit ? +(betAmount * (oddsUsed - 1)).toFixed(2) : -betAmount;
+    const oddsUsed = getActualOdds(f, strategy, oddsMap);
+
+    if (oddsUsed === null) {
+      // No bookmaker odds available — exclude from P&L but still show in table
+      skipped++;
+      games.push({ fixtureId: f.id, oddsUsed: null, hit: getHit(f, strategy), pnl: 0, running: totalPnL, skipped: true });
+      continue;
+    }
+
+    const hit = getHit(f, strategy);
+    const pnl = hit ? +(betAmount * (oddsUsed - 1)).toFixed(2) : -betAmount;
 
     totalPnL = +(totalPnL + pnl).toFixed(2);
     cumulativePnL.push(totalPnL);
-
-    if (isActual) { actualOddsSum += oddsUsed; actualOddsCount++; }
+    oddsSum += oddsUsed; oddsCount++;
 
     if (f.isHome) { homePnL = +(homePnL + pnl).toFixed(2); if (hit) homeHits++; homeTotal++; }
     else           { awayPnL = +(awayPnL + pnl).toFixed(2); if (hit) awayHits++; awayTotal++; }
@@ -162,23 +166,24 @@ function runBacktest(
     if (hit)  { curWin++;  curLose = 0; maxWin  = Math.max(maxWin,  curWin);  }
     else       { curLose++; curWin  = 0; maxLose = Math.max(maxLose, curLose); }
 
-    games.push({ fixtureId: f.id, oddsUsed, isActualOdds: isActual, hit, pnl, running: totalPnL });
+    games.push({ fixtureId: f.id, oddsUsed, hit, pnl, running: totalPnL, skipped: false });
   }
 
-  const n = fixtures.length;
+  const n = oddsCount; // only games with odds count toward staked
   const totalStaked = betAmount * n;
   return {
     totalPnL,
     roi:           n > 0 ? +((totalPnL / totalStaked) * 100).toFixed(1) : 0,
     hits, total: n,
+    totalGames: fixtures.length,
+    skipped,
     strikeRate:    n > 0 ? +((hits / n) * 100).toFixed(1) : 0,
     breakEvenOdds: hits > 0 ? +(n / hits).toFixed(2) : 0,
+    avgOdds:       oddsCount > 0 ? +(oddsSum / oddsCount).toFixed(2) : null,
     cumulativePnL,
     homeHits, homeTotal, homePnL,
     awayHits, awayTotal, awayPnL,
     maxWinStreak: maxWin, maxLoseStreak: maxLose,
-    gamesWithActualOdds: actualOddsCount,
-    avgActualOdds: actualOddsCount > 0 ? +(actualOddsSum / actualOddsCount).toFixed(2) : null,
     games,
   };
 }
@@ -266,13 +271,12 @@ export default function StrategyTesterPage() {
   const [fixturesLoading, setFixturesLoading] = useState(false);
 
   // actual odds
-  const [oddsMap,    setOddsMap]    = useState<Record<number, FixtureOdds | null> | null>(null);
+  const [oddsMap,     setOddsMap]     = useState<Record<number, FixtureOdds | null> | null>(null);
   const [oddsLoading, setOddsLoading] = useState(false);
-  const [oddsError,  setOddsError]  = useState<string | null>(null);
+  const [oddsError,   setOddsError]   = useState<string | null>(null);
 
   // strategy settings
   const [strategy,  setStrategy]  = useState<Strategy>("win");
-  const [odds,      setOdds]      = useState(STRATEGIES.win.defaultOdds);
   const [betAmount, setBetAmount] = useState(10);
 
   // debounced search
@@ -299,24 +303,41 @@ export default function StrategyTesterPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // load fixtures when team/season changes; reset odds map too
+  // load fixtures then immediately fetch their actual odds
   useEffect(() => {
     if (!team) return;
     setFixturesLoading(true);
     setFixtures(null);
     setOddsMap(null);
     setOddsError(null);
+
     fetch(`/api/football/team-results?team=${team.id}&season=${season}`)
       .then((r) => r.ok ? r.json() : { fixtures: [] })
-      .then((d) => setFixtures(d.fixtures ?? []))
+      .then(async (d) => {
+        const loaded: FixtureResult[] = d.fixtures ?? [];
+        setFixtures(loaded);
+        if (loaded.length === 0) return;
+
+        setOddsLoading(true);
+        try {
+          const ids = loaded.map((f) => f.id).join(",");
+          const res = await fetch(`/api/football/fixture-odds?fixtures=${ids}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const map: Record<number, FixtureOdds | null> = {};
+          for (const [k, v] of Object.entries(data.odds ?? {})) {
+            map[Number(k)] = v as FixtureOdds | null;
+          }
+          setOddsMap(map);
+        } catch {
+          setOddsError("Could not load odds — API quota may be exhausted.");
+        } finally {
+          setOddsLoading(false);
+        }
+      })
       .catch(() => setFixtures([]))
       .finally(() => setFixturesLoading(false));
   }, [team, season]);
-
-  const handleStrategyChange = useCallback((s: Strategy) => {
-    setStrategy(s);
-    setOdds(STRATEGIES[s].defaultOdds);
-  }, []);
 
   const handleSelectTeam = useCallback((t: TeamResult) => {
     setTeam(t);
@@ -334,41 +355,17 @@ export default function StrategyTesterPage() {
     setShowDropdown(false);
   }, []);
 
-  // fetch actual pre-match odds from API-Football for all loaded fixtures
-  const handleLoadActualOdds = useCallback(async () => {
-    if (!fixtures || fixtures.length === 0) return;
-    setOddsLoading(true);
-    setOddsError(null);
-    try {
-      const ids  = fixtures.map((f) => f.id).join(",");
-      const res  = await fetch(`/api/football/fixture-odds?fixtures=${ids}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      // Convert string keys from JSON back to numbers for easy lookup
-      const map: Record<number, FixtureOdds | null> = {};
-      for (const [k, v] of Object.entries(data.odds ?? {})) {
-        map[Number(k)] = v as FixtureOdds | null;
-      }
-      setOddsMap(map);
-    } catch (e) {
-      setOddsError("Could not load odds — API quota may be exhausted. Try again later.");
-    } finally {
-      setOddsLoading(false);
-    }
-  }, [fixtures]);
-
   // derived stats (recalculates instantly on any input change)
   const stats = useMemo<BacktestStats | null>(() => {
-    if (!fixtures || fixtures.length === 0) return null;
-    return runBacktest(fixtures, strategy, betAmount, odds, oddsMap);
-  }, [fixtures, strategy, betAmount, odds, oddsMap]);
+    if (!fixtures || fixtures.length === 0 || !oddsMap) return null;
+    return runBacktest(fixtures, strategy, betAmount, oddsMap);
+  }, [fixtures, strategy, betAmount, oddsMap]);
 
   const pnlPositive = (stats?.totalPnL ?? 0) >= 0;
   const profitStr   = stats ? `${pnlPositive ? "+" : ""}£${stats.totalPnL.toFixed(2)}` : null;
   const roiStr      = stats ? `${stats.roi >= 0 ? "+" : ""}${stats.roi}%` : null;
-  const usingActual = oddsMap !== null;
-  const coveredPct  = stats && stats.total > 0
-    ? Math.round((stats.gamesWithActualOdds / stats.total) * 100)
+  const coveredPct  = stats && stats.totalGames > 0
+    ? Math.round((stats.total / stats.totalGames) * 100)
     : 0;
 
   return (
@@ -453,16 +450,16 @@ export default function StrategyTesterPage() {
                 <div className="border-b border-white/8 px-5 py-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Bet Settings</p>
                 </div>
-                <div className="grid gap-6 p-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-6 p-5 sm:grid-cols-2 lg:grid-cols-3">
                   {/* Strategy picker */}
-                  <div className="lg:col-span-2">
+                  <div className="sm:col-span-2">
                     <label className="mb-2 block text-xs font-semibold text-slate-400">Strategy</label>
                     <div className="grid grid-cols-2 gap-2">
                       {(Object.entries(STRATEGIES) as [Strategy, typeof STRATEGIES[Strategy]][]).map(([key, s]) => {
                         const Icon = s.icon;
                         const active = strategy === key;
                         return (
-                          <button key={key} onClick={() => handleStrategyChange(key)}
+                          <button key={key} onClick={() => setStrategy(key)}
                             className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
                               active
                                 ? "border-accent-green/50 bg-accent-green/10 text-accent-green"
@@ -489,84 +486,38 @@ export default function StrategyTesterPage() {
                       />
                     </div>
                     <p className="mt-1.5 text-[11px] text-slate-600">
-                      Total staked: £{fixtures ? (betAmount * fixtures.length).toFixed(2) : "—"}
+                      Total staked: £{stats ? (betAmount * stats.total).toFixed(2) : "—"}
                     </p>
-                  </div>
-
-                  {/* Fallback odds (used when no actual odds are available for a game) */}
-                  <div>
-                    <label className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-400">
-                      {usingActual ? "Fallback odds" : "Average odds"}
-                      <span title={usingActual ? "Used for games where no bookmaker odds could be found" : "Applied uniformly to every game"}>
-                        <Info className="h-3 w-3 text-slate-600" />
-                      </span>
-                    </label>
-                    <input type="number" min={1.01} step={0.05} value={odds}
-                      onChange={(e) => setOdds(Math.max(1.01, Number(e.target.value)))}
-                      className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 px-3 text-right text-sm font-bold text-white outline-none transition focus:border-accent-green/50 focus:ring-2 focus:ring-accent-green/20"
-                    />
-                    {stats && stats.breakEvenOdds > 0 && (
-                      <p className={`mt-1.5 text-[11px] font-semibold ${odds >= stats.breakEvenOdds ? "text-emerald-500" : "text-red-400"}`}>
-                        Break-even: {stats.breakEvenOdds}x
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                {/* Actual odds loader */}
+                {/* Odds status bar */}
                 {fixtures && fixtures.length > 0 && (
-                  <div className="border-t border-white/8 px-5 py-4">
-                    {!usingActual ? (
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Use actual pre-match odds</p>
-                          <p className="text-xs text-slate-500">
-                            Pull real bookmaker odds from API-Football for each fixture.
-                            Cached after the first load — won&apos;t cost quota again for the same season.
-                          </p>
-                        </div>
-                        <button
-                          onClick={handleLoadActualOdds}
-                          disabled={oddsLoading}
-                          className="flex shrink-0 items-center gap-2 rounded-xl bg-accent-green px-4 py-2 text-sm font-bold text-white transition hover:bg-accent-green/90 disabled:opacity-50"
-                        >
-                          {oddsLoading
-                            ? <><RefreshCw className="h-4 w-4 animate-spin" /> Loading odds…</>
-                            : <><Sparkles className="h-4 w-4" /> Load actual odds</>}
-                        </button>
+                  <div className="border-t border-white/8 px-5 py-3">
+                    {oddsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        Loading bookmaker odds…
                       </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-accent-green" />
-                          <div>
-                            <p className="text-sm font-semibold text-white">
-                              Actual odds active
-                              <span className="ml-2 text-xs font-normal text-slate-400">
-                                ({stats?.gamesWithActualOdds ?? 0}/{fixtures.length} games · {coveredPct}% coverage
-                                {stats?.avgActualOdds ? ` · avg ${stats.avgActualOdds}x` : ""})
-                              </span>
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              Fallback odds of {odds}x applied to {fixtures.length - (stats?.gamesWithActualOdds ?? 0)} game(s) with no data.
-                            </p>
-                          </div>
-                        </div>
-                        <button onClick={() => { setOddsMap(null); setOddsError(null); }}
-                          className="text-xs text-slate-500 hover:text-slate-300 underline">
-                          Remove
-                        </button>
+                    ) : oddsError ? (
+                      <p className="text-xs text-red-400">{oddsError}</p>
+                    ) : oddsMap ? (
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Sparkles className="h-3.5 w-3.5 text-accent-green" />
+                        <span>
+                          Actual bookmaker odds loaded —{" "}
+                          <span className="text-slate-300 font-semibold">{stats?.total ?? 0}/{fixtures.length} games</span> with odds
+                          {stats?.skipped ? `, ${stats.skipped} excluded (no data)` : ""}
+                          {stats?.avgOdds ? ` · avg ${stats.avgOdds}x` : ""}
+                        </span>
                       </div>
-                    )}
-                    {oddsError && (
-                      <p className="mt-2 text-xs text-red-400">{oddsError}</p>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>
 
               {/* ── Results ─────────────────────────────────────────────── */}
-              {fixturesLoading && (
+              {(fixturesLoading || oddsLoading) && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
@@ -576,7 +527,7 @@ export default function StrategyTesterPage() {
                 </div>
               )}
 
-              {!fixturesLoading && fixtures && fixtures.length === 0 && (
+              {!fixturesLoading && !oddsLoading && fixtures && fixtures.length === 0 && (
                 <div className="flex items-center justify-center rounded-2xl border border-white/8 bg-white/3 py-16 text-center">
                   <div>
                     <BarChart2 className="mx-auto mb-3 h-10 w-10 text-slate-700" />
@@ -586,22 +537,20 @@ export default function StrategyTesterPage() {
                 </div>
               )}
 
-              {!fixturesLoading && stats && fixtures && (
+              {!fixturesLoading && !oddsLoading && stats && fixtures && (
                 <div className="space-y-5">
 
                   {/* Summary cards */}
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <StatCard label="Total P&L" value={profitStr!}
-                      sub={`${fixtures.length} games · £${betAmount}/game`} positive={pnlPositive} />
+                      sub={`${stats.total} games · £${betAmount}/game`} positive={pnlPositive} />
                     <StatCard label="ROI" value={roiStr!}
-                      sub={`£${(betAmount * fixtures.length).toFixed(0)} total staked`} positive={stats.roi >= 0} />
+                      sub={`£${(betAmount * stats.total).toFixed(0)} total staked`} positive={stats.roi >= 0} />
                     <StatCard label={STRATEGIES[strategy].hitLabel} value={`${stats.hits} / ${stats.total}`}
                       sub={`${stats.strikeRate}% strike rate`} />
                     <StatCard label="Break-even Odds" value={`${stats.breakEvenOdds}x`}
-                      sub={`Your ${usingActual ? "avg actual" : ""} odds: ${usingActual && stats.avgActualOdds ? stats.avgActualOdds : odds}x`}
-                      positive={usingActual
-                        ? (stats.avgActualOdds ? stats.avgActualOdds >= stats.breakEvenOdds : undefined)
-                        : odds >= stats.breakEvenOdds} />
+                      sub={stats.avgOdds ? `Avg actual odds: ${stats.avgOdds}x` : "No odds data"}
+                      positive={stats.avgOdds ? stats.avgOdds >= stats.breakEvenOdds : undefined} />
                   </div>
 
                   {/* Streak + home/away split */}
@@ -643,22 +592,13 @@ export default function StrategyTesterPage() {
                   {/* Disclaimer */}
                   <div className="flex items-start gap-2 rounded-xl border border-white/6 bg-white/2 px-4 py-3 text-xs text-slate-500">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-600" />
-                    {usingActual ? (
-                      <p>
-                        Using actual pre-match bookmaker odds from API-Football for{" "}
-                        <strong className="text-slate-400">{stats.gamesWithActualOdds}</strong> of{" "}
-                        <strong className="text-slate-400">{fixtures.length}</strong> games ({coveredPct}% coverage).{" "}
-                        Fallback odds of <strong className="text-slate-400">{odds}x</strong> applied to the remaining{" "}
-                        {fixtures.length - stats.gamesWithActualOdds} game(s).
-                        The break-even figure (<strong className="text-slate-400">{stats.breakEvenOdds}x</strong>) is based on actual results only.
-                      </p>
-                    ) : (
-                      <p>
-                        Using your average odds of <strong className="text-slate-400">{odds}x</strong> across all{" "}
-                        {fixtures.length} games. Load actual odds above to use real bookmaker prices per fixture.
-                        Break-even: <strong className="text-slate-400">{stats.breakEvenOdds}x</strong>.
-                      </p>
-                    )}
+                    <p>
+                      Using actual pre-match bookmaker odds from API-Football.{" "}
+                      <strong className="text-slate-400">{stats.total}</strong> of{" "}
+                      <strong className="text-slate-400">{stats.totalGames}</strong> games have odds data ({coveredPct}% coverage).
+                      {stats.skipped > 0 && <> <strong className="text-slate-400">{stats.skipped}</strong> game(s) excluded — no bookmaker data available.</>}
+                      {" "}Break-even: <strong className="text-slate-400">{stats.breakEvenOdds}x</strong>.
+                    </p>
                   </div>
 
                   {/* Game-by-game table */}
@@ -676,9 +616,7 @@ export default function StrategyTesterPage() {
                             <th className="px-3 py-2.5 text-center font-medium">Score</th>
                             <th className="px-3 py-2.5 text-center font-medium">Result</th>
                             <th className="px-3 py-2.5 text-center font-medium">Hit?</th>
-                            <th className="px-3 py-2.5 text-right font-medium">
-                              Odds{usingActual && <span className="ml-1 text-[9px] text-slate-600">★=actual</span>}
-                            </th>
+                            <th className="px-3 py-2.5 text-right font-medium">Odds</th>
                             <th className="px-3 py-2.5 text-right font-medium">P&L</th>
                             <th className="px-4 py-2.5 text-right font-medium">Running</th>
                           </tr>
@@ -689,7 +627,7 @@ export default function StrategyTesterPage() {
                             if (!g) return null;
                             const date = new Date(f.date);
                             return (
-                              <tr key={f.id} className={`transition-colors hover:bg-white/3 ${g.hit ? "border-l-2 border-l-emerald-500/30" : ""}`}>
+                              <tr key={f.id} className={`transition-colors ${g.skipped ? "opacity-40" : `hover:bg-white/3 ${g.hit ? "border-l-2 border-l-emerald-500/30" : ""}`}`}>
                                 <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">
                                   {date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                                 </td>
@@ -712,14 +650,15 @@ export default function StrategyTesterPage() {
                                   <span className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-extrabold ${RESULT_STYLES[f.result]}`}>{f.result}</span>
                                 </td>
                                 <td className="px-3 py-2.5 text-center">
-                                  <span className={`text-sm font-bold ${g.hit ? "text-emerald-400" : "text-slate-700"}`}>{g.hit ? "✓" : "✗"}</span>
+                                  {g.skipped
+                                    ? <span className="text-xs text-slate-700">—</span>
+                                    : <span className={`text-sm font-bold ${g.hit ? "text-emerald-400" : "text-slate-700"}`}>{g.hit ? "✓" : "✗"}</span>}
                                 </td>
                                 <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums text-slate-300 whitespace-nowrap">
-                                  {g.oddsUsed.toFixed(2)}
-                                  {g.isActualOdds && <span className="ml-0.5 text-accent-green">★</span>}
+                                  {g.oddsUsed !== null ? g.oddsUsed.toFixed(2) : <span className="text-slate-700">—</span>}
                                 </td>
-                                <td className={`px-3 py-2.5 text-right text-sm font-bold tabular-nums ${g.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                                  {g.pnl >= 0 ? "+" : ""}£{g.pnl.toFixed(2)}
+                                <td className={`px-3 py-2.5 text-right text-sm font-bold tabular-nums ${g.skipped ? "text-slate-700" : g.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                  {g.skipped ? "—" : `${g.pnl >= 0 ? "+" : ""}£${g.pnl.toFixed(2)}`}
                                 </td>
                                 <td className={`px-4 py-2.5 text-right text-sm font-extrabold tabular-nums ${g.running >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                                   {g.running >= 0 ? "+" : ""}£{g.running.toFixed(2)}
