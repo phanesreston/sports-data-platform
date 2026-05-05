@@ -53,6 +53,38 @@ export interface FixtureInput {
 
 // ── name normalisation ─────────────────────────────────────────────────────────
 
+// Known cases where the API-Football short name and the Odds API full name
+// are different enough that substring + bigram matching both fail.
+// Key = norm(API-Football name), value = norm(Odds API home_team).
+const TEAM_ALIASES: Record<string, string> = {
+  // Premier League
+  "wolves":                 "wolverhamptonwanderers",
+  "wolverhampton":          "wolverhamptonwanderers",
+  // Ligue 1
+  "psg":                    "parisaintgermain",
+  "parissaintgermain":      "parisaintgermain",
+  // Bundesliga
+  "dortmund":               "borussiadortmund",
+  "gladbach":               "borussiadortmund",        // overridden below by full alias
+  "borussiamgladbach":      "borussiadortmund",
+  "monchengladbach":        "borussiamonchengladbach",
+  "mgladbach":              "borussiamonchengladbach",
+  "leverkusen":             "bayerleverkusen",
+  "frankfurt":              "eintrachtfrankfurt",
+  "wolfsburg":              "vflwolfsburg",
+  "freiburg":               "scfreiburg",
+  "schalke":                "schalke04",
+  "mainz":                  "mainz05",
+  // La Liga
+  "atletico":               "atleticomadrid",
+  "betis":                  "realbetis",
+  "celta":                  "celtavigo",
+  // Serie A
+  "inter":                  "intermilan",
+  "roma":                   "asroma",
+  "lazio":                  "sslazio",
+};
+
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -209,7 +241,21 @@ export async function POST(req: NextRequest) {
     const allHomeNames = events.map((ev) => ev.home_team ?? "");
 
     for (const f of group.fixtures) {
-      let ev = byHome.get(norm(f.homeTeam));
+      const normHome = norm(f.homeTeam);
+
+      // 1. Exact normalised match
+      let ev = byHome.get(normHome);
+
+      // 2. Static alias (handles cases like "Wolves" → "Wolverhampton Wanderers")
+      if (!ev) {
+        const alias = TEAM_ALIASES[normHome];
+        if (alias) {
+          ev = byHome.get(alias);
+          if (ev) console.log(`[historical-odds] alias match "${f.homeTeam}" → "${ev.home_team}" (group ${groupKey})`);
+        }
+      }
+
+      // 3. Bigram fuzzy match
       if (!ev) {
         const matched = bestMatch(f.homeTeam, allHomeNames);
         if (matched) {
