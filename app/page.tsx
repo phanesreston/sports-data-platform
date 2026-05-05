@@ -89,7 +89,11 @@ function DashboardContent() {
     fetch("/api/events?sport=football")
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d) => {
-        setEvents(d.events ?? []);
+        const now = Date.now();
+        const upcoming = (d.events ?? []).filter(
+          (e: OddsEvent) => new Date(e.commenceTime).getTime() > now
+        );
+        setEvents(upcoming);
         setIsLive(d.source === "live");
       })
       .catch(() => setError("Could not load events"))
