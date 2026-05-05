@@ -31,7 +31,11 @@ export function unwrapApiFootball<T>(
     return null;
   }
 
-  if (!json.response || json.response.length === 0) return null;
+  if (!json.response) return null;
+  // /teams/statistics returns response as a plain object, not an array.
+  // Wrap it so callers can always use [0] without special-casing.
+  if (!Array.isArray(json.response)) return [json.response];
+  if ((json.response as unknown[]).length === 0) return null;
   return json.response;
 }
 

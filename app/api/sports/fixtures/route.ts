@@ -136,7 +136,7 @@ export async function GET(req: NextRequest) {
       from:     today,
       to:       nextMonth,
       timezone: "UTC",
-    });
+    }, 3600); // 1 h — fixture schedules don't change by the minute
 
     const allLeagueFixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
     if (!allLeagueFixtures || allLeagueFixtures.length === 0) {
@@ -153,8 +153,11 @@ export async function GET(req: NextRequest) {
       if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = { logo: f.teams.away.logo, id: f.teams.away.id };
     }
 
-    // Enrich the first 10 fixtures with stats/H2H/predictions
-    const fixtures = upcomingFixtures.slice(0, 10);
+    // Enrich the first 5 fixtures with stats/H2H/predictions.
+    // Keeping this small limits API quota: 5 fixtures × 4 calls × 7 leagues = 140
+    // calls on a cold start. All sub-calls are cached 24 h so subsequent requests
+    // within the day cost nothing for already-seen team/fixture combinations.
+    const fixtures = upcomingFixtures.slice(0, 5);
     if (fixtures.length === 0) continue;
 
     console.log(`[fixtures]   enriching ${fixtures.length} fixture(s):`);
@@ -176,19 +179,19 @@ export async function GET(req: NextRequest) {
             team:   homeId,
             league: league.id,
             season: league.season,
-          }),
+          }, 86400), // 24 h — season stats don't change intraday
           apiFetch<ApiTeamStatistics>("/teams/statistics", {
             team:   awayId,
             league: league.id,
             season: league.season,
-          }),
+          }, 86400),
           apiFetch<ApiFixture>("/fixtures/headtohead", {
             h2h:  `${homeId}-${awayId}`,
             last: 10,
-          }),
+          }, 86400), // 24 h — historical results are immutable
           apiFetch<ApiPrediction>("/predictions", {
             fixture: fixtureId,
-          }),
+          }, 3600), // 1 h — predictions can update closer to kick-off
         ]);
 
       // Unwrap each response — /teams/statistics returns object in response[0]
