@@ -9,6 +9,7 @@ import SearchModal from "@/components/SearchModal";
 const NAV_LINKS = [
   { label: "Picks",            href: "/"                 },
   { label: "Strategy Tester",  href: "/strategy-tester"  },
+  { label: "H2H",              href: "/h2h"              },
   { label: "How It Works",     href: "/how-it-works"     },
 ];
 

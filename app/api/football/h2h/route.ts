@@ -4,14 +4,17 @@ import type { ApiFixture } from "@/lib/types";
 
 export interface H2HMatch {
   date: string;
+  homeTeamId: number;
   homeTeam: string;
   homeLogo: string;
   homeScore: number | null;
+  awayTeamId: number;
   awayTeam: string;
   awayLogo: string;
   awayScore: number | null;
   winner: "home" | "away" | "draw" | null;
   league: string;
+  leagueLogo: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -50,14 +53,17 @@ export async function GET(req: NextRequest) {
       }
       return {
         date:       f.fixture.date,
+        homeTeamId: f.teams.home.id,
         homeTeam:   f.teams.home.name,
         homeLogo:   f.teams.home.logo,
         homeScore:  hg,
+        awayTeamId: f.teams.away.id,
         awayTeam:   f.teams.away.name,
         awayLogo:   f.teams.away.logo,
         awayScore:  ag,
         winner,
         league:     f.league.name,
+        leagueLogo: f.league.logo,
       };
     });
 
