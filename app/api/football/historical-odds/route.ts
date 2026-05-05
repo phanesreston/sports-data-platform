@@ -133,7 +133,7 @@ async function fetchSnapshot(sportKey: string, snapshotDate: string): Promise<An
   const url = new URL(`${BASE}/historical/sports/${sportKey}/odds`);
   url.searchParams.set("apiKey",     apiKey);
   url.searchParams.set("regions",    REGIONS);
-  url.searchParams.set("markets",    "h2h,totals,btts");
+  url.searchParams.set("markets",    "h2h,totals");
   url.searchParams.set("oddsFormat", "decimal");
   url.searchParams.set("dateFormat", "iso");
   url.searchParams.set("date",       snapshotDate);
