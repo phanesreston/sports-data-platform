@@ -4,18 +4,16 @@
 // Usage: POST /api/football/historical-odds
 // Body: { fixtures: FixtureInput[] }
 //
-// FixtureInput: { id, date, homeTeam, awayTeam, leagueId }
-//
 // Returns: { odds: { [fixtureId]: HistoricalOdds | null } }
 //
 // Strategy:
 //   1. Group fixtures by (sportKey, YYYY-MM-DD) so one API call covers all
 //      matches for a given league on a given day.
-//   2. Snapshot time = match day at 10:00 UTC (pre-match morning line).
-//   3. Match teams via fuzzy name normalisation.
-//   4. Cache each (sportKey, date) snapshot for 24 h — historical odds don't change.
+//   2. Snapshot time = match day at 11:00 UTC — before any European kick-off.
+//   3. Match teams via normalised name + bigram fuzzy fallback.
+//   4. Cache each (sportKey, date) snapshot for 24 h — historical odds are immutable.
 //
-// Markets fetched: h2h (home/draw/away), totals (over 2.5), both_teams_to_score.
+// Markets: h2h (home/draw/away), totals (over 2.5), btts (both teams to score).
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -47,7 +45,7 @@ export interface HistoricalOdds {
 
 export interface FixtureInput {
   id:        number;
-  date:      string; // ISO 8601 from API-Football (e.g. "2024-08-17T14:00:00+00:00")
+  date:      string; // ISO 8601 from API-Football e.g. "2024-08-17T14:00:00+00:00"
   homeTeam:  string;
   awayTeam:  string;
   leagueId:  number;
@@ -59,12 +57,10 @@ function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// Returns a 0-1 similarity score between two team name strings.
 function similarity(a: string, b: string): number {
   const na = norm(a), nb = norm(b);
   if (na === nb) return 1;
   if (na.includes(nb) || nb.includes(na)) return 0.85;
-  // Jaccard on bigrams
   const bigrams = (s: string) => {
     const bg = new Set<string>();
     for (let i = 0; i < s.length - 1; i++) bg.add(s.slice(i, i + 2));
@@ -77,7 +73,7 @@ function similarity(a: string, b: string): number {
 }
 
 function bestMatch(name: string, candidates: string[]): string | null {
-  let best = 0.45; // minimum threshold
+  let best = 0.45;
   let found: string | null = null;
   for (const c of candidates) {
     const s = similarity(name, c);
@@ -100,24 +96,26 @@ function extractOdds(event: AnyObj): HistoricalOdds {
 
       if (mkt.key === "h2h") {
         for (const o of outcomes) {
-          if (o.name === event.home_team && !result.home) result.home = Number(o.price) || null;
-          else if (o.name === "Draw"           && !result.draw) result.draw = Number(o.price) || null;
-          else if (o.name === event.away_team  && !result.away) result.away = Number(o.price) || null;
+          if      (o.name === event.home_team && !result.home) result.home = Number(o.price) || null;
+          else if (o.name === "Draw"          && !result.draw) result.draw = Number(o.price) || null;
+          else if (o.name === event.away_team && !result.away) result.away = Number(o.price) || null;
         }
       }
 
+      // "totals" market: outcomes have a `point` field; we want Over 2.5
       if (mkt.key === "totals" && !result.over25) {
         const o = outcomes.find((x) => x.name === "Over" && Number(x.point) === 2.5);
         if (o) result.over25 = Number(o.price) || null;
       }
 
-      if (mkt.key === "both_teams_to_score" && !result.btts) {
+      // "btts" is the correct Odds API market key (not "both_teams_to_score")
+      if (mkt.key === "btts" && !result.btts) {
         const o = outcomes.find((x) => x.name === "Yes");
         if (o) result.btts = Number(o.price) || null;
       }
     }
 
-    if (result.home && result.draw && result.away) break; // first complete bookmaker is enough
+    if (result.home && result.draw && result.away) break;
   }
 
   return result;
@@ -125,39 +123,45 @@ function extractOdds(event: AnyObj): HistoricalOdds {
 
 // ── The Odds API historical fetch ──────────────────────────────────────────────
 
-async function fetchSnapshot(sportKey: string, isoDate: string): Promise<AnyObj[]> {
+async function fetchSnapshot(sportKey: string, snapshotDate: string): Promise<AnyObj[]> {
   const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.error("[historical-odds] ODDS_API_KEY is not set");
+    return [];
+  }
 
   const url = new URL(`${BASE}/historical/sports/${sportKey}/odds`);
   url.searchParams.set("apiKey",     apiKey);
   url.searchParams.set("regions",    REGIONS);
-  url.searchParams.set("markets",    "h2h,totals,both_teams_to_score");
+  url.searchParams.set("markets",    "h2h,totals,btts");
   url.searchParams.set("oddsFormat", "decimal");
   url.searchParams.set("dateFormat", "iso");
-  url.searchParams.set("date",       isoDate);
+  url.searchParams.set("date",       snapshotDate);
 
   try {
     const res = await fetch(url.toString(), { next: { revalidate: 86400 } });
 
-    if (!res.ok) {
-      console.error(`[historical-odds] ${res.status} for ${sportKey} @ ${isoDate}`);
-      return [];
-    }
-
     const remaining = res.headers.get("x-requests-remaining");
     const used      = res.headers.get("x-requests-used");
     const cost      = res.headers.get("x-requests-last");
-    console.log(`[historical-odds] ${sportKey} ${isoDate} — remaining: ${remaining}, used: ${used}, cost: ${cost}`);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(`[historical-odds] ${res.status} for ${sportKey} @ ${snapshotDate}: ${errText}`);
+      return [];
+    }
+
+    console.log(`[historical-odds] ${sportKey} ${snapshotDate} — remaining: ${remaining}, used: ${used}, cost: ${cost}`);
     if (remaining !== null && parseInt(remaining) < 10) {
       console.warn(`[historical-odds] ⚠ Low quota: ${remaining} credits remaining`);
     }
 
     const body = await res.json();
-    // Historical endpoint wraps events in { data: [...] }
-    return Array.isArray(body?.data) ? body.data : (Array.isArray(body) ? body : []);
+    const events = Array.isArray(body?.data) ? body.data : (Array.isArray(body) ? body : []);
+    console.log(`[historical-odds] ${sportKey} ${snapshotDate} — ${events.length} events in snapshot`);
+    return events;
   } catch (err) {
-    console.error(`[historical-odds] fetch error for ${sportKey} @ ${isoDate}:`, err);
+    console.error(`[historical-odds] fetch error for ${sportKey} @ ${snapshotDate}:`, err);
     return [];
   }
 }
@@ -175,7 +179,7 @@ export async function POST(req: NextRequest) {
 
   if (fixtures.length === 0) return NextResponse.json({ odds: {} });
 
-  // Group by (sportKey, YYYY-MM-DD) to minimise API calls
+  // Group by (sportKey, YYYY-MM-DD) to minimise API credits
   type Group = { sportKey: string; snapshotDate: string; fixtures: FixtureInput[] };
   const groups = new Map<string, Group>();
 
@@ -183,41 +187,48 @@ export async function POST(req: NextRequest) {
     const sportKey = LEAGUE_SPORT_KEY[f.leagueId];
     if (!sportKey) continue;
 
-    // Use match-day at 10:00 UTC — well before most European kick-offs
-    const day = f.date.slice(0, 10); // YYYY-MM-DD
-    const snapshotDate = `${day}T10:00:00Z`;
-    const key = `${sportKey}::${day}`;
+    // 11:00 UTC is before any European kick-off; odds for that day's games are
+    // published well in advance so this snapshot reliably has pre-match lines.
+    const day          = f.date.slice(0, 10); // YYYY-MM-DD (handles both Z and +HH:MM offsets)
+    const snapshotDate = `${day}T11:00:00Z`;
+    const key          = `${sportKey}::${day}`;
 
     if (!groups.has(key)) groups.set(key, { sportKey, snapshotDate, fixtures: [] });
     groups.get(key)!.fixtures.push(f);
   }
 
+  console.log(`[historical-odds] processing ${fixtures.length} fixtures across ${groups.size} date-groups`);
+
   const oddsMap: Record<number, HistoricalOdds | null> = {};
 
-  for (const [, group] of groups) {
+  for (const [groupKey, group] of groups) {
     const events = await fetchSnapshot(group.sportKey, group.snapshotDate);
 
-    // Index events by normalised home team name for O(1) lookup
     const byHome = new Map<string, AnyObj>();
     for (const ev of events) byHome.set(norm(ev.home_team ?? ""), ev);
-    const allHomeNames: string[] = events.map((ev) => ev.home_team ?? "");
+    const allHomeNames = events.map((ev) => ev.home_team ?? "");
 
     for (const f of group.fixtures) {
-      // Exact normalised match first, then fuzzy
       let ev = byHome.get(norm(f.homeTeam));
       if (!ev) {
         const matched = bestMatch(f.homeTeam, allHomeNames);
-        if (matched) ev = byHome.get(norm(matched));
+        if (matched) {
+          console.log(`[historical-odds] fuzzy match "${f.homeTeam}" → "${matched}" (group ${groupKey})`);
+          ev = byHome.get(norm(matched));
+        }
       }
 
-      if (!ev) { oddsMap[f.id] = null; continue; }
+      if (!ev) {
+        console.warn(`[historical-odds] no match for "${f.homeTeam}" vs "${f.awayTeam}" in ${group.sportKey} @ ${group.snapshotDate}`);
+        oddsMap[f.id] = null;
+        continue;
+      }
 
       const o = extractOdds(ev);
       oddsMap[f.id] = (o.home || o.draw || o.away || o.over25 || o.btts) ? o : null;
     }
   }
 
-  // Ensure every requested fixture has an entry (null = no data)
   for (const f of fixtures) {
     if (!(f.id in oddsMap)) oddsMap[f.id] = null;
   }
