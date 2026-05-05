@@ -7,8 +7,9 @@ import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
 
 const NAV_LINKS = [
-  { label: "Picks",        href: "/" },
-  { label: "How It Works", href: "/how-it-works" },
+  { label: "Picks",            href: "/"                 },
+  { label: "Strategy Tester",  href: "/strategy-tester"  },
+  { label: "How It Works",     href: "/how-it-works"     },
 ];
 
 // Top European leagues + cups — same IDs as TOP_LEAGUES in the API
