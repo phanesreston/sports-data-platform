@@ -1046,7 +1046,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                               <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Results</p>
                             </div>
                             <div className="divide-y divide-bg-border">
-                              {[...teamFixtures.recent].reverse().map((f) => <FixtureRow key={f.fixture.id} f={f} teamId={teamId} />)}
+                              {teamFixtures.recent.map((f) => <FixtureRow key={f.fixture.id} f={f} teamId={teamId} />)}
                             </div>
                           </>
                         )}

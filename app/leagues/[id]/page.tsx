@@ -685,7 +685,7 @@ export default function LeaguePage({ params }: { params: { id: string } }) {
                           <>
                             <SectionLabel>Results</SectionLabel>
                             <div className="divide-y divide-bg-border">
-                              {[...roundFixtures.recent].reverse().map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
+                              {roundFixtures.recent.map((f) => <FixtureRow key={f.fixture.id} f={f} showScore={true} />)}
                             </div>
                           </>
                         )}
