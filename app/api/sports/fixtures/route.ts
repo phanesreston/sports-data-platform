@@ -99,9 +99,9 @@ export async function GET(req: NextRequest) {
   // teamLogoMap: name → { logo, id } for ALL upcoming fixtures (not just the enriched ones)
   const teamLogoMap: Record<string, { logo: string; id: number }> = {};
 
-  // 30-day window — wide enough to capture all leagues' upcoming fixtures
-  const today     = new Date().toISOString().split("T")[0];
-  const nextMonth = new Date(Date.now() + 30 * 86_400_000).toISOString().split("T")[0];
+  // 10-day window — enough for the next round(s) without pulling stale far-future fixtures
+  const today      = new Date().toISOString().split("T")[0];
+  const nextMonth  = new Date(Date.now() + 10 * 86_400_000).toISOString().split("T")[0];
   console.log(`[fixtures] season: ${SEASON}  date range: ${today} → ${nextMonth}`);
 
   // Pre-seed teamLogoMap from full league team lists (exact API names + IDs).

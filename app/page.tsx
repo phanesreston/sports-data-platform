@@ -110,40 +110,48 @@ function DashboardContent() {
   }, [events, selectedLeagueId, selectedLeagueName]);
 
   const strongSignals = useMemo(
-    () => filtered.filter((e) => (getTopPick(e)?.probability ?? 0) >= 65),
-    [filtered]
+    () => displayed.filter((e) => (getTopPick(e)?.probability ?? 0) >= 65),
+    [displayed]
   );
   const valueBets = useMemo(
-    () => filtered.filter((e) => (getEdge(e) ?? 0) > 3),
-    [filtered]
+    () => displayed.filter((e) => (getEdge(e) ?? 0) > 3),
+    [displayed]
   );
   const topConfidence = useMemo(
-    () => Math.max(0, ...filtered.map((e) => getTopPick(e)?.probability ?? 0)),
+    () => Math.max(0, ...displayed.map((e) => getTopPick(e)?.probability ?? 0)),
+    [displayed]
+  );
+
+  // Top 10 events by confidence — this is all we show on the overview
+  const displayed = useMemo(
+    () =>
+      [...filtered]
+        .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
+        .slice(0, 10),
     [filtered]
   );
 
   const topSignalEvents = useMemo(
     () =>
-      [...filtered]
+      displayed
         .filter((e) => (getTopPick(e)?.probability ?? 0) >= 58)
-        .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
         .slice(0, 3),
-    [filtered]
+    [displayed]
   );
 
   const valueBetEvents = useMemo(() => {
     const signalIds = new Set(topSignalEvents.map((e) => e.id));
-    return [...filtered]
+    return displayed
       .filter((e) => !signalIds.has(e.id) && (getEdge(e) ?? 0) > 3)
       .sort((a, b) => (getEdge(b) ?? 0) - (getEdge(a) ?? 0))
       .slice(0, 3);
-  }, [filtered, topSignalEvents]);
+  }, [displayed, topSignalEvents]);
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      {!loading && filtered.length > 0 && <AnalyticsTicker events={filtered} />}
+      {!loading && displayed.length > 0 && <AnalyticsTicker events={displayed} />}
 
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -182,9 +190,9 @@ function DashboardContent() {
           </div>
 
           {/* KPI row */}
-          {!loading && filtered.length > 0 && (
+          {!loading && displayed.length > 0 && (
             <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <KpiTile icon={BarChart2}  label="Fixtures analysed" value={filtered.length}         sub={selectedLeagueName ?? "across all leagues"} />
+              <KpiTile icon={BarChart2}  label="Fixtures analysed" value={displayed.length}        sub={selectedLeagueName ?? "top picks shown"} />
               <KpiTile icon={Zap}        label="Strong signals"    value={strongSignals.length}    sub="≥65% confidence" highlight={strongSignals.length > 0} />
               <KpiTile icon={TrendingUp} label="Value bets"        value={valueBets.length}        sub=">3% edge vs market" />
               <KpiTile icon={Activity}   label="Top confidence"    value={topConfidence > 0 ? `${topConfidence}%` : "—"} sub="highest single pick" />
@@ -212,7 +220,7 @@ function DashboardContent() {
           )}
 
           {/* Empty state */}
-          {!loading && filtered.length === 0 && (
+          {!loading && displayed.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-bg-border bg-bg-card py-16 text-center">
               <span className="text-3xl">📊</span>
               <p className="mt-3 text-sm text-slate-500">
@@ -224,7 +232,7 @@ function DashboardContent() {
           )}
 
           {/* Top Signals */}
-          {!loading && filtered.length > 0 && topSignalEvents.length > 0 && (
+          {!loading && displayed.length > 0 && topSignalEvents.length > 0 && (
             <section className="mb-8">
               <div className="mb-4 flex items-center gap-3">
                 <Zap className="h-4 w-4 text-accent-green" />
@@ -260,7 +268,7 @@ function DashboardContent() {
           )}
 
           {/* Ranked Picks by League */}
-          {!loading && filtered.length > 0 && (
+          {!loading && displayed.length > 0 && (
             <section>
               <div className="mb-4 flex items-center gap-3">
                 <BarChart2 className="h-4 w-4 text-slate-500" />
@@ -268,10 +276,10 @@ function DashboardContent() {
                   Ranked Picks by League
                 </span>
                 <div className="flex-1 border-t border-bg-border" />
-                <span className="text-xs text-slate-600">Most favourable first</span>
+                <span className="text-xs text-slate-600">Top 10 by confidence</span>
               </div>
               <BetRankingsTable
-                events={filtered}
+                events={displayed}
                 groupBy="league"
                 singleSport={selectedLeagueId !== null}
               />
