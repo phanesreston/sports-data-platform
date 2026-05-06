@@ -21,7 +21,7 @@ const API_KEY  = process.env.API_SPORTS_KEY;
 const DB_URL   = process.env.DATABASE_URL ?? "file:./sports.db";
 const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN;
 
-const LEAGUE_IDS = [39, 140, 135, 78, 61];
+const LEAGUE_IDS = [39, 40, 140, 141, 135, 136, 78, 79, 61, 62]; // Top 2 divisions: England, Spain, Italy, Germany, France
 
 function currentSeason(): number {
   const now = new Date();

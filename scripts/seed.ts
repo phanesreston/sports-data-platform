@@ -32,7 +32,7 @@ const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN;
 const STEP     = process.env.SEED_STEP ?? "all"; // all | leagues-teams | squads | fixtures
 
 // The five domestic leagues we track
-const LEAGUE_IDS = [39, 140, 135, 78, 61] as const; // EPL, La Liga, Serie A, Bundesliga, Ligue 1
+const LEAGUE_IDS = [39, 40, 140, 141, 135, 136, 78, 79, 61, 62] as const; // Top 2 divisions: England, Spain, Italy, Germany, France
 
 function currentSeason(): number {
   const now = new Date();
