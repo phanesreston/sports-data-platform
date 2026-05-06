@@ -10,7 +10,8 @@
  * API cost: ~100 squad calls + 5 fixture calls = ~105 calls total.
  */
 
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { gt, lt, and, inArray } from "drizzle-orm";

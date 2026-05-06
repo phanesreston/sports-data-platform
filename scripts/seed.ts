@@ -17,7 +17,8 @@
  *   Session 3: SEED_STEP=fixtures       npm run db:seed
  */
 
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { sql } from "drizzle-orm";
