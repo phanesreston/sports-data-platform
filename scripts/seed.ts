@@ -21,8 +21,11 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import { sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyObj = Record<string, any>;
 
 // ── config ─────────────────────────────────────────────────────────────────────
 
@@ -73,7 +76,7 @@ async function apiFetch(path: string, params: Record<string, string | number>) {
     if (n < 20) console.warn(`  ⚠ Low API quota: ${n} requests remaining`);
   }
 
-  return data.response as unknown[];
+  return (data.response ?? []) as unknown[];
 }
 
 function sleep(ms: number) {
@@ -252,6 +255,85 @@ async function seedFixtures() {
   }
 }
 
+async function seedPlayerStats() {
+  console.log("\n🎯 Seeding fixture player stats…");
+  console.log("   (tip: run with LEAGUE=39 to limit to one league)");
+
+  const leagueFilter = process.env.LEAGUE ? Number(process.env.LEAGUE) : null;
+  const now = Date.now();
+
+  // Get all completed fixtures from DB (optionally filtered by league)
+  const allFixtures = await db
+    .select({ id: schema.fixtures.id, leagueId: schema.fixtures.leagueId })
+    .from(schema.fixtures)
+    .where(
+      leagueFilter
+        ? and(
+            inArray(schema.fixtures.status, ["FT", "AET", "PEN"]),
+            eq(schema.fixtures.leagueId, leagueFilter)
+          )
+        : inArray(schema.fixtures.status, ["FT", "AET", "PEN"])
+    );
+
+  // Skip fixtures already fully cached (has at least one stat row)
+  const cachedFixtureIds = await db
+    .selectDistinct({ fixtureId: schema.fixturePlayerStats.fixtureId })
+    .from(schema.fixturePlayerStats);
+  const cached = new Set(cachedFixtureIds.map((r) => r.fixtureId));
+  const todo   = allFixtures.filter((f) => !cached.has(f.id));
+
+  console.log(`  ${allFixtures.length} completed fixtures, ${todo.length} not yet cached`);
+
+  let done = 0;
+  const BATCH = 5;
+
+  for (let i = 0; i < todo.length; i += BATCH) {
+    if (i > 0) await sleep(300);
+    const batch = todo.slice(i, i + BATCH);
+
+    await Promise.all(batch.map(async (f) => {
+      try {
+        const raw = await apiFetch("/fixtures/players", { fixture: f.id });
+        if (!raw?.length) return;
+
+        for (const teamData of raw as AnyObj[]) {
+          for (const entry of (teamData.players as AnyObj[] | undefined) ?? []) {
+            const s       = entry.statistics?.[0] ?? {};
+            const minutes = s.games?.minutes ?? 0;
+            if (!minutes) continue;
+
+            const playerId: number = entry.player?.id;
+            const teamId:   number = teamData.team?.id;
+            if (!playerId || !teamId) continue;
+
+            await db.insert(schema.players).values({
+              id: playerId, name: entry.player?.name ?? "",
+              nationality: null, photo: entry.player?.photo ?? null, updatedAt: now,
+            }).onConflictDoUpdate({ target: schema.players.id, set: { name: entry.player?.name ?? "", updatedAt: now } });
+
+            await db.insert(schema.fixturePlayerStats).values({
+              fixtureId: f.id, playerId, teamId, minutes,
+              rating:      s.games?.rating   ? parseFloat(s.games.rating) : null,
+              goals:       s.goals?.total    ?? 0,
+              assists:     s.goals?.assists  ?? 0,
+              shotsOn:     s.shots?.on       ?? 0,
+              shotsTotal:  s.shots?.total    ?? 0,
+              keyPasses:   s.passes?.key     ?? 0,
+              yellowCards: s.cards?.yellow   ?? 0,
+              redCards:    s.cards?.red      ?? 0,
+            }).onConflictDoNothing();
+          }
+        }
+        done++;
+      } catch { /* skip individual failures */ }
+    }));
+
+    process.stdout.write(`\r  Progress: ${Math.min(i + BATCH, todo.length)}/${todo.length} fixtures`);
+  }
+
+  console.log(`\n  ✓ Cached stats for ${done} fixtures`);
+}
+
 // ── main ───────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -276,6 +358,10 @@ async function main() {
 
   if (STEP === "all" || STEP === "fixtures") {
     await seedFixtures();
+  }
+
+  if (STEP === "player-stats") {
+    await seedPlayerStats();
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap } from "@/lib/apifootball";
-import type { ApiFixture } from "@/lib/types";
+import { and, or, eq, inArray, desc } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
+import { db, fixtures, teams, leagues } from "@/lib/db";
 
 export interface H2HMatch {
   date: string;
@@ -17,55 +18,61 @@ export interface H2HMatch {
   leagueLogo: string;
 }
 
+const COMPLETED = ["FT", "AET", "PEN"];
+
 export async function GET(req: NextRequest) {
   const home = req.nextUrl.searchParams.get("home");
   const away = req.nextUrl.searchParams.get("away");
-  const last = req.nextUrl.searchParams.get("last") ?? "5";
+  const last = parseInt(req.nextUrl.searchParams.get("last") ?? "20", 10);
 
-  if (!home || !away) {
-    return NextResponse.json({ matches: [] });
-  }
+  if (!home || !away) return NextResponse.json({ matches: [] });
 
-  const raw = await apiFetch<ApiFixture>(
-    "/fixtures/headtohead",
-    { h2h: `${home}-${away}`, last: parseInt(last, 10) },
-    3600
-  );
+  const homeId = Number(home);
+  const awayId = Number(away);
 
-  const fixtures = unwrap(raw);
-  if (!fixtures) {
-    return NextResponse.json({ matches: [] });
-  }
+  // Alias teams twice so we can join home and away separately
+  const ht = alias(teams, "ht");
+  const at = alias(teams, "at");
 
-  // Only completed matches (FT, AET, PEN)
-  const finished = fixtures.filter((f) =>
-    ["FT", "AET", "PEN"].includes(f.fixture.status.short)
-  );
+  const rows = await db
+    .select({
+      date:       fixtures.date,
+      homeTeamId: fixtures.homeTeamId,
+      homeTeam:   ht.name,
+      homeLogo:   ht.logo,
+      homeScore:  fixtures.homeGoals,
+      awayTeamId: fixtures.awayTeamId,
+      awayTeam:   at.name,
+      awayLogo:   at.logo,
+      awayScore:  fixtures.awayGoals,
+      league:     leagues.name,
+      leagueLogo: leagues.logo,
+    })
+    .from(fixtures)
+    .innerJoin(ht,      eq(fixtures.homeTeamId, ht.id))
+    .innerJoin(at,      eq(fixtures.awayTeamId, at.id))
+    .innerJoin(leagues, eq(fixtures.leagueId,   leagues.id))
+    .where(
+      and(
+        inArray(fixtures.status, COMPLETED),
+        or(
+          and(eq(fixtures.homeTeamId, homeId), eq(fixtures.awayTeamId, awayId)),
+          and(eq(fixtures.homeTeamId, awayId), eq(fixtures.awayTeamId, homeId))
+        )
+      )
+    )
+    .orderBy(desc(fixtures.timestamp))
+    .limit(last);
 
-  const matches: H2HMatch[] = finished
-    .sort((a, b) => b.fixture.timestamp - a.fixture.timestamp)
-    .map((f) => {
-      const hg = f.goals.home;
-      const ag = f.goals.away;
-      let winner: H2HMatch["winner"] = null;
-      if (hg !== null && ag !== null) {
-        winner = hg > ag ? "home" : ag > hg ? "away" : "draw";
-      }
-      return {
-        date:       f.fixture.date,
-        homeTeamId: f.teams.home.id,
-        homeTeam:   f.teams.home.name,
-        homeLogo:   f.teams.home.logo,
-        homeScore:  hg,
-        awayTeamId: f.teams.away.id,
-        awayTeam:   f.teams.away.name,
-        awayLogo:   f.teams.away.logo,
-        awayScore:  ag,
-        winner,
-        league:     f.league.name,
-        leagueLogo: f.league.logo,
-      };
-    });
+  const matches: H2HMatch[] = rows.map((r) => {
+    const hg = r.homeScore;
+    const ag = r.awayScore;
+    let winner: H2HMatch["winner"] = null;
+    if (hg !== null && ag !== null) {
+      winner = hg > ag ? "home" : ag > hg ? "away" : "draw";
+    }
+    return { ...r, homeScore: hg, awayScore: ag, winner };
+  });
 
   return NextResponse.json({ matches });
 }
