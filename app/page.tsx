@@ -109,6 +109,15 @@ function DashboardContent() {
     );
   }, [events, selectedLeagueId, selectedLeagueName]);
 
+  // Top 10 events by confidence — this is all we show on the overview
+  const displayed = useMemo(
+    () =>
+      [...filtered]
+        .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
+        .slice(0, 10),
+    [filtered]
+  );
+
   const strongSignals = useMemo(
     () => displayed.filter((e) => (getTopPick(e)?.probability ?? 0) >= 65),
     [displayed]
@@ -120,15 +129,6 @@ function DashboardContent() {
   const topConfidence = useMemo(
     () => Math.max(0, ...displayed.map((e) => getTopPick(e)?.probability ?? 0)),
     [displayed]
-  );
-
-  // Top 10 events by confidence — this is all we show on the overview
-  const displayed = useMemo(
-    () =>
-      [...filtered]
-        .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
-        .slice(0, 10),
-    [filtered]
   );
 
   const topSignalEvents = useMemo(
