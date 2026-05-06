@@ -116,9 +116,11 @@ async function seedTeams() {
   console.log("\n🏟  Seeding teams…");
   const now = Date.now();
 
+  // Seed both seasons so fixtures from last season reference valid team rows
+  for (const season of [PREV_SEASON, SEASON]) {
   for (const leagueId of LEAGUE_IDS) {
-    const rows = await apiFetch("/teams", { league: leagueId, season: SEASON });
-    console.log(`  League ${leagueId}: ${rows.length} teams`);
+    const rows = await apiFetch("/teams", { league: leagueId, season });
+    console.log(`  League ${leagueId} (${season}): ${rows.length} teams`);
 
     for (const row of rows as { team: { id: number; name: string; country: string; logo: string } }[]) {
       await db.insert(schema.teams).values({
@@ -135,12 +137,13 @@ async function seedTeams() {
       await db.insert(schema.leagueTeams).values({
         leagueId,
         teamId: row.team.id,
-        season: SEASON,
+        season,
       }).onConflictDoNothing();
     }
 
     await sleep(300);
   }
+  } // end season loop
 }
 
 async function seedSquads() {
@@ -210,12 +213,14 @@ async function seedFixtures() {
       console.log(`  League ${leagueId} season ${season}…`);
       const rows = await apiFetch("/fixtures", { league: leagueId, season });
 
+      let skipped = 0;
       for (const row of rows as {
         fixture: { id: number; date: string; timestamp: number; status: { short: string } };
         league:  { season: number; round: string };
         teams:   { home: { id: number }; away: { id: number } };
         goals:   { home: number | null; away: number | null };
       }[]) {
+        try {
         await db.insert(schema.fixtures).values({
           id:         row.fixture.id,
           leagueId,
@@ -238,9 +243,10 @@ async function seedFixtures() {
             updatedAt: now,
           },
         });
+        } catch { skipped++; }
       }
 
-      console.log(`    ✓ ${rows.length} fixtures`);
+      console.log(`    ✓ ${rows.length - skipped} fixtures (${skipped} skipped — unknown team)`);
       await sleep(500);
     }
   }
