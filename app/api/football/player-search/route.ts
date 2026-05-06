@@ -1,58 +1,50 @@
 // /api/football/player-search — searches for players by name.
 //
-// Usage: GET /api/football/player-search?q={name}
+// DB-only: queries the players table with a LIKE pattern, enriched with
+// squad membership for team/position info.
 //
-// Tries the current season first, falls back to the previous season if no
-// results — useful for players who haven't featured yet this season.
-// Returns the top 10 matches with team, position, and photo.
+// Usage: GET /api/football/player-search?q={name}
 
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, currentSeason } from "@/lib/apifootball";
+import { and, eq, like } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { db, players, squads, teams } from "@/lib/db";
+import { currentSeason } from "@/lib/apifootball";
 
-interface ApiPlayerEntry {
-  player: {
-    id: number;
-    name: string;
-    firstname: string;
-    lastname: string;
-    nationality: string;
-    photo: string;
-  };
-  statistics: Array<{
-    team:   { id: number; name: string; logo: string };
-    league: { id: number; name: string; country: string; logo: string };
-    games:  { appearences: number | null; minutes: number | null; position: string };
-    goals:  { total: number | null; assists: number | null };
-  }>;
-}
+const SEASON = currentSeason();
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 3) return NextResponse.json({ players: [] });
 
-  const season = currentSeason();
+  const pattern = `%${q}%`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function search(s: number): Promise<any[]> {
-    const raw = await apiFetch<ApiPlayerEntry>("/players", { search: q, season: s }, 3600);
-    return raw?.response ?? [];
-  }
+  const rows = await db
+    .select({
+      id:          players.id,
+      name:        players.name,
+      photo:       players.photo,
+      nationality: players.nationality,
+      position:    squads.position,
+      teamId:      squads.teamId,
+      teamName:    teams.name,
+      teamLogo:    teams.logo,
+    })
+    .from(players)
+    .leftJoin(squads, and(eq(squads.playerId, players.id), eq(squads.season, SEASON)))
+    .leftJoin(teams, sql`${teams.id} = ${squads.teamId}`)
+    .where(like(players.name, pattern))
+    .limit(10);
 
-  let entries = await search(season);
-  if (entries.length === 0) entries = await search(season - 1);
-
-  const players = entries.slice(0, 10).map((e: ApiPlayerEntry) => {
-    const stat = e.statistics[0] ?? null;
-    return {
-      id:          e.player.id,
-      name:        e.player.name,
-      photo:       e.player.photo,
-      nationality: e.player.nationality,
-      team:        stat ? { id: stat.team.id, name: stat.team.name, logo: stat.team.logo } : null,
-      league:      stat ? { id: stat.league.id, name: stat.league.name, logo: stat.league.logo } : null,
-      position:    stat?.games.position ?? null,
-    };
+  return NextResponse.json({
+    players: rows.map((r) => ({
+      id:          r.id,
+      name:        r.name,
+      photo:       r.photo ?? null,
+      nationality: r.nationality ?? null,
+      team:        r.teamId ? { id: r.teamId, name: r.teamName, logo: r.teamLogo } : null,
+      league:      null,
+      position:    r.position ?? null,
+    })),
   });
-
-  return NextResponse.json({ players });
 }

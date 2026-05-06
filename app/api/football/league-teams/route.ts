@@ -1,12 +1,15 @@
+// /api/football/league-teams — teams competing in a league for a given season.
+//
+// DB-only: reads from the leagueTeams + teams tables seeded by scripts/seed.ts.
+//
+// Usage: GET /api/football/league-teams?league={id}&season={year}
+
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, currentSeason } from "@/lib/apifootball";
+import { and, asc, eq } from "drizzle-orm";
+import { db, leagueTeams, teams } from "@/lib/db";
+import { currentSeason } from "@/lib/apifootball";
 
 const SEASON = currentSeason();
-
-interface ApiTeamEntry {
-  team: { id: number; name: string; code: string; country: string; founded: number | null; logo: string };
-  venue: { id: number; name: string; address: string; city: string; capacity: number | null; surface: string };
-}
 
 export async function GET(req: NextRequest) {
   const league = req.nextUrl.searchParams.get("league");
@@ -14,10 +17,22 @@ export async function GET(req: NextRequest) {
 
   if (!league) return NextResponse.json({ error: "league required" }, { status: 400 });
 
-  const res = await apiFetch<ApiTeamEntry>("/teams", { league, season }, 3600);
-  const teams = (unwrap(res) ?? []).sort((a, b) =>
-    a.team.name.localeCompare(b.team.name)
-  );
+  const rows = await db
+    .select({
+      id:      teams.id,
+      name:    teams.name,
+      logo:    teams.logo,
+      country: teams.country,
+    })
+    .from(leagueTeams)
+    .innerJoin(teams, eq(leagueTeams.teamId, teams.id))
+    .where(and(eq(leagueTeams.leagueId, Number(league)), eq(leagueTeams.season, season)))
+    .orderBy(asc(teams.name));
 
-  return NextResponse.json({ teams });
+  return NextResponse.json({
+    teams: rows.map((t) => ({
+      team:  { id: t.id, name: t.name, logo: t.logo, country: t.country, founded: null },
+      venue: { name: "", city: "", capacity: null },
+    })),
+  });
 }

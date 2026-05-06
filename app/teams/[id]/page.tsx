@@ -42,11 +42,11 @@ const RESULT_STYLES = {
 // ── interfaces ─────────────────────────────────────────────────────────────────
 
 interface SquadPlayer {
-  id: number; name: string; age: number; number: number | null; position: string; photo: string;
+  id: number; name: string; age: number | null; number: number | null; position: string; photo: string;
 }
 interface TeamData {
-  team:  { id: number; name: string; country: string; founded: number; logo: string };
-  venue: { name: string; city: string; capacity: number };
+  team:  { id: number; name: string; country: string; founded: number | null; logo: string };
+  venue: { name: string; city: string; capacity: number | null } | null;
   // league is always populated from the leagues endpoint, even when stats is null
   league: { id: number; name: string; logo: string } | null;
   stats: {
@@ -185,7 +185,7 @@ function PlayerCard({ player }: { player: SquadPlayer }) {
         <p className="truncate text-sm font-semibold text-white group-hover:text-accent-green">{player.name}</p>
         <p className="text-[11px] text-slate-500">
           {player.position}{player.number != null && <span className="ml-1.5 text-slate-600">#{player.number}</span>}
-          {" · "}Age {player.age}
+          {player.age != null && <>{" · "}Age {player.age}</>}
         </p>
       </div>
     </Link>
@@ -715,9 +715,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                               </Link>
                             );
                           })()}
-                          <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{data.venue.city}</span>
-                          <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Est. {data.team.founded}</span>
-                          <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{data.venue.name}</span>
+                          {data.venue?.city && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{data.venue.city}</span>}
+                          {data.team.founded && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />Est. {data.team.founded}</span>}
+                          {data.venue?.name && <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{data.venue.name}</span>}
                         </div>
                       </div>
                     </div>

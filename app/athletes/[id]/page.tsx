@@ -46,9 +46,9 @@ interface PlayerStats {
 
 interface PlayerData {
   player: {
-    id: number; name: string; firstname: string; lastname: string;
-    age: number; nationality: string; height: string | null; weight: string | null;
-    photo: string; injured: boolean;
+    id: number; name: string; firstname?: string; lastname?: string;
+    age: number | null; nationality: string | null; height: string | null; weight: string | null;
+    photo: string | null; injured?: boolean;
   };
   statistics: PlayerStats[];
 }
@@ -490,9 +490,8 @@ export default function AthletePage({ params }: { params: { id: string } }) {
                       <h1 className="text-3xl font-extrabold text-white sm:text-4xl">{data.player.name}</h1>
 
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                        <span>{data.player.nationality}</span>
-                        <span>·</span>
-                        <span>Age {data.player.age}</span>
+                        {data.player.nationality && <span>{data.player.nationality}</span>}
+                        {data.player.age != null && <><span>·</span><span>Age {data.player.age}</span></>}
                         {data.player.height && <><span>·</span><span>{data.player.height}</span></>}
                         {data.player.weight && <><span>·</span><span>{data.player.weight}</span></>}
                       </div>

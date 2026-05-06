@@ -1,158 +1,150 @@
+// /api/football/team — team profile, season stats, and squad.
+//
+// DB-only: reads from teams, leagueTeams, leagues, fixtures, squads, and players.
+// Season stats (W/D/L/form/goals/clean sheets) are computed from the fixtures table.
+// Venue and founded year are not stored in DB and are omitted from the response.
+//
+// Usage:
+//   GET /api/football/team?id={teamId}
+//   GET /api/football/team?name={teamName}
+
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, currentSeason, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
+import { and, or, eq, inArray, asc, desc, like } from "drizzle-orm";
+import { db, fixtures, teams, leagues, leagueTeams, squads, players } from "@/lib/db";
+import { currentSeason } from "@/lib/apifootball";
 
+const SEASON    = currentSeason();
+const COMPLETED = ["FT", "AET", "PEN"];
+const LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3, 40, 141, 136, 79, 62];
 
-// Leagues to try for season stats (priority order)
-const STATS_LEAGUE_PRIORITY = [39, 140, 135, 78, 61, 2, 3];
-const SEASON = currentSeason();
-
-interface ApiTeam {
-  team: { id: number; name: string; code: string; country: string; founded: number; logo: string };
-  venue: { name: string; city: string; capacity: number; surface: string; image: string };
-}
-
-interface ApiLeagueForTeam {
-  league: { id: number; name: string; logo: string; country: string };
-  seasons: { year: number; current: boolean }[];
-}
-
-interface ApiTeamStats {
-  team: { id: number; name: string; logo: string };
-  league: { id: number; name: string; logo: string; season: number };
-  form: string;
-  fixtures: {
-    played: { home: number; away: number; total: number };
-    wins:   { home: number; away: number; total: number };
-    draws:  { home: number; away: number; total: number };
-    loses:  { home: number; away: number; total: number };
-  };
-  goals: {
-    for:     { average: { home: string; away: string; total: string }; total: { home: number; away: number; total: number } };
-    against: { average: { home: string; away: string; total: string }; total: { home: number; away: number; total: number } };
-  };
-  clean_sheet: { home: number; away: number; total: number };
-}
-
-interface ApiSquadPlayer {
-  id: number;
-  name: string;
-  age: number;
-  number: number | null;
-  position: string;
-  photo: string;
-}
-
-/**
- * Find a team using /teams?name=X (direct name search).
- * Try the alias first (e.g. "Wolves" for "Wolverhampton Wanderers"), then
- * progressive variants of the full name. pickBestTeam filters youth/reserve
- * clubs from results so we always get the senior side.
- */
-async function findTeamByName(name: string): Promise<ApiTeam | null> {
-  console.log(`\n[team] findTeamByName("${name}")`);
-
-  // Alias first, then progressive name variants
-  const alias = TEAM_NAME_ALIASES[name];
-  const variants: string[] = [];
-  if (alias) variants.push(alias);
-  for (const v of getTeamSearchVariants(name)) {
-    if (!variants.includes(v)) variants.push(v);
-  }
-
-  for (const variant of variants) {
-    console.log(`[team]   GET /teams?name="${variant}"`);
-    const res = unwrap(await apiFetch<ApiTeam>("/teams", { name: variant }, 3600));
-    if (!res?.length) {
-      console.log(`[team]   no results`);
-      continue;
-    }
-    const match = pickBestTeam(res, name);
-    if (match) {
-      console.log(`[team]   ✓ "${match.team.name}" (id ${match.team.id}) via search "${variant}"`);
-      return match;
-    }
-    console.log(`[team]   all results were youth/reserve teams`);
-  }
-
-  console.warn(`[team]   ✗ no match found for "${name}"`);
-  return null;
+function resultFor(
+  row: { homeTeamId: number; homeGoals: number | null; awayGoals: number | null },
+  teamId: number
+): "W" | "D" | "L" | null {
+  const hg = row.homeGoals, ag = row.awayGoals;
+  if (hg === null || ag === null) return null;
+  const isHome = row.homeTeamId === teamId;
+  const gf = isHome ? hg : ag, ga = isHome ? ag : hg;
+  return gf > ga ? "W" : gf === ga ? "D" : "L";
 }
 
 export async function GET(req: NextRequest) {
-  const name   = req.nextUrl.searchParams.get("name");
-  const teamId = req.nextUrl.searchParams.get("id");
+  const nameParam = req.nextUrl.searchParams.get("name");
+  const idParam   = req.nextUrl.searchParams.get("id");
 
-  if (!name && !teamId) {
+  if (!nameParam && !idParam) {
     return NextResponse.json({ error: "name or id required" }, { status: 400 });
   }
 
-  console.log(`\n[team] GET request — name="${name}" id="${teamId}"`);
-
-  // ── Step 1: resolve team entry ──────────────────────────────────────────────
-  let teamEntry: ApiTeam | null = null;
-
-  if (teamId) {
-    console.log(`[team] looking up by id: ${teamId}`);
-    const res = unwrap(await apiFetch<ApiTeam>("/teams", { id: teamId }, 86400));
-    teamEntry = res?.[0] ?? null;
-    console.log(`[team] id lookup result: ${teamEntry ? `"${teamEntry.team.name}" (id ${teamEntry.team.id})` : "✗ not found"}`);
+  // ── 1. Find team ─────────────────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let teamRows: any[];
+  if (idParam) {
+    teamRows = await db.select().from(teams).where(eq(teams.id, Number(idParam)));
   } else {
-    // League-roster lookup — returns only senior clubs, never U21/reserves
-    teamEntry = await findTeamByName(name!);
+    teamRows = await db.select().from(teams).where(eq(teams.name, nameParam!));
+    if (!teamRows.length) {
+      teamRows = await db.select().from(teams).where(like(teams.name, `%${nameParam}%`));
+    }
   }
 
-  if (!teamEntry) {
-    console.warn(`[team] ✗ returning 404 for name="${name}" id="${teamId}"`);
+  if (!teamRows.length) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
-  const { team, venue } = teamEntry;
-  console.log(`[team] resolved: "${team.name}" (id ${team.id})`);
 
-  // ── Step 2: find which league the team is currently in ──────────────────────
-  const leaguesRes = unwrap(
-    await apiFetch<ApiLeagueForTeam>("/leagues", { team: team.id, current: "true" }, 3600)
-  );
-  console.log(`[team] leagues for team ${team.id}: ${leaguesRes?.map(l => `${l.league.name}(${l.league.id})`).join(", ") || "none"}`);
-  const leagueEntry =
-    leaguesRes?.find((l) => STATS_LEAGUE_PRIORITY.includes(l.league.id)) ??
-    leaguesRes?.[0] ??
-    null;
-  const currentLeagueId = leagueEntry?.league.id;
-  console.log(`[team] using league ${currentLeagueId} for stats`);
+  const team   = teamRows[0] as { id: number; name: string; country: string; logo: string };
+  const teamId = team.id;
 
-  // ── Step 3: stats + squad in parallel ───────────────────────────────────────
-  const [statsRes, squadRes] = await Promise.all([
-    currentLeagueId
-      ? apiFetch<ApiTeamStats>("/teams/statistics", { team: team.id, league: currentLeagueId, season: SEASON }, 3600)
-      : Promise.resolve(null),
-    apiFetch<{ team: ApiTeam["team"]; players: ApiSquadPlayer[] }>(
-      "/players/squads",
-      { team: team.id },
-      3600
-    ),
-  ]);
+  // ── 2. Find primary league (current season, highest priority) ────────────────
+  const leagueRows = await db
+    .select({ leagueId: leagueTeams.leagueId, leagueName: leagues.name, leagueLogo: leagues.logo })
+    .from(leagueTeams)
+    .innerJoin(leagues, eq(leagueTeams.leagueId, leagues.id))
+    .where(and(eq(leagueTeams.teamId, teamId), eq(leagueTeams.season, SEASON)));
 
-  // /teams/statistics returns response as a plain object, not an array,
-  // so unwrap() (which checks .length) always returns null for this endpoint.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const statsRaw = (statsRes as any)?.response;
-  const stats: ApiTeamStats | null = statsRaw
-    ? (Array.isArray(statsRaw) ? (statsRaw[0] ?? null) : statsRaw)
-    : null;
-  const squad = unwrap(squadRes)?.[0]?.players ?? [];
-  console.log(`[team] stats: ${stats ? "✓" : "✗ missing"}  squad: ${squad.length} players`);
-  console.log(`[team] ── DONE returning "${team.name}" ──\n`);
+  leagueRows.sort((a, b) => {
+    const ai = LEAGUE_PRIORITY.indexOf(a.leagueId);
+    const bi = LEAGUE_PRIORITY.indexOf(b.leagueId);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
 
-  const grouped = {
-    Goalkeepers: squad.filter((p) => p.position === "Goalkeeper"),
-    Defenders:   squad.filter((p) => p.position === "Defender"),
-    Midfielders: squad.filter((p) => p.position === "Midfielder"),
-    Forwards:    squad.filter((p) => p.position === "Attacker"),
+  const primaryLeague = leagueRows[0] ?? null;
+  const leagueId      = primaryLeague?.leagueId ?? null;
+
+  // ── 3. Compute season stats from fixtures ────────────────────────────────────
+  let stats = null;
+  if (leagueId) {
+    const rows = await db
+      .select({ homeTeamId: fixtures.homeTeamId, homeGoals: fixtures.homeGoals, awayGoals: fixtures.awayGoals, timestamp: fixtures.timestamp })
+      .from(fixtures)
+      .where(and(
+        or(eq(fixtures.homeTeamId, teamId), eq(fixtures.awayTeamId, teamId)),
+        eq(fixtures.season, SEASON),
+        eq(fixtures.leagueId, leagueId),
+        inArray(fixtures.status, COMPLETED)
+      ))
+      .orderBy(desc(fixtures.timestamp));
+
+    if (rows.length > 0) {
+      let wins = 0, draws = 0, losses = 0, gf = 0, ga = 0, cleanSheets = 0;
+      for (const f of rows) {
+        const isHome   = f.homeTeamId === teamId;
+        const scored   = (isHome ? f.homeGoals : f.awayGoals) ?? 0;
+        const conceded = (isHome ? f.awayGoals : f.homeGoals) ?? 0;
+        gf += scored; ga += conceded;
+        const r = resultFor(f, teamId);
+        if (r === "W") wins++;
+        else if (r === "D") draws++;
+        else if (r === "L") losses++;
+        if (conceded === 0) cleanSheets++;
+      }
+      const played = rows.length;
+      const form   = rows.slice(0, 5).reverse().map((f) => resultFor(f, teamId) ?? "").filter(Boolean).join("");
+
+      stats = {
+        form,
+        league: { id: leagueId, name: primaryLeague.leagueName, logo: primaryLeague.leagueLogo },
+        fixtures: {
+          played: { home: 0, away: 0, total: played },
+          wins:   { home: 0, away: 0, total: wins   },
+          draws:  { home: 0, away: 0, total: draws  },
+          loses:  { home: 0, away: 0, total: losses },
+        },
+        goals: {
+          for:     { average: { home: "0", away: "0", total: played ? (gf / played).toFixed(2) : "0" }, total: { home: 0, away: 0, total: gf } },
+          against: { average: { home: "0", away: "0", total: played ? (ga / played).toFixed(2) : "0" }, total: { home: 0, away: 0, total: ga } },
+        },
+        clean_sheet: { home: 0, away: 0, total: cleanSheets },
+      };
+    }
+  }
+
+  // ── 4. Get squad ─────────────────────────────────────────────────────────────
+  const squadRows = await db
+    .select({ id: players.id, name: players.name, photo: players.photo, position: squads.position, number: squads.number })
+    .from(squads)
+    .innerJoin(players, eq(squads.playerId, players.id))
+    .where(and(eq(squads.teamId, teamId), eq(squads.season, SEASON)))
+    .orderBy(asc(squads.number));
+
+  const grouped: Record<string, { id: number; name: string; number: number | null; position: string; photo: string; age: null }[]> = {
+    Goalkeepers: [], Defenders: [], Midfielders: [], Forwards: [],
   };
 
-  // Always include the resolved league at the top level so the Stats tab can
-  // fetch /team-season-stats even when the initial stats call returns null.
-  const league = stats?.league ?? (leagueEntry ? { id: leagueEntry.league.id, name: leagueEntry.league.name, logo: leagueEntry.league.logo } : null);
+  for (const p of squadRows) {
+    const entry = { id: p.id, name: p.name, number: p.number ?? null, position: p.position ?? "Unknown", photo: p.photo ?? "", age: null };
+    const pos = p.position ?? "";
+    if      (pos === "Goalkeeper")                    grouped.Goalkeepers.push(entry);
+    else if (pos === "Defender")                      grouped.Defenders.push(entry);
+    else if (pos === "Midfielder")                    grouped.Midfielders.push(entry);
+    else                                              grouped.Forwards.push(entry);
+  }
 
-  return NextResponse.json({ team, venue, stats, league, squad: grouped });
+  return NextResponse.json({
+    team:  { id: team.id, name: team.name, country: team.country, logo: team.logo, founded: null, code: null },
+    venue: null,
+    stats,
+    league: primaryLeague ? { id: primaryLeague.leagueId, name: primaryLeague.leagueName, logo: primaryLeague.leagueLogo } : null,
+    squad:  grouped,
+  });
 }

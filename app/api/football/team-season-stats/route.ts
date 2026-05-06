@@ -1,31 +1,21 @@
-// /api/football/team-season-stats — returns the full `/teams/statistics` payload
-// for the Stats tab. The base `/api/football/team` route only surfaces a subset
-// of what the API returns (fixtures, goals, clean sheet). This endpoint exposes
-// shots, passes, cards, penalty, fouls and lineups as well.
+// /api/football/team-season-stats — season statistics for the Stats tab.
+//
+// DB-only: computes W/D/L/goals/clean-sheets from the fixtures table.
+// Fields not stored in DB (shots, passes, fouls, cards, penalties, lineups)
+// are omitted — the Stats tab renders "—" for any null value automatically.
 //
 // Usage: GET /api/football/team-season-stats?team={id}&league={id}&season={year}
-// Falls back to season-1 then season-2 if the requested season returns no data.
-// Cached 1 hour — team season stats don't change in real-time.
 
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, currentSeason } from "@/lib/apifootball";
+import { and, or, eq, inArray } from "drizzle-orm";
+import { db, fixtures } from "@/lib/db";
+import { currentSeason } from "@/lib/apifootball";
 
-async function fetchStats(team: string, league: string, season: number) {
-  const res = await apiFetch<unknown>(
-    "/teams/statistics",
-    { team, league, season: String(season) },
-    3600
-  );
-  // /teams/statistics returns response as a plain object, not an array.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const raw = (res as any)?.response;
-  if (!raw) return null;
-  return Array.isArray(raw) ? (raw[0] ?? null) : raw;
-}
+const COMPLETED = ["FT", "AET", "PEN"];
 
 export async function GET(req: NextRequest) {
-  const team   = req.nextUrl.searchParams.get("team");
-  const league = req.nextUrl.searchParams.get("league");
+  const team        = req.nextUrl.searchParams.get("team");
+  const league      = req.nextUrl.searchParams.get("league");
   const seasonParam = req.nextUrl.searchParams.get("season");
   const requestedSeason = seasonParam ? Number(seasonParam) : currentSeason();
 
@@ -33,16 +23,68 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "team and league are required" }, { status: 400 });
   }
 
-  // Try requested season first, then fall back up to 2 seasons back if empty.
-  // API-Football sometimes has no data for the current in-progress season on
-  // the free tier, so the fallback ensures the Stats tab shows something useful.
+  const tid = Number(team);
+  const lid = Number(league);
+
+  // Try the requested season, fall back to previous two if empty
   for (let offset = 0; offset <= 2; offset++) {
     const season = requestedSeason - offset;
-    const stats = await fetchStats(team, league, season);
-    if (stats) {
-      // Return the actual season used so the client can label it correctly.
-      return NextResponse.json({ stats, season });
+
+    const rows = await db
+      .select({
+        homeTeamId: fixtures.homeTeamId,
+        homeGoals:  fixtures.homeGoals,
+        awayGoals:  fixtures.awayGoals,
+        timestamp:  fixtures.timestamp,
+      })
+      .from(fixtures)
+      .where(and(
+        or(eq(fixtures.homeTeamId, tid), eq(fixtures.awayTeamId, tid)),
+        eq(fixtures.season, season),
+        eq(fixtures.leagueId, lid),
+        inArray(fixtures.status, COMPLETED)
+      ));
+
+    if (!rows.length) continue;
+
+    let wins = 0, draws = 0, losses = 0, gf = 0, ga = 0, cleanSheets = 0;
+
+    for (const f of rows) {
+      const isHome   = f.homeTeamId === tid;
+      const scored   = (isHome ? f.homeGoals : f.awayGoals) ?? 0;
+      const conceded = (isHome ? f.awayGoals : f.homeGoals) ?? 0;
+      gf += scored; ga += conceded;
+      if      (scored   > conceded) wins++;
+      else if (scored === conceded) draws++;
+      else                          losses++;
+      if (conceded === 0) cleanSheets++;
     }
+
+    const played = rows.length;
+
+    return NextResponse.json({
+      season,
+      stats: {
+        fixtures: {
+          played: { total: played },
+          wins:   { total: wins   },
+          draws:  { total: draws  },
+          loses:  { total: losses },
+        },
+        goals: {
+          for:     { total: { total: gf } },
+          against: { total: { total: ga } },
+        },
+        clean_sheet: { total: cleanSheets },
+        // Fields not in DB — the Stats tab shows "—" for null values
+        shots:   null,
+        passes:  null,
+        fouls:   null,
+        cards:   null,
+        penalty: null,
+        lineups: null,
+      },
+    });
   }
 
   return NextResponse.json({ stats: null, season: requestedSeason });

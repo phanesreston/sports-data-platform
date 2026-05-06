@@ -1,88 +1,184 @@
-// /api/football/player — fetches a single player's full profile and statistics.
+// /api/football/player — player profile and season statistics.
+//
+// DB-only: reads from players, squads, teams, fixtures, leagues, and
+// fixturePlayerStats tables. Statistics are aggregated from per-fixture rows.
+//
+// Fields not stored in DB (age, height, weight, injured) are returned as null.
+// If no stats are cached for this player, statistics will be an empty array.
+// Pre-populate with: SEED_STEP=player-stats npm run db:seed
 //
 // Usage:
-//   GET /api/football/player?id=276           → auto-discovers the most recent season
-//   GET /api/football/player?id=276&season=2023 → fetches a specific season only
-//
-// Season discovery works by trying seasons in descending order (current, current-1,
-// current-2) and returning the first one that has data. This handles players who
-// haven't appeared in the current season yet (e.g. newly signed, injured).
+//   GET /api/football/player?id=276           → most recent season with data
+//   GET /api/football/player?id=276&season=2024 → specific season
 
 import { NextRequest, NextResponse } from "next/server";
-import { apiFetch, unwrap, isRateLimited, currentSeason } from "@/lib/apifootball";
+import { and, desc, eq } from "drizzle-orm";
+import { db, players, squads, teams, fixtures, leagues, fixturePlayerStats } from "@/lib/db";
+import { currentSeason } from "@/lib/apifootball";
 
-// ApiPlayerFull — the full shape returned by /players?id=&season= on API-Football v3.
-// Exported so the athlete page can reuse it for type-safety.
 export interface ApiPlayerFull {
   player: {
     id: number;
     name: string;
-    firstname: string;
-    lastname: string;
-    age: number;
-    nationality: string;
+    firstname: string | undefined;
+    lastname: string | undefined;
+    age: number | null;
+    nationality: string | null;
     height: string | null;
     weight: string | null;
-    photo: string;
-    injured: boolean;
+    photo: string | null;
+    injured: boolean | undefined;
   };
-  // statistics is an array — one entry per competition the player appeared in.
-  // A player appearing in the Premier League AND the Champions League will have two entries.
   statistics: {
-    team:   { id: number; name: string; logo: string };
-    league: { id: number; name: string; logo: string; country: string; season: number };
-    games: {
-      appearences: number | null;
-      lineups:     number | null;
-      minutes:     number | null;
-      position:    string;
-      rating:      string | null;
-    };
-    goals:   { total: number | null; assists: number | null; conceded: number | null; saves: number | null };
-    shots:   { total: number | null; on: number | null };
-    passes:  { total: number | null; key: number | null; accuracy: string | null };
-    tackles: { total: number | null; blocks: number | null; interceptions: number | null };
-    duels:   { total: number | null; won: number | null };
-    dribbles:{ attempts: number | null; success: number | null };
-    cards:   { yellow: number; red: number };
+    team:      { id: number; name: string; logo: string };
+    league:    { id: number; name: string; logo: string; country: string; season: number };
+    games:     { appearences: number | null; lineups: number | null; minutes: number | null; position: string; rating: string | null };
+    goals:     { total: number | null; assists: number | null; conceded: number | null; saves: number | null };
+    shots:     { total: number | null; on: number | null };
+    passes:    { total: number | null; key: number | null; accuracy: string | null };
+    tackles:   { total: number | null; blocks: number | null; interceptions: number | null };
+    duels:     { total: number | null; won: number | null };
+    dribbles:  { attempts: number | null; success: number | null };
+    cards:     { yellow: number; red: number };
   }[];
 }
-
-// Try up to 3 seasons when no specific season is requested.
-// The API returns an empty array (not a 404) when a player has no data for that season.
-const FALLBACK_SEASONS = [currentSeason(), currentSeason() - 1, currentSeason() - 2];
 
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  // If the caller passes ?season=X we only try that one season (used by the season
-  // selector on the athlete page). Otherwise we walk through FALLBACK_SEASONS.
-  const seasonParam = req.nextUrl.searchParams.get("season");
-  const seasons = seasonParam ? [Number(seasonParam)] : FALLBACK_SEASONS;
+  const pid          = Number(id);
+  const seasonParam  = req.nextUrl.searchParams.get("season");
+  const CURRENT      = currentSeason();
 
-  for (const season of seasons) {
-    // Cache player stats for 60 seconds — short because match ratings update live.
-    const raw = await apiFetch<ApiPlayerFull>("/players", { id, season }, 60);
+  // ── 1. Player profile ────────────────────────────────────────────────────────
+  const playerRows = await db.select().from(players).where(eq(players.id, pid));
+  if (!playerRows.length) {
+    return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  }
+  const playerRow = playerRows[0];
 
-    // isRateLimited detects the API-Football rate-limit error response.
-    // We return 429 immediately rather than trying the next season.
-    if (isRateLimited(raw)) {
-      console.warn(`[player] rate limited fetching player ${id} season ${season}`);
-      return NextResponse.json({ error: "Rate limited — try again in a moment" }, { status: 429 });
+  // ── 2. Current team from squads (most recent season) ─────────────────────────
+  const squadRows = await db
+    .select({ teamId: squads.teamId, position: squads.position, season: squads.season })
+    .from(squads)
+    .where(eq(squads.playerId, pid))
+    .orderBy(desc(squads.season))
+    .limit(1);
+  const position = squadRows[0]?.position ?? "Midfielder";
+
+  // ── 3. Aggregate stats from fixturePlayerStats ───────────────────────────────
+  const statsRows = await db
+    .select({
+      season:      fixtures.season,
+      leagueId:    fixtures.leagueId,
+      leagueName:  leagues.name,
+      leagueLogo:  leagues.logo,
+      leagueCountry: leagues.country,
+      teamId:      fixturePlayerStats.teamId,
+      teamName:    teams.name,
+      teamLogo:    teams.logo,
+      minutes:     fixturePlayerStats.minutes,
+      rating:      fixturePlayerStats.rating,
+      goals:       fixturePlayerStats.goals,
+      assists:     fixturePlayerStats.assists,
+      shotsOn:     fixturePlayerStats.shotsOn,
+      shotsTotal:  fixturePlayerStats.shotsTotal,
+      keyPasses:   fixturePlayerStats.keyPasses,
+      yellowCards: fixturePlayerStats.yellowCards,
+      redCards:    fixturePlayerStats.redCards,
+    })
+    .from(fixturePlayerStats)
+    .innerJoin(fixtures, eq(fixturePlayerStats.fixtureId, fixtures.id))
+    .innerJoin(leagues, eq(fixtures.leagueId, leagues.id))
+    .innerJoin(teams,   eq(fixturePlayerStats.teamId, teams.id))
+    .where(eq(fixturePlayerStats.playerId, pid))
+    .orderBy(desc(fixtures.season));
+
+  // Group by season + league
+  type Entry = {
+    season: number; leagueId: number; leagueName: string; leagueLogo: string; leagueCountry: string;
+    teamId: number; teamName: string; teamLogo: string;
+    appearances: number; minutes: number; ratings: number[];
+    goals: number; assists: number; shotsOn: number; shotsTotal: number;
+    keyPasses: number; yellowCards: number; redCards: number;
+  };
+  const grouped = new Map<string, Entry>();
+
+  for (const row of statsRows) {
+    const key = `${row.season}:${row.leagueId}`;
+    let e = grouped.get(key);
+    if (!e) {
+      e = {
+        season: row.season, leagueId: row.leagueId, leagueName: row.leagueName,
+        leagueLogo: row.leagueLogo, leagueCountry: row.leagueCountry ?? "",
+        teamId: row.teamId, teamName: row.teamName, teamLogo: row.teamLogo,
+        appearances: 0, minutes: 0, ratings: [],
+        goals: 0, assists: 0, shotsOn: 0, shotsTotal: 0, keyPasses: 0, yellowCards: 0, redCards: 0,
+      };
+      grouped.set(key, e);
     }
-
-    const res = unwrap(raw);
-    if (res?.length) {
-      console.log(`[player] found player ${id} in season ${season}`);
-      // Return the season alongside the data so the client can pre-select the right
-      // year in the season selector without guessing.
-      return NextResponse.json({ player: res[0], season });
-    }
-
-    console.log(`[player] no data for player ${id} season ${season}, trying next`);
+    e.appearances++;
+    e.minutes      += row.minutes      ?? 0;
+    e.goals        += row.goals        ?? 0;
+    e.assists      += row.assists      ?? 0;
+    e.shotsOn      += row.shotsOn      ?? 0;
+    e.shotsTotal   += row.shotsTotal   ?? 0;
+    e.keyPasses    += row.keyPasses    ?? 0;
+    e.yellowCards  += row.yellowCards  ?? 0;
+    e.redCards     += row.redCards     ?? 0;
+    if (row.rating != null) e.ratings.push(row.rating);
   }
 
-  console.warn(`[player] player ${id} not found in any season`);
-  return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  // Determine which season to return
+  const allSeasons = [...new Set([...grouped.values()].map((e) => e.season))].sort((a, b) => b - a);
+  let targetSeason: number;
+  if (seasonParam) {
+    targetSeason = Number(seasonParam);
+  } else {
+    // Pick most recent season with data, defaulting to current
+    targetSeason = allSeasons[0] ?? CURRENT;
+  }
+
+  const statistics = [...grouped.values()]
+    .filter((e) => e.season === targetSeason)
+    .map((e) => ({
+      team:   { id: e.teamId, name: e.teamName, logo: e.teamLogo },
+      league: { id: e.leagueId, name: e.leagueName, logo: e.leagueLogo, country: e.leagueCountry, season: e.season },
+      games: {
+        appearences: e.appearances,
+        lineups:     e.appearances,
+        minutes:     e.minutes || null,
+        position,
+        rating: e.ratings.length
+          ? (e.ratings.reduce((a, b) => a + b, 0) / e.ratings.length).toFixed(2)
+          : null,
+      },
+      goals:    { total: e.goals || null,       assists: e.assists || null,   conceded: null, saves: null },
+      shots:    { total: e.shotsTotal || null,   on: e.shotsOn || null },
+      passes:   { total: null,                   key: e.keyPasses || null,    accuracy: null },
+      tackles:  { total: null, blocks: null, interceptions: null },
+      duels:    { total: null, won: null },
+      dribbles: { attempts: null, success: null },
+      cards:    { yellow: e.yellowCards, red: e.redCards },
+    }));
+
+  const playerData: ApiPlayerFull = {
+    player: {
+      id:          playerRow.id,
+      name:        playerRow.name,
+      firstname:   undefined,
+      lastname:    undefined,
+      age:         null,
+      nationality: playerRow.nationality ?? null,
+      height:      null,
+      weight:      null,
+      photo:       playerRow.photo ?? null,
+      injured:     undefined,
+    },
+    statistics,
+  };
+
+  // If no stats found for target season but we have other seasons, return profile only
+  return NextResponse.json({ player: playerData, season: targetSeason });
 }
