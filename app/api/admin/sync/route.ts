@@ -1,130 +1,189 @@
-// POST /api/admin/sync
-// Triggers a database sync without needing shell access.
-// Protected by ADMIN_SECRET — set this in .env.local.
-//
-// Usage:
-//   curl -X POST https://your-domain.com/api/admin/sync \
-//     -H "Authorization: Bearer YOUR_ADMIN_SECRET" \
-//     -H "Content-Type: application/json" \
-//     -d '{"step":"all"}'           # all | squads | fixtures
-//
-// For Vercel Cron, add to vercel.json:
-//   { "crons": [{ "path": "/api/admin/sync", "schedule": "0 3 * * *" }] }
-// And set CRON_SECRET = ADMIN_SECRET in project env vars.
+/**
+ * /api/admin/sync — on-demand sync of upcoming fixtures and predictions.
+ *
+ * All API-Football calls live here (and in npm run db:sync). The rest of the
+ * app reads only from the DB, so there are zero live API calls at page-load time.
+ *
+ * Usage:
+ *   POST /api/admin/sync                     — fixtures + predictions
+ *   POST /api/admin/sync?step=fixtures        — upcoming fixture list only
+ *   POST /api/admin/sync?step=predictions     — predictions for NS fixtures only
+ *
+ * Protect in production — add ADMIN_SECRET to .env.local and pass it:
+ *   curl -X POST https://your-domain/api/admin/sync \
+ *        -H "Authorization: Bearer YOUR_ADMIN_SECRET"
+ *
+ * Vercel Cron example (vercel.json):
+ *   { "crons": [{ "path": "/api/admin/sync", "schedule": "0 3 * * *" }] }
+ */
 
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import * as schema from "@/lib/db/schema";
+import { and, eq, gt, inArray, isNull, lt, or } from "drizzle-orm";
+import { db, fixtures, fixturePredictions } from "@/lib/db";
 
-const LEAGUE_IDS = [39, 140, 135, 78, 61];
+export const dynamic = "force-dynamic";
 
-function currentSeason(): number {
+const BASE = "https://v3.football.api-sports.io";
+const ALL_LEAGUE_IDS      = [39, 40, 140, 141, 135, 136, 78, 79, 61, 62, 2, 3];
+const OVERVIEW_LEAGUE_IDS = [39, 140, 135, 78, 61, 2, 3];
+
+function currentSeason() {
   const now = new Date();
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
-function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
 
 async function apiFetch(path: string, params: Record<string, string | number>) {
   const key = process.env.API_SPORTS_KEY;
   if (!key) throw new Error("API_SPORTS_KEY not set");
-
-  const url = new URL(`https://v3.football.api-sports.io${path}`);
+  const url = new URL(`${BASE}${path}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
-
-  const res = await fetch(url.toString(), {
-    headers: { "x-apisports-key": key },
-    cache: "no-store",
-  });
+  const res = await fetch(url.toString(), { headers: { "x-apisports-key": key }, cache: "no-store" });
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
-  const data = await res.json();
-  return data.response as unknown[];
+  const data = await res.json() as { response: unknown[]; errors?: Record<string, string> };
+  if (data.errors && Object.keys(data.errors).length > 0) {
+    throw new Error(Object.values(data.errors)[0]);
+  }
+  return data.response;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function upsertSquadsForTeam(team: { id: number }, season: number, now: number): Promise<number> {
-  const rows = await apiFetch("/players/squads", { team: team.id });
-  const entry = rows[0] as { players: { id: number; name: string; nationality?: string; photo?: string; number?: number; position: string }[] } | undefined;
-  if (!entry?.players?.length) return 0;
+// ── sync upcoming fixture list ─────────────────────────────────────────────────
 
-  for (const p of entry.players) {
-    await db.insert(schema.players).values({ id: p.id, name: p.name, nationality: p.nationality ?? null, photo: p.photo ?? null, updatedAt: now })
-      .onConflictDoUpdate({ target: schema.players.id, set: { name: p.name, photo: p.photo ?? null, updatedAt: now } });
-
-    await db.insert(schema.squads).values({ teamId: team.id, playerId: p.id, season, number: p.number ?? null, position: p.position ?? null })
-      .onConflictDoUpdate({ target: [schema.squads.teamId, schema.squads.playerId, schema.squads.season], set: { number: p.number ?? null, position: p.position ?? null } });
-  }
-  return entry.players.length;
-}
-
-export async function POST(req: NextRequest) {
-  // Auth check
-  const secret = process.env.ADMIN_SECRET;
-  const auth   = req.headers.get("authorization") ?? "";
-  if (!secret || auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body = await req.json().catch(() => ({}));
-  const step: string = body.step ?? "all";
-
-  const season = currentSeason();
+async function syncFixtures(): Promise<{ updated: number; errors: number }> {
+  const SEASON = currentSeason();
   const now    = Date.now();
-  const log: string[] = [];
+  const from   = new Date(now - 7  * 86400_000).toISOString().slice(0, 10);
+  const to     = new Date(now + 14 * 86400_000).toISOString().slice(0, 10);
+
+  let updated = 0, errors = 0;
+
+  for (let i = 0; i < ALL_LEAGUE_IDS.length; i++) {
+    const leagueId = ALL_LEAGUE_IDS[i];
+    if (i > 0) await sleep(400);
+    try {
+      const rows = await apiFetch("/fixtures", { league: leagueId, season: SEASON, from, to });
+      for (const row of rows as {
+        fixture: { id: number; date: string; timestamp: number; status: { short: string } };
+        league:  { season: number; round: string };
+        teams:   { home: { id: number }; away: { id: number } };
+        goals:   { home: number | null; away: number | null };
+      }[]) {
+        await db.insert(fixtures).values({
+          id:         row.fixture.id,
+          leagueId,
+          season:     row.league.season,
+          round:      row.league.round,
+          date:       row.fixture.date,
+          timestamp:  row.fixture.timestamp,
+          status:     row.fixture.status.short,
+          homeTeamId: row.teams.home.id,
+          awayTeamId: row.teams.away.id,
+          homeGoals:  row.goals.home,
+          awayGoals:  row.goals.away,
+          updatedAt:  now,
+        }).onConflictDoUpdate({
+          target: fixtures.id,
+          set: { status: row.fixture.status.short, homeGoals: row.goals.home, awayGoals: row.goals.away, updatedAt: now },
+        });
+        updated++;
+      }
+      console.log(`[sync] [API] league ${leagueId}: ${rows.length} fixtures`);
+    } catch (err) {
+      console.error(`[sync] [API] league ${leagueId}: error — ${err}`);
+      errors++;
+    }
+  }
+  return { updated, errors };
+}
+
+// ── sync predictions ───────────────────────────────────────────────────────────
+
+async function syncPredictions(): Promise<{ updated: number; skipped: number; errors: number }> {
+  const nowSecs = Math.floor(Date.now() / 1000);
+  const maxSecs = nowSecs + 14 * 86400;
+  const staleMs = Date.now() - 23 * 3600_000;
+
+  // Only re-fetch predictions that are missing or older than 23 h
+  const upcoming = await db
+    .select({ id: fixtures.id })
+    .from(fixtures)
+    .leftJoin(fixturePredictions, eq(fixturePredictions.fixtureId, fixtures.id))
+    .where(and(
+      eq(fixtures.status, "NS"),
+      gt(fixtures.timestamp, nowSecs),
+      lt(fixtures.timestamp, maxSecs),
+      inArray(fixtures.leagueId, OVERVIEW_LEAGUE_IDS),
+      or(isNull(fixturePredictions.updatedAt), lt(fixturePredictions.updatedAt, staleMs))
+    ));
+
+  console.log(`[sync] [DB] ${upcoming.length} fixtures need predictions`);
+  let updated = 0, skipped = 0, errors = 0;
+
+  for (let i = 0; i < upcoming.length; i++) {
+    const { id } = upcoming[i];
+    if (i > 0) await sleep(700);
+    try {
+      const rows = await apiFetch("/predictions", { fixture: id });
+      if (!rows.length) { skipped++; continue; }
+
+      const pred = rows[0] as {
+        predictions: { percent: { home: string; draw: string; away: string }; advice?: string; under_over?: string | null };
+      };
+      const homePct = parseInt(pred.predictions.percent.home) || 0;
+      const drawPct = parseInt(pred.predictions.percent.draw) || 0;
+      const awayPct = parseInt(pred.predictions.percent.away) || 0;
+      const now     = Date.now();
+
+      await db.insert(fixturePredictions).values({
+        fixtureId: id, homePct, drawPct, awayPct,
+        advice:    pred.predictions.advice    ?? null,
+        underOver: pred.predictions.under_over ?? null,
+        updatedAt: now,
+      }).onConflictDoUpdate({
+        target: fixturePredictions.fixtureId,
+        set: { homePct, drawPct, awayPct, advice: pred.predictions.advice ?? null, underOver: pred.predictions.under_over ?? null, updatedAt: now },
+      });
+
+      console.log(`[sync] [API] fixture ${id}: ${homePct}%H / ${drawPct}%D / ${awayPct}%A`);
+      updated++;
+    } catch (err) {
+      console.error(`[sync] [API] fixture ${id}: error — ${err}`);
+      errors++;
+    }
+  }
+  return { updated, skipped, errors };
+}
+
+// ── handler ───────────────────────────────────────────────────────────────────
+
+async function handle(req: NextRequest) {
+  // Optional secret guard — skip check if ADMIN_SECRET is not configured
+  const secret = process.env.ADMIN_SECRET;
+  if (secret) {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  const step    = req.nextUrl.searchParams.get("step");
+  const results: Record<string, unknown> = {};
 
   try {
-    // ── squads ────────────────────────────────────────────────────────────────
-    if (step === "all" || step === "squads") {
-      const teams = await db.select({ id: schema.teams.id }).from(schema.teams);
-      let totalPlayers = 0;
-
-      for (const team of teams) {
-        try {
-          const n = await upsertSquadsForTeam(team, season, now);
-          totalPlayers += n;
-        } catch { /* skip individual failures */ }
-        await sleep(300);
-      }
-      log.push(`squads: updated ${totalPlayers} player records across ${teams.length} teams`);
+    if (!step || step === "fixtures") {
+      console.log("[sync] syncing upcoming fixtures…");
+      results.fixtures = await syncFixtures();
     }
-
-    // ── fixtures ──────────────────────────────────────────────────────────────
-    if (step === "all" || step === "fixtures") {
-      const from = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
-      const to   = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
-      let totalFixtures = 0;
-
-      for (const leagueId of LEAGUE_IDS) {
-        try {
-          const rows = await apiFetch("/fixtures", { league: leagueId, season, from, to });
-          for (const row of rows as {
-            fixture: { id: number; date: string; timestamp: number; status: { short: string } };
-            league:  { season: number; round: string };
-            teams:   { home: { id: number }; away: { id: number } };
-            goals:   { home: number | null; away: number | null };
-          }[]) {
-            await db.insert(schema.fixtures).values({
-              id: row.fixture.id, leagueId, season: row.league.season, round: row.league.round,
-              date: row.fixture.date, timestamp: row.fixture.timestamp, status: row.fixture.status.short,
-              homeTeamId: row.teams.home.id, awayTeamId: row.teams.away.id,
-              homeGoals: row.goals.home, awayGoals: row.goals.away, updatedAt: now,
-            }).onConflictDoUpdate({
-              target: schema.fixtures.id,
-              set: { status: row.fixture.status.short, homeGoals: row.goals.home, awayGoals: row.goals.away, updatedAt: now },
-            });
-          }
-          totalFixtures += rows.length;
-        } catch { /* skip individual league failures */ }
-        await sleep(400);
-      }
-      log.push(`fixtures: updated ${totalFixtures} fixture records`);
+    if (!step || step === "predictions") {
+      console.log("[sync] syncing predictions…");
+      results.predictions = await syncPredictions();
     }
-
-    return NextResponse.json({ ok: true, step, log });
+    return NextResponse.json({ ok: true, timestamp: new Date().toISOString(), ...results });
   } catch (err) {
+    console.error("[sync] fatal:", err);
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
 
-// Allow Vercel Cron to call this as a GET too
-export { POST as GET };
+export { handle as POST, handle as GET };

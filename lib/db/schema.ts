@@ -101,11 +101,26 @@ export const fixturePlayerStats = sqliteTable("fixture_player_stats", {
   fixtureIdx: index("fps_fixture_idx").on(t.fixtureId),
 }));
 
+// ── fixture_predictions ────────────────────────────────────────────────────────
+// Pre-match prediction probabilities fetched from /predictions and cached here.
+// Populated by the sync script; read by the fixtures route with no live API calls.
+
+export const fixturePredictions = sqliteTable("fixture_predictions", {
+  fixtureId: integer("fixture_id").primaryKey().references(() => fixtures.id),
+  homePct:   integer("home_pct").notNull(),
+  drawPct:   integer("draw_pct").notNull(),
+  awayPct:   integer("away_pct").notNull(),
+  advice:    text("advice"),
+  underOver: text("under_over"),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 // ── TypeScript inferred types ──────────────────────────────────────────────────
 
-export type League            = typeof leagues.$inferSelect;
-export type Team              = typeof teams.$inferSelect;
-export type Player            = typeof players.$inferSelect;
-export type Squad             = typeof squads.$inferSelect;
-export type Fixture           = typeof fixtures.$inferSelect;
-export type FixturePlayerStat = typeof fixturePlayerStats.$inferSelect;
+export type League             = typeof leagues.$inferSelect;
+export type Team               = typeof teams.$inferSelect;
+export type Player             = typeof players.$inferSelect;
+export type Squad              = typeof squads.$inferSelect;
+export type Fixture            = typeof fixtures.$inferSelect;
+export type FixturePlayerStat  = typeof fixturePlayerStats.$inferSelect;
+export type FixturePrediction  = typeof fixturePredictions.$inferSelect;
