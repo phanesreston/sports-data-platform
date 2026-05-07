@@ -16,6 +16,7 @@ export function currentSeason(): number {
 // under when no substring overlap exists. Add entries as mismatches appear in logs.
 export const TEAM_NAME_ALIASES: Record<string, string> = {
   "Wolverhampton Wanderers": "Wolves",
+  "Athletic Bilbao":         "Athletic Club",
 };
 
 /**

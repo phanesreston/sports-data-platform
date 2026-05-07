@@ -2,25 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import type {
   ApiFootballResponse,
   ApiFixture,
-  ApiTeamStatistics,
   ApiPrediction,
 } from "@/lib/types";
 import type { TeamStats, H2HStats } from "@/lib/types";
 import {
   unwrapApiFootball,
-  transformTeamStatistics,
-  transformH2H,
   transformPredictionToMarkets,
   placeholderStats,
 } from "@/lib/transformers";
 import { currentSeason } from "@/lib/apifootball";
 import type { Market } from "@/lib/types";
+import { db, teams, leagueTeams, fixtures as fixturesTable } from "@/lib/db";
+import { and, eq, inArray, desc, or } from "drizzle-orm";
 
 const BASE_URL = "https://v3.football.api-sports.io";
-
 const SEASON = currentSeason();
 
-// All supported leagues — IDs are stable across seasons
 const FOOTBALL_LEAGUES = [
   { id: 39,  name: "Premier League"   },
   { id: 140, name: "La Liga"          },
@@ -53,23 +50,20 @@ async function apiFetch<T>(
       return null;
     }
 
-    // Forward rate limit info to console for monitoring
     const remaining = res.headers.get("x-ratelimit-requests-remaining");
     if (remaining !== null && parseInt(remaining) < 20) {
       console.warn(`[API-Football] Low daily quota remaining: ${remaining}`);
     }
 
-    return res.json() as Promise<ApiFootballResponse<T>>;
+    const json = await res.json() as ApiFootballResponse<T>;
+    if (json.errors && Object.keys(json.errors).length > 0) {
+      console.error(`[API-Football] errors in response:`, json.errors);
+    }
+    return json;
   } catch (err) {
     console.error(`[API-Football] fetch error on ${path}:`, err);
     return null;
   }
-}
-
-// Minimal team shape returned by /teams?league=X&season=Y
-interface ApiLeagueTeam {
-  team:  { id: number; name: string; logo: string };
-  venue: { id: number; name: string; city: string };
 }
 
 export interface FixtureWithStats {
@@ -80,63 +74,137 @@ export interface FixtureWithStats {
   markets: Market[];
 }
 
+const COMPLETED = ["FT", "AET", "PEN"];
+
+async function teamStatsFromDb(teamId: number, leagueId: number, season: number): Promise<TeamStats> {
+  const rows = await db
+    .select({
+      homeTeamId: fixturesTable.homeTeamId,
+      homeGoals:  fixturesTable.homeGoals,
+      awayGoals:  fixturesTable.awayGoals,
+    })
+    .from(fixturesTable)
+    .where(
+      and(
+        eq(fixturesTable.leagueId, leagueId),
+        eq(fixturesTable.season, season),
+        inArray(fixturesTable.status, COMPLETED),
+        or(
+          eq(fixturesTable.homeTeamId, teamId),
+          eq(fixturesTable.awayTeamId, teamId)
+        )
+      )
+    )
+    .orderBy(desc(fixturesTable.timestamp))
+    .limit(38);
+
+  if (rows.length === 0) return placeholderStats();
+
+  let totalFor = 0, totalAgainst = 0;
+  const formResults: ("W" | "D" | "L")[] = [];
+
+  for (const row of rows) {
+    const isHome       = row.homeTeamId === teamId;
+    const goalsFor     = (isHome ? row.homeGoals : row.awayGoals) ?? 0;
+    const goalsAgainst = (isHome ? row.awayGoals : row.homeGoals) ?? 0;
+    totalFor     += goalsFor;
+    totalAgainst += goalsAgainst;
+    if (formResults.length < 5) {
+      formResults.push(goalsFor > goalsAgainst ? "W" : goalsFor < goalsAgainst ? "L" : "D");
+    }
+  }
+
+  return {
+    form: formResults.reverse(), // oldest→newest
+    avgScored:   Math.round((totalFor / rows.length) * 10) / 10,
+    avgConceded: Math.round((totalAgainst / rows.length) * 10) / 10,
+  };
+}
+
+async function h2hFromDb(homeTeamId: number, awayTeamId: number): Promise<H2HStats> {
+  const rows = await db
+    .select({
+      homeTeamId: fixturesTable.homeTeamId,
+      homeGoals:  fixturesTable.homeGoals,
+      awayGoals:  fixturesTable.awayGoals,
+    })
+    .from(fixturesTable)
+    .where(
+      and(
+        inArray(fixturesTable.status, COMPLETED),
+        or(
+          and(eq(fixturesTable.homeTeamId, homeTeamId), eq(fixturesTable.awayTeamId, awayTeamId)),
+          and(eq(fixturesTable.homeTeamId, awayTeamId), eq(fixturesTable.awayTeamId, homeTeamId))
+        )
+      )
+    )
+    .orderBy(desc(fixturesTable.timestamp))
+    .limit(10);
+
+  let homeWins = 0, draws = 0, awayWins = 0;
+  for (const row of rows) {
+    const hg = row.homeGoals ?? 0;
+    const ag = row.awayGoals ?? 0;
+    if (hg === ag) {
+      draws++;
+    } else if (
+      (row.homeTeamId === homeTeamId && hg > ag) ||
+      (row.homeTeamId !== homeTeamId && ag > hg)
+    ) {
+      homeWins++;
+    } else {
+      awayWins++;
+    }
+  }
+
+  return { homeWins, draws, awayWins };
+}
+
 export async function GET(req: NextRequest) {
   const leagueParam = req.nextUrl.searchParams.get("league");
 
-  // Determine which leagues to fetch
-  const leagues = leagueParam
+  const leaguesList = leagueParam
     ? FOOTBALL_LEAGUES.filter((l) => String(l.id) === leagueParam)
     : FOOTBALL_LEAGUES;
 
   console.log(`\n[fixtures] ── START ──────────────────────────────────────`);
-  console.log(`[fixtures] leagues to fetch: ${leagues.map(l => `${l.name}(${l.id})`).join(", ")}`);
+  console.log(`[fixtures] leagues to fetch: ${leaguesList.map(l => `${l.name}(${l.id})`).join(", ")}`);
 
-  if (leagues.length === 0) {
+  if (leaguesList.length === 0) {
     return NextResponse.json({ fixtures: [], teamLogoMap: {} });
   }
 
   const allFixtures: FixtureWithStats[] = [];
-  // teamLogoMap: name → { logo, id } for ALL upcoming fixtures (not just the enriched ones)
   const teamLogoMap: Record<string, { logo: string; id: number }> = {};
 
-  // 10-day window — enough for the next round(s) without pulling stale far-future fixtures
-  const today      = new Date().toISOString().split("T")[0];
-  const nextMonth  = new Date(Date.now() + 10 * 86_400_000).toISOString().split("T")[0];
-  console.log(`[fixtures] season: ${SEASON}  date range: ${today} → ${nextMonth}`);
+  const today    = new Date().toISOString().split("T")[0];
+  const nextWeek = new Date(Date.now() + 10 * 86_400_000).toISOString().split("T")[0];
+  console.log(`[fixtures] season: ${SEASON}  date range: ${today} → ${nextWeek}`);
 
-  // Pre-seed teamLogoMap from full league team lists (exact API names + IDs).
-  // Cached 24 h — one call per league per day. This ensures all 20 PL teams
-  // (etc.) are in the map even if they have no fixture in the next 7 days.
-  for (const league of leagues) {
-    console.log(`[fixtures] fetching team roster: league=${league.id} season=${league.season}`);
-    const teamsJson = await apiFetch<ApiLeagueTeam>("/teams", {
-      league:  league.id,
-      season:  league.season,
-    }, 86400);
-    const leagueTeams = unwrapApiFootball(teamsJson ?? ({} as ApiFootballResponse<ApiLeagueTeam>));
-    if (leagueTeams) {
-      console.log(`[fixtures]   → ${leagueTeams.length} teams in ${league.name}`);
-      for (const t of leagueTeams) {
-        if (t.team.logo) {
-          teamLogoMap[t.team.name] = { logo: t.team.logo, id: t.team.id };
-        }
-      }
-    } else {
-      console.warn(`[fixtures]   → NO teams returned for league ${league.id} (API key missing or quota hit?)`);
-    }
+  // Build teamLogoMap from DB — single query, no API calls for logos
+  const leagueIds = leaguesList.map((l) => l.id);
+  const dbTeams = await db
+    .select({ name: teams.name, logo: teams.logo, id: teams.id })
+    .from(teams)
+    .innerJoin(leagueTeams, eq(leagueTeams.teamId, teams.id))
+    .where(and(inArray(leagueTeams.leagueId, leagueIds), eq(leagueTeams.season, SEASON)));
+
+  for (const row of dbTeams) {
+    if (row.logo) teamLogoMap[row.name] = { logo: row.logo, id: row.id };
   }
+  console.log(`[fixtures] teamLogoMap from DB: ${Object.keys(teamLogoMap).length} teams`);
 
-  console.log(`[fixtures] teamLogoMap has ${Object.keys(teamLogoMap).length} teams:`, Object.keys(teamLogoMap).sort().join(", "));
-
-  for (const league of leagues) {
+  for (const league of leaguesList) {
     console.log(`\n[fixtures] fetching fixtures: league=${league.id} season=${league.season}`);
+
+    // Upcoming fixtures — genuinely future data, must come from API
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
       league:   league.id,
       season:   league.season,
       from:     today,
-      to:       nextMonth,
+      to:       nextWeek,
       timezone: "UTC",
-    }, 3600); // 1 h — fixture schedules don't change by the minute
+    }, 3600);
 
     const allLeagueFixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
     if (!allLeagueFixtures || allLeagueFixtures.length === 0) {
@@ -147,67 +215,36 @@ export async function GET(req: NextRequest) {
     const upcomingFixtures = allLeagueFixtures.filter((f) => f.fixture.status.short === "NS");
     console.log(`[fixtures]   → ${allLeagueFixtures.length} total, ${upcomingFixtures.length} upcoming (NS)`);
 
-    // Collect logos + IDs for ALL upcoming teams in this league (cheap — data already fetched)
+    // Supplement logoMap with logos returned inline by the fixtures endpoint
     for (const f of upcomingFixtures) {
       if (f.teams.home.logo) teamLogoMap[f.teams.home.name] = { logo: f.teams.home.logo, id: f.teams.home.id };
       if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = { logo: f.teams.away.logo, id: f.teams.away.id };
     }
 
-    // Enrich the first 5 fixtures with stats/H2H/predictions.
-    // Keeping this small limits API quota: 5 fixtures × 4 calls × 7 leagues = 140
-    // calls on a cold start. All sub-calls are cached 24 h so subsequent requests
-    // within the day cost nothing for already-seen team/fixture combinations.
-    const fixtures = upcomingFixtures.slice(0, 5);
-    if (fixtures.length === 0) continue;
+    const toEnrich = upcomingFixtures.slice(0, 5);
+    if (toEnrich.length === 0) continue;
 
-    console.log(`[fixtures]   enriching ${fixtures.length} fixture(s):`);
-    fixtures.forEach(f =>
-      console.log(`[fixtures]     fixture ${f.fixture.id}: ${f.teams.home.name}(${f.teams.home.id}) vs ${f.teams.away.name}(${f.teams.away.id}) on ${f.fixture.date}`)
-    );
+    console.log(`[fixtures]   enriching ${toEnrich.length} fixture(s) with DB stats + API predictions:`);
 
-    // For each fixture, fetch team stats, H2H, and predictions in parallel
-    for (const fixture of fixtures) {
-      const homeId = fixture.teams.home.id;
-      const awayId = fixture.teams.away.id;
-      const fixtureId = fixture.fixture.id;
+    for (const fixture of toEnrich) {
+      const homeId  = fixture.teams.home.id;
+      const awayId  = fixture.teams.away.id;
+      const fixId   = fixture.fixture.id;
 
-      console.log(`[fixtures]   fetching stats for fixture ${fixtureId}: team/${homeId} vs team/${awayId} in league/${league.id}`);
+      // Team stats and H2H from DB; predictions still from API (future/predictive)
+      const [homeStats, awayStats, h2h, predictionJson] = await Promise.all([
+        teamStatsFromDb(homeId, league.id, league.season),
+        teamStatsFromDb(awayId, league.id, league.season),
+        h2hFromDb(homeId, awayId),
+        apiFetch<ApiPrediction>("/predictions", { fixture: fixId }, 3600),
+      ]);
 
-      const [homeStatsJson, awayStatsJson, h2hJson, predictionJson] =
-        await Promise.all([
-          apiFetch<ApiTeamStatistics>("/teams/statistics", {
-            team:   homeId,
-            league: league.id,
-            season: league.season,
-          }, 86400), // 24 h — season stats don't change intraday
-          apiFetch<ApiTeamStatistics>("/teams/statistics", {
-            team:   awayId,
-            league: league.id,
-            season: league.season,
-          }, 86400),
-          apiFetch<ApiFixture>("/fixtures/headtohead", {
-            h2h:  `${homeId}-${awayId}`,
-            last: 10,
-          }, 86400), // 24 h — historical results are immutable
-          apiFetch<ApiPrediction>("/predictions", {
-            fixture: fixtureId,
-          }, 3600), // 1 h — predictions can update closer to kick-off
-        ]);
-
-      // Unwrap each response — /teams/statistics returns object in response[0]
-      const homeStatsRaw = unwrapApiFootball(homeStatsJson ?? ({} as ApiFootballResponse<ApiTeamStatistics>));
-      const awayStatsRaw = unwrapApiFootball(awayStatsJson ?? ({} as ApiFootballResponse<ApiTeamStatistics>));
-      const h2hFixtures  = unwrapApiFootball(h2hJson ?? ({} as ApiFootballResponse<ApiFixture>));
-      const predictions  = unwrapApiFootball(predictionJson ?? ({} as ApiFootballResponse<ApiPrediction>));
-
-      console.log(`[fixtures]     homeStats: ${homeStatsRaw?.[0] ? "✓" : "✗ missing"}  awayStats: ${awayStatsRaw?.[0] ? "✓" : "✗ missing"}  h2h: ${h2hFixtures?.length ?? 0} matches  predictions: ${predictions?.[0] ? "✓" : "✗ missing"}`);
-
-      const homeStats = homeStatsRaw?.[0] ? transformTeamStatistics(homeStatsRaw[0]) : placeholderStats();
-      const awayStats = awayStatsRaw?.[0] ? transformTeamStatistics(awayStatsRaw[0]) : placeholderStats();
-      const h2h       = h2hFixtures ? transformH2H(h2hFixtures, homeId) : { homeWins: 0, draws: 0, awayWins: 0 };
-      const markets   = predictions?.[0]
+      const predictions = unwrapApiFootball(predictionJson ?? ({} as ApiFootballResponse<ApiPrediction>));
+      const markets = predictions?.[0]
         ? transformPredictionToMarkets(predictions[0], fixture.teams.home.name, fixture.teams.away.name)
         : [];
+
+      console.log(`[fixtures]     ${fixture.teams.home.name} vs ${fixture.teams.away.name}: form=${homeStats.form.join("")}/${awayStats.form.join("")} h2h=${h2h.homeWins}-${h2h.draws}-${h2h.awayWins} pred=${predictions?.[0] ? "✓" : "✗"}`);
 
       allFixtures.push({ fixture, homeStats, awayStats, h2h, markets });
     }

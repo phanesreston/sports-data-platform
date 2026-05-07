@@ -6,34 +6,37 @@ import {
   deriveMarketsFromOdds,
 } from "@/lib/transformers";
 import type { FixtureWithStats } from "@/app/api/sports/fixtures/route";
-import { apiFetch, unwrap, TEAM_NAME_ALIASES, pickBestTeam, getTeamSearchVariants } from "@/lib/apifootball";
+import { TEAM_NAME_ALIASES } from "@/lib/apifootball";
+import { db, teams } from "@/lib/db";
+import { like } from "drizzle-orm";
 
-interface ApiTeamBasic {
-  team: { id: number; name: string; logo: string };
+// Strip diacritics so "Atlético" matches "Atletico", "Alavés" matches "Alaves", etc.
+// eslint-disable-next-line no-misleading-character-class
+const DIACRITICS_RE = /[̀-ͯ]/g;
+
+function normName(s: string): string {
+  return s.normalize("NFD").replace(DIACRITICS_RE, "").toLowerCase();
 }
 
 /**
- * Fuzzy logo lookup: tries exact match first, then checks whether either
- * string contains the other (handles "Tottenham Hotspur" ↔ "Tottenham" etc.)
- * Returns the matched value AND the key it matched on.
+ * Fuzzy logo lookup: exact → accent-insensitive substring → alias fallback.
  */
 function dataFromMap(
   map: Record<string, { logo?: string; id?: number }>,
   name: string
 ): { logo?: string; id?: number; matchedKey?: string } | undefined {
   if (map[name]) return { ...map[name], matchedKey: name };
-  const lower = name.toLowerCase();
+  const norm = normName(name);
   for (const [key, val] of Object.entries(map)) {
-    const k = key.toLowerCase();
-    if (k.includes(lower) || lower.includes(k)) return { ...val, matchedKey: key };
+    const k = normName(key);
+    if (k.includes(norm) || norm.includes(k)) return { ...val, matchedKey: key };
   }
-  // Try the API-Football nickname when no substring overlap exists (e.g. "Wolverhampton Wanderers" → "Wolves")
   const alias = TEAM_NAME_ALIASES[name];
   if (alias) {
     if (map[alias]) return { ...map[alias], matchedKey: alias };
-    const al = alias.toLowerCase();
+    const al = normName(alias);
     for (const [key, val] of Object.entries(map)) {
-      const k = key.toLowerCase();
+      const k = normName(key);
       if (k.includes(al) || al.includes(k)) return { ...val, matchedKey: key };
     }
   }
@@ -41,39 +44,39 @@ function dataFromMap(
 }
 
 /**
- * Resolve logos + IDs for team names not found in the fixture-based logoMap.
- * Uses /teams?name=X (same approach as the team route) with alias + progressive
- * variant fallback. Results cached 1 h each so subsequent requests are instant.
+ * Resolve logos + IDs for team names still missing after logoMap lookup.
+ * Searches the local DB first (no API quota consumed); logs what it finds.
  */
 async function fetchMissingTeamData(
   names: string[]
 ): Promise<Record<string, { logo?: string; id?: number }>> {
-  console.log(`[events] fetchMissingTeamData: resolving ${names.length} teams via /teams?name=X`);
+  console.log(`[events] fetchMissingTeamData: resolving ${names.length} teams from DB`);
 
   const result: Record<string, { logo?: string; id?: number }> = {};
   for (const name of names) {
+    // Build search variants: original, alias, first word
     const alias = TEAM_NAME_ALIASES[name];
-    const variants: string[] = [];
-    if (alias) variants.push(alias);
-    for (const v of getTeamSearchVariants(name)) {
-      if (!variants.includes(v)) variants.push(v);
-    }
+    const variants = [...new Set([name, ...(alias ? [alias] : []), name.split(" ")[0]])].filter(v => v.length >= 3);
 
     let found = false;
     for (const variant of variants) {
-      console.log(`[events]   GET /teams?name="${variant}" for "${name}"`);
-      const res = unwrap(await apiFetch<ApiTeamBasic>("/teams", { name: variant }, 3600));
-      if (!res?.length) { console.log(`[events]   no results`); continue; }
-      const match = pickBestTeam(res, name);
-      if (match) {
-        result[name] = { logo: match.team.logo, id: match.team.id };
-        console.log(`[events]   ✓ "${match.team.name}" (id ${match.team.id}) via "${variant}"`);
-        found = true;
-        break;
-      }
-      console.log(`[events]   all results were youth/reserve teams`);
+      const rows = await db
+        .select({ id: teams.id, name: teams.name, logo: teams.logo })
+        .from(teams)
+        .where(like(teams.name, `%${variant}%`))
+        .limit(5);
+
+      if (!rows.length) continue;
+
+      // Pick the row whose normalised name best matches the query
+      const normQuery = normName(name);
+      const match = rows.find(r => normName(r.name) === normQuery) ?? rows[0];
+      result[name] = { id: match.id, logo: match.logo };
+      console.log(`[events]   ✓ DB match: "${match.name}" (id ${match.id}) for "${name}" via "${variant}"`);
+      found = true;
+      break;
     }
-    if (!found) console.warn(`[events]   ✗ no match for "${name}"`);
+    if (!found) console.warn(`[events]   ✗ no DB match for "${name}"`);
   }
   return result;
 }
@@ -237,8 +240,7 @@ export async function GET(req: NextRequest) {
           return event;
         });
 
-        // For football events still missing logos or IDs, resolve via API-Football
-        // (cached 24 h — only costs quota on first hit per unique team name)
+        // For football events still missing logos or IDs after the logoMap lookup, try the DB
         if (s === "football") {
           const missingNames = new Set<string>();
           for (const e of transformed) {
@@ -246,7 +248,7 @@ export async function GET(req: NextRequest) {
             if (!e.awayLogo || !e.awayTeamId) missingNames.add(e.awayTeam);
           }
           if (missingNames.size > 0) {
-            console.log(`\n[events] still missing after logoMap — will search API: ${[...missingNames].join(", ")}`);
+            console.log(`\n[events] still missing after logoMap — searching DB: ${[...missingNames].join(", ")}`);
             const fetched = await fetchMissingTeamData([...missingNames]);
             for (const e of transformed) {
               const home = fetched[e.homeTeam];
