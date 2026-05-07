@@ -109,12 +109,8 @@ function DashboardContent() {
     );
   }, [events, selectedLeagueId, selectedLeagueName]);
 
-  // Top 10 events by confidence — this is all we show on the overview
   const displayed = useMemo(
-    () =>
-      [...filtered]
-        .sort((a, b) => (getTopPick(b)?.probability ?? 0) - (getTopPick(a)?.probability ?? 0))
-        .slice(0, 10),
+    () => [...filtered].sort((a, b) => (a.commenceTime ?? "").localeCompare(b.commenceTime ?? "")),
     [filtered]
   );
 

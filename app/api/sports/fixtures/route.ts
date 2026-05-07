@@ -28,6 +28,16 @@ const SEASON = (() => {
 
 const OVERVIEW_LEAGUE_IDS = [39, 140, 135, 78, 61, 2, 3];
 
+const LEAGUE_META: Record<number, { name: string; country: string; logo: string }> = {
+  39:  { name: "Premier League",   country: "England", logo: "https://media.api-sports.io/football/leagues/39.png"  },
+  140: { name: "La Liga",          country: "Spain",   logo: "https://media.api-sports.io/football/leagues/140.png" },
+  135: { name: "Serie A",          country: "Italy",   logo: "https://media.api-sports.io/football/leagues/135.png" },
+  78:  { name: "Bundesliga",       country: "Germany", logo: "https://media.api-sports.io/football/leagues/78.png"  },
+  61:  { name: "Ligue 1",          country: "France",  logo: "https://media.api-sports.io/football/leagues/61.png"  },
+  2:   { name: "UEFA Champions League", country: "World", logo: "https://media.api-sports.io/football/leagues/2.png" },
+  3:   { name: "UEFA Europa League",    country: "World", logo: "https://media.api-sports.io/football/leagues/3.png" },
+};
+
 export interface FixtureWithStats {
   fixture: ApiFixture;
   homeStats: TeamStats;
@@ -197,7 +207,7 @@ export async function GET(req: NextRequest) {
       homeTeamLogo:  homeTeam.logo,
       awayTeamName:  awayTeam.name,
       awayTeamLogo:  awayTeam.logo,
-      leagueId:      leagues.id,
+      leagueId:      fixturesTable.leagueId,
       leagueName:    leagues.name,
       leagueLogo:    leagues.logo,
       leagueCountry: leagues.country,
@@ -210,14 +220,13 @@ export async function GET(req: NextRequest) {
     .from(fixturesTable)
     .innerJoin(homeTeam, eq(homeTeam.id, fixturesTable.homeTeamId))
     .innerJoin(awayTeam, eq(awayTeam.id, fixturesTable.awayTeamId))
-    .innerJoin(leagues,  eq(leagues.id,  fixturesTable.leagueId))
+    .leftJoin(leagues,  eq(leagues.id,  fixturesTable.leagueId))
     .leftJoin(fixturePredictions, eq(fixturePredictions.fixtureId, fixturesTable.id))
     .where(and(
       eq(fixturesTable.status, "NS"),
       gt(fixturesTable.timestamp, nowSecs),
       lt(fixturesTable.timestamp, tenDaysSecs),
       inArray(fixturesTable.leagueId, leagueIds),
-      eq(fixturesTable.season, SEASON),
     ))
     .orderBy(asc(fixturesTable.timestamp))
     .limit(100);
@@ -257,9 +266,9 @@ export async function GET(req: NextRequest) {
       },
       league: {
         id:      row.leagueId,
-        name:    row.leagueName,
-        country: row.leagueCountry,
-        logo:    row.leagueLogo,
+        name:    row.leagueName    ?? LEAGUE_META[row.leagueId]?.name    ?? String(row.leagueId),
+        country: row.leagueCountry ?? LEAGUE_META[row.leagueId]?.country ?? "",
+        logo:    row.leagueLogo    ?? LEAGUE_META[row.leagueId]?.logo    ?? "",
         flag:    null,
         season:  row.season,
         round:   row.round ?? "",
