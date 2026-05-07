@@ -141,8 +141,8 @@ export async function GET(req: NextRequest) {
       const oddsData     = await parseJson<{ events: OddsApiEvent[] }>(oddsRes);
       const fixturesData = await parseJson<{ fixtures: FixtureWithStats[]; teamLogoMap: Record<string, { logo: string; id: number }> }>(fixturesRes);
 
-      console.log(`[events] oddsData: ${oddsData?.events?.length ?? 0} events  fixturesData: ${fixturesData?.fixtures?.length ?? 0} enriched fixtures`);
-      console.log(`[events] teamLogoMap from fixtures: ${Object.keys(fixturesData?.teamLogoMap ?? {}).length} teams`);
+      console.log(`[events] [API] odds: ${oddsData?.events?.length ?? 0} events`);
+      console.log(`[events] [API] fixtures: ${fixturesData?.fixtures?.length ?? 0} enriched  |  [DB] logoMap: ${Object.keys(fixturesData?.teamLogoMap ?? {}).length} teams`);
 
       // No data from either source — skip this sport entirely (no sample fallback)
       if (!oddsData?.events?.length && !fixturesData?.fixtures?.length) {
@@ -169,7 +169,7 @@ export async function GET(req: NextRequest) {
           if (f) {
             const key = `${raw.home_team}__${raw.away_team}`;
             statsMap.set(key, { home: f.homeStats, away: f.awayStats, h2h: f.h2h });
-            console.log(`[events] stats matched: "${raw.home_team}" → fixture "${f.fixture.teams.home.name}" (id ${f.fixture.teams.home.id})`);
+            console.log(`[events] [DB]  stats matched via fixture: "${raw.home_team}" → "${f.fixture.teams.home.name}" (id ${f.fixture.teams.home.id})`);
           }
         }
       }
@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
             // Normalize to the API-Football league name so all events for the same
             // league share one name ("Premier League" not "English Premier League")
             event.league      = fixtureEntry.fixture.league.name;
-            console.log(`[events]   ✓ fixture match: "${raw.home_team}" vs "${raw.away_team}" → API names: "${fixtureEntry.fixture.teams.home.name}"(${fixtureEntry.fixture.teams.home.id}) vs "${fixtureEntry.fixture.teams.away.name}"(${fixtureEntry.fixture.teams.away.id})`);
+            console.log(`[events]   [API] fixture matched: "${raw.home_team}" vs "${raw.away_team}"`);
           } else {
             // Fuzzy match against teamLogoMap (handles name variants)
             const homeData = dataFromMap(teamLogoMap2, raw.home_team);
@@ -222,8 +222,8 @@ export async function GET(req: NextRequest) {
                 event.league   = leagueInfo.name;
               }
             }
-            console.log(`[events]   ~ logoMap lookup: "${raw.home_team}" → ${homeData ? `matched "${homeData.matchedKey}" logo=${!!homeData.logo} id=${homeData.id}` : "✗ NOT FOUND"}`);
-            console.log(`[events]   ~ logoMap lookup: "${raw.away_team}" → ${awayData ? `matched "${awayData.matchedKey}" logo=${!!awayData.logo} id=${awayData.id}` : "✗ NOT FOUND"}`);
+            console.log(`[events]   [DB]  logoMap "${raw.home_team}" → ${homeData ? `"${homeData.matchedKey}" ✓` : "✗ NOT FOUND"}`);
+            console.log(`[events]   [DB]  logoMap "${raw.away_team}" → ${awayData ? `"${awayData.matchedKey}" ✓` : "✗ NOT FOUND"}`);
           }
 
           // Patch bestOdds back onto prediction-derived markets
@@ -248,7 +248,7 @@ export async function GET(req: NextRequest) {
             if (!e.awayLogo || !e.awayTeamId) missingNames.add(e.awayTeam);
           }
           if (missingNames.size > 0) {
-            console.log(`\n[events] still missing after logoMap — searching DB: ${[...missingNames].join(", ")}`);
+            console.log(`[events] [DB]  logo fallback for: ${[...missingNames].join(", ")}`);
             const fetched = await fetchMissingTeamData([...missingNames]);
             for (const e of transformed) {
               const home = fetched[e.homeTeam];
@@ -259,11 +259,11 @@ export async function GET(req: NextRequest) {
               if (!e.awayTeamId && away?.id)    e.awayTeamId = away.id;
             }
           } else {
-            console.log(`[events] all football events have logos — no fallback search needed`);
+            console.log(`[events] [DB]  all logos resolved from logoMap — no fallback needed`);
           }
 
           // Final summary per event
-          console.log(`\n[events] final event logo/id summary for ${s}:`);
+          console.log(`[events] logo/id summary:`);
           for (const e of transformed) {
             console.log(`[events]   "${e.homeTeam}" logo=${!!e.homeLogo}  |  "${e.awayTeam}" logo=${!!e.awayLogo}`);
           }

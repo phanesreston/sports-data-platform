@@ -192,10 +192,10 @@ export async function GET(req: NextRequest) {
   for (const row of dbTeams) {
     if (row.logo) teamLogoMap[row.name] = { logo: row.logo, id: row.id };
   }
-  console.log(`[fixtures] teamLogoMap from DB: ${Object.keys(teamLogoMap).length} teams`);
+  console.log(`[fixtures] [DB]  teamLogoMap: ${Object.keys(teamLogoMap).length} teams loaded from DB`);
 
   for (const league of leaguesList) {
-    console.log(`\n[fixtures] fetching fixtures: league=${league.id} season=${league.season}`);
+    console.log(`\n[fixtures] [API] fetching upcoming fixtures: league=${league.id} season=${league.season}`);
 
     // Upcoming fixtures — genuinely future data, must come from API
     const fixturesJson = await apiFetch<ApiFixture>("/fixtures", {
@@ -208,12 +208,12 @@ export async function GET(req: NextRequest) {
 
     const allLeagueFixtures = unwrapApiFootball(fixturesJson ?? ({} as ApiFootballResponse<ApiFixture>));
     if (!allLeagueFixtures || allLeagueFixtures.length === 0) {
-      console.warn(`[fixtures]   → no fixtures returned for league ${league.id}`);
+      console.warn(`[fixtures] [API] ✗ no fixtures returned for league ${league.id}`);
       continue;
     }
 
     const upcomingFixtures = allLeagueFixtures.filter((f) => f.fixture.status.short === "NS");
-    console.log(`[fixtures]   → ${allLeagueFixtures.length} total, ${upcomingFixtures.length} upcoming (NS)`);
+    console.log(`[fixtures] [API] ✓ ${allLeagueFixtures.length} total, ${upcomingFixtures.length} upcoming (NS)`);
 
     // Supplement logoMap with logos returned inline by the fixtures endpoint
     for (const f of upcomingFixtures) {
@@ -224,12 +224,12 @@ export async function GET(req: NextRequest) {
     const toEnrich = upcomingFixtures.slice(0, 5);
     if (toEnrich.length === 0) continue;
 
-    console.log(`[fixtures]   enriching ${toEnrich.length} fixture(s) with DB stats + API predictions:`);
-
     for (const fixture of toEnrich) {
       const homeId  = fixture.teams.home.id;
       const awayId  = fixture.teams.away.id;
       const fixId   = fixture.fixture.id;
+
+      console.log(`[fixtures]   ${fixture.teams.home.name} vs ${fixture.teams.away.name} (fixture ${fixId}):`);
 
       // Team stats and H2H from DB; predictions still from API (future/predictive)
       const [homeStats, awayStats, h2h, predictionJson] = await Promise.all([
@@ -244,7 +244,10 @@ export async function GET(req: NextRequest) {
         ? transformPredictionToMarkets(predictions[0], fixture.teams.home.name, fixture.teams.away.name)
         : [];
 
-      console.log(`[fixtures]     ${fixture.teams.home.name} vs ${fixture.teams.away.name}: form=${homeStats.form.join("")}/${awayStats.form.join("")} h2h=${h2h.homeWins}-${h2h.draws}-${h2h.awayWins} pred=${predictions?.[0] ? "✓" : "✗"}`);
+      console.log(`[fixtures]     [DB]  homeStats: form=${homeStats.form.join("") || "—"} avg=${homeStats.avgScored}/${homeStats.avgConceded}`);
+      console.log(`[fixtures]     [DB]  awayStats: form=${awayStats.form.join("") || "—"} avg=${awayStats.avgScored}/${awayStats.avgConceded}`);
+      console.log(`[fixtures]     [DB]  h2h: ${h2h.homeWins}W-${h2h.draws}D-${h2h.awayWins}L`);
+      console.log(`[fixtures]     [API] predictions: ${predictions?.[0] ? "✓" : "✗ missing"}`);
 
       allFixtures.push({ fixture, homeStats, awayStats, h2h, markets });
     }
