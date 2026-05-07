@@ -263,9 +263,9 @@ export async function GET(req: NextRequest) {
           }
 
           // Final summary per event
-          console.log(`[events] logo/id summary:`);
+          console.log(`[events] [DB]  logo/id summary:`);
           for (const e of transformed) {
-            console.log(`[events]   "${e.homeTeam}" logo=${!!e.homeLogo}  |  "${e.awayTeam}" logo=${!!e.awayLogo}`);
+            console.log(`[events]   [DB]  "${e.homeTeam}" logo=${!!e.homeLogo}  |  "${e.awayTeam}" logo=${!!e.awayLogo}`);
           }
         }
 
@@ -312,7 +312,7 @@ export async function GET(req: NextRequest) {
           });
         }
         if (fixtureOnlyCount.added > 0) {
-          console.log(`[events] added ${fixtureOnlyCount.added} unmatched API-Football fixtures (non-EPL leagues)`);
+          console.log(`[events] [API] added ${fixtureOnlyCount.added} unmatched fixtures (non-EPL leagues)`);
         }
       }
     }
