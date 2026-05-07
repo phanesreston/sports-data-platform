@@ -160,6 +160,12 @@ async function h2hFromDb(homeTeamId: number, awayTeamId: number): Promise<H2HSta
   return { homeWins, draws, awayWins };
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Max predictions per league — keeps cold-start API calls within rate limits.
+// 7 leagues × 2 = 14 prediction calls + 7 fixture-list calls = 21 total per cold start.
+const MAX_ENRICHED_PER_LEAGUE = 2;
+
 export async function GET(req: NextRequest) {
   const leagueParam = req.nextUrl.searchParams.get("league");
 
@@ -194,7 +200,11 @@ export async function GET(req: NextRequest) {
   }
   console.log(`[fixtures] [DB]  teamLogoMap: ${Object.keys(teamLogoMap).length} teams loaded from DB`);
 
-  for (const league of leaguesList) {
+  for (let li = 0; li < leaguesList.length; li++) {
+    const league = leaguesList[li];
+    // Brief gap between league fixture-list calls to avoid per-minute rate limit
+    if (li > 0) await sleep(400);
+
     console.log(`\n[fixtures] [API] fetching upcoming fixtures: league=${league.id} season=${league.season}`);
 
     // Upcoming fixtures — genuinely future data, must come from API
@@ -221,22 +231,30 @@ export async function GET(req: NextRequest) {
       if (f.teams.away.logo) teamLogoMap[f.teams.away.name] = { logo: f.teams.away.logo, id: f.teams.away.id };
     }
 
-    const toEnrich = upcomingFixtures.slice(0, 5);
+    const toEnrich = upcomingFixtures.slice(0, MAX_ENRICHED_PER_LEAGUE);
     if (toEnrich.length === 0) continue;
 
-    for (const fixture of toEnrich) {
+    for (let i = 0; i < toEnrich.length; i++) {
+      const fixture = toEnrich[i];
       const homeId  = fixture.teams.home.id;
       const awayId  = fixture.teams.away.id;
       const fixId   = fixture.fixture.id;
 
+      // Stagger API calls: 600 ms gap between each prediction call so we stay
+      // within the free-tier rate limit (~10 req/min = 6 s apart in theory,
+      // but a short pause is enough because fixture-list calls and DB queries
+      // fill the gaps between leagues).
+      if (i > 0) await sleep(600);
+
       console.log(`[fixtures]   ${fixture.teams.home.name} vs ${fixture.teams.away.name} (fixture ${fixId}):`);
 
-      // Team stats and H2H from DB; predictions still from API (future/predictive)
+      // DB for stats/H2H; API only for predictions (genuinely future data).
+      // Predictions cached 24 h — they rarely change day-to-day pre-match.
       const [homeStats, awayStats, h2h, predictionJson] = await Promise.all([
         teamStatsFromDb(homeId, league.id, league.season),
         teamStatsFromDb(awayId, league.id, league.season),
         h2hFromDb(homeId, awayId),
-        apiFetch<ApiPrediction>("/predictions", { fixture: fixId }, 3600),
+        apiFetch<ApiPrediction>("/predictions", { fixture: fixId }, 86400),
       ]);
 
       const predictions = unwrapApiFootball(predictionJson ?? ({} as ApiFootballResponse<ApiPrediction>));
