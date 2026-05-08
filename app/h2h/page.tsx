@@ -16,6 +16,11 @@ interface SquadPlayer {
   id: number; name: string; position: string; number: number | null; photo: string;
 }
 
+interface PlayerSearchResult {
+  id: number; name: string; photo: string | null; position: string | null;
+  team: { id: number; name: string; logo: string } | null;
+}
+
 interface H2HMatch {
   date: string;
   homeTeamId: number; homeTeam: string; homeLogo: string; homeScore: number | null;
@@ -156,17 +161,18 @@ function TeamSearchBox({
   );
 }
 
-// Squad player picker — shows after a team is selected in Player mode
-function PlayerPicker({
-  squad, loading, selected, onSelect, onClear,
+// Player search input with dropdown (name → team shown as subtitle)
+function PlayerSearchBox({
+  placeholder, value, onChange, results, onSelect, onClear, loading,
 }: {
-  squad: SquadPlayer[];
-  loading: boolean;
-  selected: SquadPlayer | null;
-  onSelect: (p: SquadPlayer) => void;
+  placeholder: string;
+  value: string;
+  onChange: (q: string) => void;
+  results: PlayerSearchResult[];
+  onSelect: (item: PlayerSearchResult) => void;
   onClear: () => void;
+  loading: boolean;
 }) {
-  const [filter, setFilter] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -176,67 +182,53 @@ function PlayerPicker({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Reset filter when squad changes
-  useEffect(() => { setFilter(""); }, [squad]);
-
-  const filtered = squad.filter((p) =>
-    !filter || p.name.toLowerCase().includes(filter.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="flex h-12 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-slate-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-accent-green" />
-        Loading squad…
-      </div>
-    );
-  }
-
-  if (squad.length === 0) return null;
+  useEffect(() => { if (results.length > 0) setOpen(true); }, [results]);
 
   return (
     <div className="relative" ref={ref}>
       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-        <User className="h-4 w-4 text-slate-500" />
+        {loading
+          ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-accent-green" />
+          : <User className="h-4 w-4 text-slate-500" />}
       </div>
       <input
-        value={selected ? selected.name : filter}
-        onChange={(e) => {
-          setFilter(e.target.value);
-          if (selected) onClear();
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder="Filter players…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        placeholder={placeholder}
         className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-9 text-sm text-white placeholder-slate-600 outline-none transition focus:border-accent-green/50 focus:ring-2 focus:ring-accent-green/20"
       />
-      {(selected || filter) && (
-        <button
-          onClick={() => { onClear(); setFilter(""); setOpen(false); }}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-200"
-        >
+      {value && (
+        <button onClick={onClear} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-200">
           <X className="h-4 w-4" />
         </button>
       )}
-      {open && !selected && filtered.length > 0 && (
-        <div className="absolute z-50 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-white/10 bg-bg-card shadow-xl [scrollbar-width:thin]">
-          {filtered.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => { onSelect(p); setFilter(""); setOpen(false); }}
+      {open && results.length > 0 && (
+        <div className="absolute z-50 mt-1.5 max-h-64 w-full overflow-y-auto rounded-xl border border-white/10 bg-bg-card shadow-xl [scrollbar-width:thin]">
+          {results.map((p) => (
+            <button key={p.id} onClick={() => { onSelect(p); setOpen(false); }}
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/5"
             >
-              {p.photo && (
+              {p.photo ? (
                 <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
                   <Image src={p.photo} alt="" fill className="object-cover" sizes="28px" />
+                </div>
+              ) : (
+                <div className="h-7 w-7 shrink-0 rounded-full bg-white/8 flex items-center justify-center">
+                  <User className="h-3.5 w-3.5 text-slate-500" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{p.name}</p>
                 <p className="text-xs text-slate-500">
-                  {p.position}{p.number != null ? ` · #${p.number}` : ""}
+                  {p.team?.name ?? "Unknown team"}{p.position ? ` · ${p.position}` : ""}
                 </p>
               </div>
+              {p.team?.logo && (
+                <div className="relative h-5 w-5 shrink-0">
+                  <Image src={p.team.logo} alt="" fill className="object-contain" sizes="20px" />
+                </div>
+              )}
               <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-600" />
             </button>
           ))}
@@ -503,16 +495,12 @@ export default function H2HPage() {
   const [loading2, setLoading2] = useState(false);
   const [team2, setTeam2] = useState<TeamResult | null>(null);
 
-  // player mode — player's team
-  const [pTeamQuery, setPTeamQuery] = useState("");
-  const [pTeamResults, setPTeamResults] = useState<TeamResult[]>([]);
-  const [pTeamLoading, setPTeamLoading] = useState(false);
-  const [playerTeam, setPlayerTeam] = useState<TeamResult | null>(null);
-
-  // player mode — squad + selected player
-  const [squad, setSquad] = useState<SquadPlayer[]>([]);
-  const [squadLoading, setSquadLoading] = useState(false);
+  // player mode — direct player search
+  const [playerQuery, setPlayerQuery] = useState("");
+  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
+  const [playerLoading, setPlayerLoading] = useState(false);
   const [player, setPlayer] = useState<SquadPlayer | null>(null);
+  const [playerTeam, setPlayerTeam] = useState<TeamResult | null>(null);
 
   // results
   const [h2hMatches, setH2hMatches] = useState<H2HMatch[] | null>(null);
@@ -523,7 +511,7 @@ export default function H2HPage() {
 
   const db1 = useRef<ReturnType<typeof setTimeout> | null>(null);
   const db2 = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dbP = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dbPl = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounced team search 1 (Teams mode left)
   useEffect(() => {
@@ -551,30 +539,18 @@ export default function H2HPage() {
     }, 300);
   }, [query2]);
 
-  // Debounced player-team search (Player mode left)
+  // Debounced player search (Player mode left)
   useEffect(() => {
-    if (pTeamQuery.length < 2) { setPTeamResults([]); return; }
-    if (dbP.current) clearTimeout(dbP.current);
-    dbP.current = setTimeout(() => {
-      setPTeamLoading(true);
-      fetch(`/api/football/search?q=${encodeURIComponent(pTeamQuery)}`)
-        .then((r) => r.ok ? r.json() : { teams: [] })
-        .then((d) => setPTeamResults(d.teams ?? []))
-        .finally(() => setPTeamLoading(false));
+    if (playerQuery.length < 3) { setPlayerResults([]); return; }
+    if (dbPl.current) clearTimeout(dbPl.current);
+    dbPl.current = setTimeout(() => {
+      setPlayerLoading(true);
+      fetch(`/api/football/player-search?q=${encodeURIComponent(playerQuery)}`)
+        .then((r) => r.ok ? r.json() : { players: [] })
+        .then((d) => setPlayerResults(d.players ?? []))
+        .finally(() => setPlayerLoading(false));
     }, 300);
-  }, [pTeamQuery]);
-
-  // Fetch squad when playerTeam is set
-  useEffect(() => {
-    if (!playerTeam) { setSquad([]); return; }
-    setSquadLoading(true);
-    setPlayer(null);
-    fetch(`/api/football/team-squad?team=${playerTeam.id}`)
-      .then((r) => r.ok ? r.json() : { players: [] })
-      .then((d) => setSquad(d.players ?? []))
-      .catch(() => setSquad([]))
-      .finally(() => setSquadLoading(false));
-  }, [playerTeam]);
+  }, [playerQuery]);
 
   // Fetch team H2H when both teams selected
   useEffect(() => {
@@ -611,9 +587,8 @@ export default function H2HPage() {
     setTeam1(null); setTeam2(null);
     setQuery1(""); setQuery2("");
     setResults1([]); setResults2([]);
-    setPlayerTeam(null); setPlayer(null);
-    setPTeamQuery(""); setPTeamResults([]);
-    setSquad([]);
+    setPlayer(null); setPlayerTeam(null);
+    setPlayerQuery(""); setPlayerResults([]);
     setH2hMatches(null); setPlayerH2H(null); setError(null);
   }, []);
 
@@ -672,31 +647,23 @@ export default function H2HPage() {
                 />
               </div>
             ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player&apos;s Team</label>
-                  <TeamSearchBox
-                    placeholder="Search team…"
-                    value={playerTeam ? playerTeam.name : pTeamQuery}
-                    onChange={(q) => { setPTeamQuery(q); if (playerTeam) { setPlayerTeam(null); setPlayer(null); setPlayerH2H(null); } }}
-                    results={pTeamResults}
-                    loading={pTeamLoading}
-                    onSelect={(t) => { setPlayerTeam(t); setPTeamQuery(t.name); setPTeamResults([]); }}
-                    onClear={() => { setPlayerTeam(null); setPTeamQuery(""); setPlayer(null); setSquad([]); setPlayerH2H(null); }}
-                  />
-                </div>
-                {playerTeam && (
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player</label>
-                    <PlayerPicker
-                      squad={squad}
-                      loading={squadLoading}
-                      selected={player}
-                      onSelect={(p) => { setPlayer(p); setPlayerH2H(null); }}
-                      onClear={() => { setPlayer(null); setPlayerH2H(null); }}
-                    />
-                  </div>
-                )}
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-slate-500">Player</label>
+                <PlayerSearchBox
+                  placeholder="Search player by name…"
+                  value={player ? player.name : playerQuery}
+                  onChange={(q) => { setPlayerQuery(q); if (player) { setPlayer(null); setPlayerTeam(null); setPlayerH2H(null); } }}
+                  results={playerResults}
+                  loading={playerLoading}
+                  onSelect={(p) => {
+                    setPlayer({ id: p.id, name: p.name, position: p.position ?? "", number: null, photo: p.photo ?? "" });
+                    setPlayerTeam(p.team ? { id: p.team.id, name: p.team.name, logo: p.team.logo, country: "" } : null);
+                    setPlayerQuery(p.name);
+                    setPlayerResults([]);
+                    setPlayerH2H(null);
+                  }}
+                  onClear={() => { setPlayer(null); setPlayerTeam(null); setPlayerQuery(""); setPlayerH2H(null); }}
+                />
               </div>
             )}
 
@@ -775,11 +742,9 @@ export default function H2HPage() {
               <p className="text-lg font-semibold text-slate-400">
                 {mode === "teams"
                   ? "Select two teams to compare their H2H record"
-                  : !playerTeam
-                    ? "Start by selecting the player's team"
-                    : !player
-                      ? "Now select a player from the squad"
-                      : "Select an opponent to see the H2H record"}
+                  : !player
+                    ? "Search for a player by name"
+                    : "Select an opponent to see the H2H record"}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 {mode === "teams" ? "Shows up to 20 historical meetings with stats breakdown." : "Shows goals, assists, ratings and more across all H2H matches."}
