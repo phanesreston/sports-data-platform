@@ -105,10 +105,21 @@ async function syncFixtures() {
 
       for (const row of rows as {
         fixture: { id: number; date: string; timestamp: number; status: { short: string } };
-        league:  { season: number; round: string };
-        teams:   { home: { id: number }; away: { id: number } };
+        league:  { id: number; name: string; country: string; logo: string; season: number; round: string };
+        teams:   { home: { id: number; name: string; logo: string }; away: { id: number; name: string; logo: string } };
         goals:   { home: number | null; away: number | null };
       }[]) {
+        // Ensure league + both teams exist before inserting fixture (FK constraints)
+        await db.insert(schema.leagues).values({
+          id: leagueId, name: row.league.name, country: row.league.country, logo: row.league.logo ?? "", updatedAt: now,
+        }).onConflictDoNothing();
+        await db.insert(schema.teams).values({
+          id: row.teams.home.id, name: row.teams.home.name, logo: row.teams.home.logo ?? "", country: "", updatedAt: now,
+        }).onConflictDoNothing();
+        await db.insert(schema.teams).values({
+          id: row.teams.away.id, name: row.teams.away.name, logo: row.teams.away.logo ?? "", country: "", updatedAt: now,
+        }).onConflictDoNothing();
+
         await db.insert(schema.fixtures).values({
           id:         row.fixture.id,
           leagueId,
