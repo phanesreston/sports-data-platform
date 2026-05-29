@@ -11,6 +11,7 @@ import AnalyticsTicker from "@/components/AnalyticsTicker";
 import BetRankingsTable from "@/components/BetRankingsTable";
 
 const LEAGUE_NAMES: Record<number, string> = {
+  1:   "World Cup",
   39:  "Premier League",
   140: "La Liga",
   135: "Serie A",

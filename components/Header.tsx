@@ -13,9 +13,9 @@ const NAV_LINKS = [
   { label: "How It Works",     href: "/how-it-works"     },
 ];
 
-// Top European leagues + cups — same IDs as TOP_LEAGUES in the API
 const LEAGUE_TABS = [
   { id: null, label: "All" },
+  { id: 1,    label: "World Cup" },
   { id: 39,   label: "Premier League" },
   { id: 140,  label: "La Liga" },
   { id: 135,  label: "Serie A" },

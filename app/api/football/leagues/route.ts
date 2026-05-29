@@ -17,6 +17,7 @@ const SEASON = currentSeason();
 
 // Flags aren't stored in the DB — overlay them by ID.
 const LEAGUE_META: Record<number, { name: string; country: string; flag: string }> = {
+  1:   { name: "FIFA World Cup",   country: "World",   flag: "🌍" },
   39:  { name: "Premier League",  country: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
   40:  { name: "Championship",    country: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
   140: { name: "La Liga",         country: "Spain",   flag: "🇪🇸" },
@@ -32,13 +33,14 @@ const LEAGUE_META: Record<number, { name: string; country: string; flag: string 
 };
 
 export const TOP_LEAGUES = [
-  { id: 39,  name: "Premier League",  country: "England",  flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { id: 140, name: "La Liga",          country: "Spain",    flag: "🇪🇸" },
-  { id: 135, name: "Serie A",          country: "Italy",    flag: "🇮🇹" },
-  { id: 78,  name: "Bundesliga",       country: "Germany",  flag: "🇩🇪" },
-  { id: 61,  name: "Ligue 1",          country: "France",   flag: "🇫🇷" },
-  { id: 2,   name: "Champions League", country: "Europe",   flag: "🏆" },
-  { id: 3,   name: "Europa League",    country: "Europe",   flag: "🇪🇺" },
+  { id: 1,   name: "FIFA World Cup",   country: "World",    flag: "🌍" },
+  { id: 39,  name: "Premier League",   country: "England",  flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: 140, name: "La Liga",           country: "Spain",    flag: "🇪🇸" },
+  { id: 135, name: "Serie A",           country: "Italy",    flag: "🇮🇹" },
+  { id: 78,  name: "Bundesliga",        country: "Germany",  flag: "🇩🇪" },
+  { id: 61,  name: "Ligue 1",           country: "France",   flag: "🇫🇷" },
+  { id: 2,   name: "Champions League",  country: "Europe",   flag: "🏆" },
+  { id: 3,   name: "Europa League",     country: "Europe",   flag: "🇪🇺" },
 ];
 
 const TOP_IDS = TOP_LEAGUES.map((l) => l.id);

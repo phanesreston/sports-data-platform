@@ -24,8 +24,14 @@ import { db, fixtures, fixturePredictions, leagues, teams } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 const BASE = "https://v3.football.api-sports.io";
-const ALL_LEAGUE_IDS      = [39, 40, 140, 141, 135, 136, 78, 79, 61, 62, 2, 3];
-const OVERVIEW_LEAGUE_IDS = [39, 140, 135, 78, 61, 2, 3];
+const ALL_LEAGUE_IDS      = [1, 39, 40, 140, 141, 135, 136, 78, 79, 61, 62, 2, 3];
+const OVERVIEW_LEAGUE_IDS = [1, 39, 140, 135, 78, 61, 2, 3];
+
+// International tournaments (World Cup etc.) run in calendar years, not Aug-May.
+const CALENDAR_YEAR_LEAGUES = new Set([1]);
+function leagueSeason(leagueId: number): number {
+  return CALENDAR_YEAR_LEAGUES.has(leagueId) ? new Date().getFullYear() : currentSeason();
+}
 
 function currentSeason() {
   const now = new Date();
@@ -51,10 +57,9 @@ async function apiFetch(path: string, params: Record<string, string | number>) {
 // ── sync upcoming fixture list ─────────────────────────────────────────────────
 
 async function syncFixtures(): Promise<{ updated: number; errors: number }> {
-  const SEASON = currentSeason();
-  const now    = Date.now();
-  const from   = new Date(now - 7  * 86400_000).toISOString().slice(0, 10);
-  const to     = new Date(now + 14 * 86400_000).toISOString().slice(0, 10);
+  const now  = Date.now();
+  const from = new Date(now - 7  * 86400_000).toISOString().slice(0, 10);
+  const to   = new Date(now + 14 * 86400_000).toISOString().slice(0, 10);
 
   let updated = 0, errors = 0;
 
@@ -62,7 +67,7 @@ async function syncFixtures(): Promise<{ updated: number; errors: number }> {
     const leagueId = ALL_LEAGUE_IDS[i];
     if (i > 0) await sleep(400);
     try {
-      const rows = await apiFetch("/fixtures", { league: leagueId, season: SEASON, from, to });
+      const rows = await apiFetch("/fixtures", { league: leagueId, season: leagueSeason(leagueId), from, to });
       for (const row of rows as {
         fixture: { id: number; date: string; timestamp: number; status: { short: string } };
         league:  { id: number; name: string; country: string; logo: string; season: number; round: string };

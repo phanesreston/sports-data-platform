@@ -24,15 +24,21 @@ const API_KEY  = process.env.API_SPORTS_KEY;
 const DB_URL   = process.env.DATABASE_URL ?? "file:./sports.db";
 const DB_TOKEN = process.env.DATABASE_AUTH_TOKEN;
 
-// Domestic leagues + CL + EL
-const LEAGUE_IDS = [39, 40, 140, 141, 135, 136, 78, 79, 61, 62, 2, 3];
+// Domestic leagues + CL + EL + FIFA World Cup
+const LEAGUE_IDS = [1, 39, 40, 140, 141, 135, 136, 78, 79, 61, 62, 2, 3];
 
-// The 7 leagues shown on the overview (subset used for predictions)
-const OVERVIEW_LEAGUE_IDS = [39, 140, 135, 78, 61, 2, 3];
+// The leagues shown on the overview (subset used for predictions)
+const OVERVIEW_LEAGUE_IDS = [1, 39, 140, 135, 78, 61, 2, 3];
 
 function currentSeason(): number {
   const now = new Date();
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+// International tournaments run in calendar years, not Aug-May club seasons.
+const CALENDAR_YEAR_LEAGUES = new Set([1]); // FIFA World Cup
+function leagueSeason(leagueId: number): number {
+  return CALENDAR_YEAR_LEAGUES.has(leagueId) ? new Date().getFullYear() : currentSeason();
 }
 
 const BASE = "https://v3.football.api-sports.io";
@@ -93,13 +99,13 @@ async function syncSquads() {
 
 async function syncFixtures() {
   console.log("\n📅 Syncing fixtures (last 7 days + next 14 days)…");
-  const SEASON = currentSeason();
-  const now    = Date.now();
+  const now = Date.now();
 
   for (const leagueId of LEAGUE_IDS) {
     try {
-      const from = new Date(Date.now() - 7  * 86400_000).toISOString().slice(0, 10);
-      const to   = new Date(Date.now() + 14 * 86400_000).toISOString().slice(0, 10);
+      const from   = new Date(Date.now() - 7  * 86400_000).toISOString().slice(0, 10);
+      const to     = new Date(Date.now() + 14 * 86400_000).toISOString().slice(0, 10);
+      const SEASON = leagueSeason(leagueId);
 
       const rows = await apiFetch("/fixtures", { league: leagueId, season: SEASON, from, to });
 

@@ -26,16 +26,17 @@ const SEASON = (() => {
   return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
 })();
 
-const OVERVIEW_LEAGUE_IDS = [39, 140, 135, 78, 61, 2, 3];
+const OVERVIEW_LEAGUE_IDS = [1, 39, 140, 135, 78, 61, 2, 3];
 
 const LEAGUE_META: Record<number, { name: string; country: string; logo: string }> = {
-  39:  { name: "Premier League",   country: "England", logo: "https://media.api-sports.io/football/leagues/39.png"  },
-  140: { name: "La Liga",          country: "Spain",   logo: "https://media.api-sports.io/football/leagues/140.png" },
-  135: { name: "Serie A",          country: "Italy",   logo: "https://media.api-sports.io/football/leagues/135.png" },
-  78:  { name: "Bundesliga",       country: "Germany", logo: "https://media.api-sports.io/football/leagues/78.png"  },
-  61:  { name: "Ligue 1",          country: "France",  logo: "https://media.api-sports.io/football/leagues/61.png"  },
-  2:   { name: "UEFA Champions League", country: "World", logo: "https://media.api-sports.io/football/leagues/2.png" },
-  3:   { name: "UEFA Europa League",    country: "World", logo: "https://media.api-sports.io/football/leagues/3.png" },
+  1:   { name: "FIFA World Cup",        country: "World",   logo: "https://media.api-sports.io/football/leagues/1.png"   },
+  39:  { name: "Premier League",        country: "England", logo: "https://media.api-sports.io/football/leagues/39.png"  },
+  140: { name: "La Liga",               country: "Spain",   logo: "https://media.api-sports.io/football/leagues/140.png" },
+  135: { name: "Serie A",               country: "Italy",   logo: "https://media.api-sports.io/football/leagues/135.png" },
+  78:  { name: "Bundesliga",            country: "Germany", logo: "https://media.api-sports.io/football/leagues/78.png"  },
+  61:  { name: "Ligue 1",               country: "France",  logo: "https://media.api-sports.io/football/leagues/61.png"  },
+  2:   { name: "UEFA Champions League", country: "World",   logo: "https://media.api-sports.io/football/leagues/2.png"   },
+  3:   { name: "UEFA Europa League",    country: "World",   logo: "https://media.api-sports.io/football/leagues/3.png"   },
 };
 
 export interface FixtureWithStats {

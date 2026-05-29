@@ -52,6 +52,8 @@ export interface LeagueProfile {
 
 // Maps league display names to API-Football numeric league IDs
 export const LEAGUE_NAME_TO_ID: Record<string, number> = {
+  "FIFA World Cup":           1,
+  "World Cup":                1,
   "Premier League":           39,
   "La Liga":                  140,
   "Serie A":                  135,
