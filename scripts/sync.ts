@@ -104,7 +104,7 @@ async function syncFixtures() {
   for (const leagueId of LEAGUE_IDS) {
     try {
       const from   = new Date(Date.now() - 7  * 86400_000).toISOString().slice(0, 10);
-      const to     = new Date(Date.now() + 14 * 86400_000).toISOString().slice(0, 10);
+      const to     = new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
       const SEASON = leagueSeason(leagueId);
 
       const rows = await apiFetch("/fixtures", { league: leagueId, season: SEASON, from, to });

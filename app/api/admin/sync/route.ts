@@ -59,7 +59,7 @@ async function apiFetch(path: string, params: Record<string, string | number>) {
 async function syncFixtures(): Promise<{ updated: number; errors: number }> {
   const now  = Date.now();
   const from = new Date(now - 7  * 86400_000).toISOString().slice(0, 10);
-  const to   = new Date(now + 14 * 86400_000).toISOString().slice(0, 10);
+  const to   = new Date(now + 30 * 86400_000).toISOString().slice(0, 10);
 
   let updated = 0, errors = 0;
 

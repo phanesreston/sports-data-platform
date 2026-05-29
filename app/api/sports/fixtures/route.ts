@@ -186,8 +186,8 @@ export async function GET(req: NextRequest) {
   console.log(`[fixtures] [DB] teamLogoMap: ${Object.keys(teamLogoMap).length} teams`);
 
   // ── 2. Upcoming fixtures with predictions from DB ────────────────────────────
-  const nowSecs    = Math.floor(Date.now() / 1000);
-  const tenDaysSecs = nowSecs + 10 * 86400;
+  const nowSecs     = Math.floor(Date.now() / 1000);
+  const thirtyDaysSecs = nowSecs + 30 * 86400;
 
   const homeTeam = alias(teams, "home_team");
   const awayTeam = alias(teams, "away_team");
@@ -226,11 +226,11 @@ export async function GET(req: NextRequest) {
     .where(and(
       eq(fixturesTable.status, "NS"),
       gt(fixturesTable.timestamp, nowSecs),
-      lt(fixturesTable.timestamp, tenDaysSecs),
+      lt(fixturesTable.timestamp, thirtyDaysSecs),
       inArray(fixturesTable.leagueId, leagueIds),
     ))
     .orderBy(asc(fixturesTable.timestamp))
-    .limit(100);
+    .limit(500);
 
   console.log(`[fixtures] [DB] ${rows.length} upcoming fixtures found`);
 
