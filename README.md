@@ -1,66 +1,48 @@
-# WeLikeSportz
+# Football Database
 
-A sports odds comparison platform that helps users make smarter betting decisions by surfacing the best available odds across 40+ sports and 80+ bookmakers.
+PHP/MySQL World Cup 2026 tracker running on Apache.
 
-## Vision
+## First-time setup on server
 
-Real-time odds aggregation + statistical insights — all in one clean, fast interface.
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 14 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Odds Data | [The Odds API](https://the-odds-api.com/) |
-| Sports Stats | [API-Sports](https://api-sports.io/) |
-| Horse Racing | [The Racing API](https://theracingapi.com/) |
-| Stats Data | Sample data (v1) |
-
-## Getting Started
+**1. Create your config files** (these are gitignored and never committed):
 
 ```bash
-npm install
-npm run dev
+cp config.example.php config.php
+cp config.example.py config.py
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Edit both files and fill in your DB password and API Sports key.
 
-## Environment Variables
-
-Copy `.env.local.example` to `.env.local` and add your API key:
+**2. Install Python dependency:**
 
 ```bash
-cp .env.local.example .env.local
+pip install mysql-connector-python
 ```
 
-```
-ODDS_API_KEY=your_key_from_the_odds_api
-API_SPORTS_KEY=your_key_from_api_sports_io
-RACING_API_KEY=your_key_from_theracingapi
-```
+**3. Populate the database:**
 
-## Project Structure
-
-```
-app/              # Next.js App Router pages + layout
-components/       # UI components
-  Header.tsx      # Sticky nav with WeLikeSportz branding
-  Hero.tsx        # Landing hero section
-  SportFilter.tsx # Filter tabs by sport
-  OddsCard.tsx    # Individual event odds card
-  OddsFeed.tsx    # Filterable odds grid
-  Footer.tsx      # Site footer
-data/
-  sampleOdds.ts   # Sample odds data + helper functions
+```bash
+python3 insert_leagues.py   # league metadata
+python3 insert_teams.py     # World Cup team profiles
+python3 sync_fixtures.py    # fixtures for each team
+python3 sync_statistics.py  # match stats (finished games only)
 ```
 
-## Roadmap
+## Day-to-day workflow
 
-- [x] V1: Homepage with live odds feed + sport filter
-- [ ] V2: Live Odds API integration (The Odds API)
-- [ ] V3: Sports stats integration (API-Sports)
-- [ ] V4: Horse racing — racecards, results, form & analysis (The Racing API)
-- [ ] V5: Statistical insights & value indicators
-- [ ] V6: User accounts, saved events, alerts
+Edit files here, commit, then on the server:
+
+```bash
+git pull
+```
+
+`config.php` and `config.py` are gitignored so they're never touched by a pull.
+
+## Re-syncing data
+
+Run these any time to pick up new results/fixtures:
+
+```bash
+python3 sync_fixtures.py    # updates scores and status
+python3 sync_statistics.py  # adds stats for newly finished games
+```
