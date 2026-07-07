@@ -36,6 +36,23 @@ if ($view === 'teams') {
         LIMIT $perPage OFFSET $offset
     ")->fetch_all(MYSQLI_ASSOC);
 
+} elseif ($view === 'players') {
+    $search = trim($_GET['q'] ?? '');
+    $where  = $search ? "WHERE p.name LIKE '%" . $conn->real_escape_string($search) . "%' OR p.nationality LIKE '%" . $conn->real_escape_string($search) . "%'" : '';
+    $total  = $conn->query("SELECT COUNT(DISTINCT p.id) FROM players p $where")->fetch_row()[0];
+    $rows   = $conn->query("
+        SELECT p.id, p.name, p.nationality, p.photo,
+               ps.position, ps.season,
+               t.name AS team_name, t.logo AS team_logo
+        FROM players p
+        LEFT JOIN player_stats ps ON ps.player_id = p.id
+        LEFT JOIN teams t ON t.id = ps.team_id
+        $where
+        GROUP BY p.id
+        ORDER BY p.name
+        LIMIT $perPage OFFSET $offset
+    ")->fetch_all(MYSQLI_ASSOC);
+
 } else {
     $view   = 'leagues';
     $search = trim($_GET['q'] ?? '');
@@ -243,6 +260,7 @@ function viewUrl($v) {
         <a href="<?= viewUrl('leagues') ?>" class="<?= $view==='leagues'?'active':'' ?>">🏆 Leagues</a>
         <a href="<?= viewUrl('teams')   ?>" class="<?= $view==='teams'  ?'active':'' ?>">👥 Teams</a>
         <a href="<?= viewUrl('fixtures')?>" class="<?= $view==='fixtures'?'active':'' ?>">📅 Fixtures</a>
+        <a href="<?= viewUrl('players') ?>" class="<?= $view==='players'?'active':'' ?>">🧑 Players</a>
     </div>
 </nav>
 
@@ -250,7 +268,7 @@ function viewUrl($v) {
 
     <div class="toolbar">
         <h1>
-            <?= $view === 'leagues' ? 'Leagues' : ($view === 'teams' ? 'Teams' : 'Fixtures') ?>
+            <?= $view === 'leagues' ? 'Leagues' : ($view === 'teams' ? 'Teams' : ($view === 'fixtures' ? 'Fixtures' : 'Players')) ?>
         </h1>
         <span class="count"><?= number_format($total) ?> total</span>
         <form method="get" class="search-wrap" style="margin:0">
@@ -342,6 +360,39 @@ function viewUrl($v) {
                 </td>
                 <td style="font-size:13px;color:#666"><?= htmlspecialchars($r['league_name'] ?? '—') ?></td>
                 <td><span class="pill <?= $pill ?>"><?= $r['status_short'] ?></span></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+
+    <?php elseif ($view === 'players'): ?>
+        <table>
+            <thead><tr>
+                <th>Photo</th><th>Name</th><th>Nationality</th><th>Position</th><th>Team</th><th>Season</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($rows as $r): ?>
+            <tr>
+                <td>
+                    <?php if ($r['photo']): ?>
+                        <img src="<?= htmlspecialchars($r['photo']) ?>" height="32" width="32"
+                             style="border-radius:50%;object-fit:cover">
+                    <?php endif; ?>
+                </td>
+                <td><a class="row-link" href="player.php?id=<?= $r['id'] ?>"><?= htmlspecialchars($r['name']) ?></a></td>
+                <td style="color:#666"><?= htmlspecialchars($r['nationality'] ?? '—') ?></td>
+                <td style="color:#666"><?= htmlspecialchars($r['position'] ?? '—') ?></td>
+                <td>
+                    <?php if ($r['team_name']): ?>
+                        <div class="team-row" style="gap:6px">
+                            <?= $r['team_logo'] ? "<img src='{$r['team_logo']}' style='width:18px;height:18px;object-fit:contain'>" : '' ?>
+                            <span style="font-size:13px"><?= htmlspecialchars($r['team_name']) ?></span>
+                        </div>
+                    <?php else: ?>
+                        <span style="color:#aaa">—</span>
+                    <?php endif; ?>
+                </td>
+                <td style="color:#888;font-size:13px"><?= $r['season'] ?? '—' ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>

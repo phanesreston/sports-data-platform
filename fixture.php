@@ -222,6 +222,7 @@ $ai_text = ob_get_clean();
         <a href="index.php?view=leagues">🏆 Leagues</a>
         <a href="index.php?view=teams">👥 Teams</a>
         <a href="index.php?view=fixtures">📅 Fixtures</a>
+        <a href="index.php?view=players">🧑 Players</a>
     </div>
 </nav>
 
