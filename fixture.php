@@ -138,6 +138,11 @@ $ai_text = ob_get_clean();
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #f5f5f5; color: #333; }
 
+        .navbar { background: #111; color: white; display: flex; align-items: center; padding: 0 24px; height: 54px; gap: 32px; }
+        .nav-brand { font-size: 1rem; font-weight: 800; color: white; text-decoration: none; }
+        .nav-links { display: flex; gap: 4px; }
+        .nav-links a { color: #aaa; text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 14px; border-radius: 6px; }
+        .nav-links a:hover { color: white; background: #222; }
         .back { display: inline-block; margin: 20px; color: #1a73e8; text-decoration: none; font-size: 14px; }
         .back:hover { text-decoration: underline; }
 
@@ -210,6 +215,15 @@ $ai_text = ob_get_clean();
     </style>
 </head>
 <body>
+
+<nav class="navbar">
+    <a href="index.php" class="nav-brand">⚽ Football DB</a>
+    <div class="nav-links">
+        <a href="index.php?view=leagues">🏆 Leagues</a>
+        <a href="index.php?view=teams">👥 Teams</a>
+        <a href="index.php?view=fixtures">📅 Fixtures</a>
+    </div>
+</nav>
 
 <a href="javascript:history.back()" class="back">← Back</a>
 
