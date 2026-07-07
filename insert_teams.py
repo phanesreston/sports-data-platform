@@ -2,57 +2,6 @@ import urllib.request, json, time
 import mysql.connector
 from config import API_KEY, DB
 
-TEAM_IDS = [
-    1532,  # Algeria
-    26,    # Argentina
-    20,    # Australia
-    775,   # Austria
-    1,     # Belgium
-    1113,  # Bosnia and Herzegovina
-    6,     # Brazil
-    5529,  # Canada
-    1533,  # Cape Verde
-    8,     # Colombia
-    3,     # Croatia
-    5530,  # Curaçao
-    770,   # Czech Republic
-    1508,  # DR Congo
-    2382,  # Ecuador
-    32,    # Egypt
-    10,    # England
-    2,     # France
-    25,    # Germany
-    1504,  # Ghana
-    2386,  # Haiti
-    22,    # Iran
-    1567,  # Iraq
-    1501,  # Ivory Coast
-    12,    # Japan
-    1548,  # Jordan
-    16,    # Mexico
-    31,    # Morocco
-    1118,  # Netherlands
-    4673,  # New Zealand
-    1090,  # Norway
-    11,    # Panama
-    2380,  # Paraguay
-    27,    # Portugal
-    1569,  # Qatar
-    23,    # Saudi Arabia
-    1108,  # Scotland
-    13,    # Senegal
-    1531,  # South Africa
-    17,    # South Korea
-    9,     # Spain
-    5,     # Sweden
-    15,    # Switzerland
-    28,    # Tunisia
-    777,   # Turkey
-    2384,  # United States
-    7,     # Uruguay
-    1568,  # Uzbekistan
-]
-
 def fetch_team(team_id):
     req = urllib.request.Request(
         f"https://v3.football.api-sports.io/teams?id={team_id}",
@@ -109,6 +58,11 @@ def upsert_team(cursor, team, venue):
 
 conn   = mysql.connector.connect(**DB)
 cursor = conn.cursor()
+
+# Fetch all team IDs from the DB — includes any added by sync_fixtures.py
+cursor.execute("SELECT id FROM teams ORDER BY id")
+TEAM_IDS = [row[0] for row in cursor.fetchall()]
+print(f"{len(TEAM_IDS)} teams to update")
 
 for i, team_id in enumerate(TEAM_IDS):
     try:

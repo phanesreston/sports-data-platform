@@ -2,17 +2,6 @@ import urllib.request, json, time
 import mysql.connector
 from config import API_KEY, DB
 
-LEAGUE_IDS = [
-    1,    # FIFA World Cup
-    2,    # UEFA Champions League
-    3,    # UEFA Europa League
-    39,   # Premier League
-    140,  # La Liga
-    135,  # Serie A
-    78,   # Bundesliga
-    61,   # Ligue 1
-]
-
 def fetch_league(league_id):
     req = urllib.request.Request(
         f"https://v3.football.api-sports.io/leagues?id={league_id}",
@@ -67,6 +56,11 @@ def upsert_league(cursor, result):
 
 conn   = mysql.connector.connect(**DB)
 cursor = conn.cursor()
+
+# Fetch all league IDs from the DB — includes any added by sync_fixtures.py
+cursor.execute("SELECT id FROM leagues ORDER BY id")
+LEAGUE_IDS = [row[0] for row in cursor.fetchall()]
+print(f"{len(LEAGUE_IDS)} leagues to update")
 
 for i, league_id in enumerate(LEAGUE_IDS):
     try:
