@@ -44,8 +44,15 @@ def upsert_stats(cursor, player_id, team_id, s):
     fo = s.get("fouls",     {})
     ca = s.get("cards",     {})
     pe = s.get("penalty",   {})
-    league_id = s.get("league", {}).get("id")
-    season    = s.get("league", {}).get("season")
+    league_info = s.get("league", {})
+    league_id   = league_info.get("id")
+    season      = league_info.get("season")
+
+    if league_id:
+        cursor.execute("""
+            INSERT IGNORE INTO leagues (id, name, type, country_name)
+            VALUES (%s, %s, %s, %s)
+        """, (league_id, league_info.get("name"), league_info.get("type"), league_info.get("country")))
 
     rating_raw = g.get("rating")
     rating = float(rating_raw) if rating_raw else None
