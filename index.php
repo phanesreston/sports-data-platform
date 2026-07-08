@@ -40,10 +40,12 @@ if ($view === 'teams') {
     $search = trim($_GET['q'] ?? '');
     $where  = $search ? "WHERE p.name LIKE '%" . $conn->real_escape_string($search) . "%' OR p.nationality LIKE '%" . $conn->real_escape_string($search) . "%'" : '';
     $total  = $conn->query("SELECT COUNT(DISTINCT p.id) FROM players p $where")->fetch_row()[0];
-    $rows   = $conn->query("
+    $result = $conn->query("
         SELECT p.id, p.name, p.nationality, p.photo,
-               ps.position, ps.season,
-               t.name AS team_name, t.logo AS team_logo
+               ANY_VALUE(ps.position) AS position,
+               ANY_VALUE(ps.season)   AS season,
+               ANY_VALUE(t.name)      AS team_name,
+               ANY_VALUE(t.logo)      AS team_logo
         FROM players p
         LEFT JOIN player_stats ps ON ps.player_id = p.id
         LEFT JOIN teams t ON t.id = ps.team_id
@@ -51,7 +53,8 @@ if ($view === 'teams') {
         GROUP BY p.id
         ORDER BY p.name
         LIMIT $perPage OFFSET $offset
-    ")->fetch_all(MYSQLI_ASSOC);
+    ");
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 
 } else {
     $view   = 'leagues';
