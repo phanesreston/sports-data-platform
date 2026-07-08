@@ -51,18 +51,25 @@ foreach ($fixtures as $f) {
     <title><?= htmlspecialchars($league['name']) ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f5f5f5; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
 
         .navbar { background: #111; color: white; display: flex; align-items: center; padding: 0 24px; height: 54px; gap: 32px; }
         .nav-brand { font-size: 1rem; font-weight: 800; color: white; text-decoration: none; }
         .nav-links { display: flex; gap: 4px; }
         .nav-links a { color: #aaa; text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 14px; border-radius: 6px; }
         .nav-links a:hover { color: white; background: #222; }
-        .back { display: inline-block; margin: 20px; color: #1a73e8; text-decoration: none; font-size: 14px; }
-        .back:hover { text-decoration: underline; }
+        .breadcrumb {
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 10px 24px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .breadcrumb a { color: #555; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a73e8; }
 
         .header {
-            background: #222;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
             padding: 40px;
             display: flex;
@@ -72,7 +79,7 @@ foreach ($fixtures as $f) {
         .header img { width: 90px; height: 90px; object-fit: contain; }
         .header h1  { font-size: 2rem; margin-bottom: 6px; }
         .header p   { color: #aaa; font-size: 0.95rem; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #444; color: #ddd; margin-top: 8px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.15); color: #ddd; margin-top: 8px; }
 
         .content { max-width: 900px; margin: 30px auto; padding: 0 20px; }
 
@@ -90,11 +97,14 @@ foreach ($fixtures as $f) {
             letter-spacing: 0.08em;
             color: #888;
             margin-bottom: 16px;
+            border-left: 3px solid #1a73e8;
+            padding-left: 10px;
         }
 
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .info-item label { display: block; font-size: 12px; color: #888; margin-bottom: 2px; }
-        .info-item span  { font-size: 1.05rem; font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-item { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 12px 14px; }
+        .info-item label { display: block; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .info-item span  { font-size: 1rem; font-weight: 600; }
 
         .round-header {
             font-size: 11px;
@@ -197,7 +207,9 @@ foreach ($fixtures as $f) {
     </div>
 </nav>
 
-<a href="index.php?view=leagues" class="back">← Back to leagues</a>
+<div class="breadcrumb">
+    <a href="index.php">Home</a> › <a href="index.php?view=leagues">Leagues</a> › <?= htmlspecialchars($league['name']) ?>
+</div>
 
 <div class="header">
     <?php if ($league['logo']): ?>

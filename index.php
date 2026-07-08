@@ -82,7 +82,7 @@ function viewUrl($v) {
     <title>Football Database</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
 
         /* ── Nav ── */
         .navbar {
@@ -184,7 +184,8 @@ function viewUrl($v) {
             vertical-align: middle;
         }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafcff; }
+        tr.clickable { cursor: pointer; }
+        tr.clickable:hover td { background: #f0f6ff; }
         a.row-link { color: #1a73e8; text-decoration: none; font-weight: 600; }
         a.row-link:hover { text-decoration: underline; }
 
@@ -293,7 +294,7 @@ function viewUrl($v) {
             </tr></thead>
             <tbody>
             <?php foreach ($rows as $r): ?>
-            <tr>
+            <tr class="clickable" onclick="location.href='league.php?id=<?= $r['id'] ?>'">
                 <td><?= $r['logo'] ? "<img src='{$r['logo']}' height='26' style='object-fit:contain'>" : '' ?></td>
                 <td><a class="row-link" href="league.php?id=<?= $r['id'] ?>"><?= htmlspecialchars($r['name']) ?></a></td>
                 <td><span class="badge <?= strtolower($r['type'] ?? '') ?>"><?= htmlspecialchars($r['type'] ?? '—') ?></span></td>
@@ -310,7 +311,7 @@ function viewUrl($v) {
             </tr></thead>
             <tbody>
             <?php foreach ($rows as $r): ?>
-            <tr>
+            <tr class="clickable" onclick="location.href='team.php?id=<?= $r['id'] ?>'">
                 <td><?= $r['logo'] ? "<img src='{$r['logo']}' height='26' style='object-fit:contain'>" : '' ?></td>
                 <td><a class="row-link" href="team.php?id=<?= $r['id'] ?>"><?= htmlspecialchars($r['name']) ?></a></td>
                 <td style="color:#888"><?= htmlspecialchars($r['code'] ?? '') ?></td>
@@ -333,7 +334,7 @@ function viewUrl($v) {
                 $live     = in_array($r['status_short'], ['1H','2H','HT','ET','P']);
                 $pill     = $finished ? 'ft' : ($live ? 'live' : 'ns');
             ?>
-            <tr>
+            <tr class="clickable" onclick="location.href='fixture.php?id=<?= $r['id'] ?>'">
                 <td style="white-space:nowrap;color:#888;font-size:12px">
                     <?= date('d M Y', strtotime($r['date'])) ?><br>
                     <?= date('H:i', strtotime($r['date'])) ?> UTC
@@ -375,7 +376,7 @@ function viewUrl($v) {
             </tr></thead>
             <tbody>
             <?php foreach ($rows as $r): ?>
-            <tr>
+            <tr class="clickable" onclick="location.href='player.php?id=<?= $r['id'] ?>'">
                 <td>
                     <?php if ($r['photo']): ?>
                         <img src="<?= htmlspecialchars($r['photo']) ?>" height="32" width="32"

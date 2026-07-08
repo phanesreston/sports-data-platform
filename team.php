@@ -44,7 +44,7 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
     <title><?= htmlspecialchars($team['name']) ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f5f5f5; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
 
         .navbar { background: #111; color: white; display: flex; align-items: center; padding: 0 24px; height: 54px; gap: 32px; }
         .nav-brand { font-size: 1rem; font-weight: 800; color: white; text-decoration: none; }
@@ -54,8 +54,18 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
         .back { display: inline-block; margin: 20px; color: #1a73e8; text-decoration: none; font-size: 14px; }
         .back:hover { text-decoration: underline; }
 
+        .breadcrumb {
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 10px 24px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .breadcrumb a { color: #555; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a73e8; }
+
         .header {
-            background: #222;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
             padding: 40px;
             display: flex;
@@ -82,11 +92,14 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
             letter-spacing: 0.08em;
             color: #888;
             margin-bottom: 16px;
+            border-left: 3px solid #1a73e8;
+            padding-left: 10px;
         }
 
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .info-item label { display: block; font-size: 12px; color: #888; margin-bottom: 2px; }
-        .info-item span  { font-size: 1.05rem; font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-item { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 12px 14px; }
+        .info-item label { display: block; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .info-item span  { font-size: 1rem; font-weight: 600; }
 
         table { border-collapse: collapse; width: 100%; font-size: 14px; }
         th {
@@ -117,9 +130,17 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
             text-align: center;
             white-space: nowrap;
         }
-        .score.win  { color: #155724; }
-        .score.loss { color: #721c24; }
-        .score.draw { color: #555; }
+        .result-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        .result-pill.win  { background: #d4edda; color: #155724; }
+        .result-pill.loss { background: #f8d7da; color: #721c24; }
+        .result-pill.draw { background: #f0f0f0; color: #555; }
 
         .pill {
             display: inline-block;
@@ -157,7 +178,9 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
 </nav>
 
-<a href="index.php?view=teams" class="back">← Back to teams</a>
+<div class="breadcrumb">
+    <a href="index.php">Home</a> › <a href="index.php?view=teams">Teams</a> › <?= htmlspecialchars($team['name']) ?>
+</div>
 
 <div class="header">
     <?php if ($team['logo']): ?>
@@ -286,11 +309,12 @@ $fixtures = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
                             </div>
                         </a>
                     </td>
-                    <td>
+                    <td style="white-space:nowrap">
                         <?php if ($finished || $live): ?>
-                            <span class="score <?= $result_class ?>">
-                                <?= $f['home_goals'] ?> – <?= $f['away_goals'] ?>
-                            </span>
+                            <span class="score"><?= $f['home_goals'] ?> – <?= $f['away_goals'] ?></span>
+                            <?php if ($finished && $result_class): ?>
+                                <span class="result-pill <?= $result_class ?>"><?= strtoupper($result_class) ?></span>
+                            <?php endif; ?>
                         <?php else: ?>
                             <span style="color:#bbb;font-size:13px">—</span>
                         <?php endif; ?>

@@ -46,7 +46,7 @@ function pct($won, $total) {
     <title><?= htmlspecialchars($player['name']) ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f0f2f5; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
 
         .navbar { background: #111; color: white; display: flex; align-items: center; padding: 0 24px; height: 54px; gap: 32px; }
         .nav-brand { font-size: 1rem; font-weight: 800; color: white; text-decoration: none; }
@@ -54,8 +54,15 @@ function pct($won, $total) {
         .nav-links a { color: #aaa; text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 14px; border-radius: 6px; }
         .nav-links a:hover { color: white; background: #222; }
 
-        .back { display: inline-block; margin: 20px; color: #1a73e8; text-decoration: none; font-size: 14px; }
-        .back:hover { text-decoration: underline; }
+        .breadcrumb {
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 10px 24px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .breadcrumb a { color: #555; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a73e8; }
 
         /* ── Header ── */
         .header {
@@ -146,22 +153,22 @@ function pct($won, $total) {
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #999;
+            color: #888;
             margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #f0f0f0;
+            border-left: 3px solid #1a73e8;
+            padding-left: 10px;
         }
 
         /* ── Stat grid ── */
         .stat-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 12px;
+            gap: 10px;
         }
-        .stat-item {}
-        .stat-item .s-lbl { font-size: 12px; color: #999; margin-bottom: 3px; }
-        .stat-item .s-val { font-size: 1.2rem; font-weight: 700; color: #222; }
-        .stat-item .s-sub { font-size: 11px; color: #aaa; margin-top: 1px; }
+        .stat-item { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 14px 16px; }
+        .stat-item .s-lbl { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+        .stat-item .s-val { font-size: 1.25rem; font-weight: 700; color: #222; }
+        .stat-item .s-sub { font-size: 11px; color: #aaa; margin-top: 3px; }
 
         /* ── Season history table ── */
         table { border-collapse: collapse; width: 100%; font-size: 13px; }
@@ -187,7 +194,9 @@ function pct($won, $total) {
     </div>
 </nav>
 
-<a href="index.php?view=players" class="back">← Back to players</a>
+<div class="breadcrumb">
+    <a href="index.php">Home</a> › <a href="index.php?view=players">Players</a> › <?= htmlspecialchars($player['name']) ?>
+</div>
 
 <!-- Player header -->
 <div class="header">

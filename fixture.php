@@ -136,17 +136,24 @@ $ai_text = ob_get_clean();
     <title><?= htmlspecialchars($f['home_name']) ?> vs <?= htmlspecialchars($f['away_name']) ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f5f5f5; color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
 
         .navbar { background: #111; color: white; display: flex; align-items: center; padding: 0 24px; height: 54px; gap: 32px; }
         .nav-brand { font-size: 1rem; font-weight: 800; color: white; text-decoration: none; }
         .nav-links { display: flex; gap: 4px; }
         .nav-links a { color: #aaa; text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 14px; border-radius: 6px; }
         .nav-links a:hover { color: white; background: #222; }
-        .back { display: inline-block; margin: 20px; color: #1a73e8; text-decoration: none; font-size: 14px; }
-        .back:hover { text-decoration: underline; }
+        .breadcrumb {
+            background: white;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 10px 24px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .breadcrumb a { color: #555; text-decoration: none; }
+        .breadcrumb a:hover { color: #1a73e8; }
 
-        .header { background: #111; color: white; padding: 36px 20px; text-align: center; }
+        .header { background: linear-gradient(180deg, #111 0%, #1a1a2e 100%); color: white; padding: 36px 20px; text-align: center; }
         .teams  { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
         .team   { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 120px; }
         .team img { width: 70px; height: 70px; object-fit: contain; }
@@ -177,11 +184,14 @@ $ai_text = ob_get_clean();
             letter-spacing: 0.08em;
             color: #888;
             margin-bottom: 0;
+            border-left: 3px solid #1a73e8;
+            padding-left: 10px;
         }
 
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .info-item label { display: block; font-size: 12px; color: #888; margin-bottom: 2px; }
-        .info-item span  { font-size: 1.05rem; font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-item { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 12px 14px; }
+        .info-item label { display: block; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .info-item span  { font-size: 1rem; font-weight: 600; }
 
         .stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
         .stat-val { font-weight: 700; font-size: 15px; width: 60px; }
@@ -226,7 +236,9 @@ $ai_text = ob_get_clean();
     </div>
 </nav>
 
-<a href="javascript:history.back()" class="back">← Back</a>
+<div class="breadcrumb">
+    <a href="index.php">Home</a> › <a href="index.php?view=fixtures">Fixtures</a> › <?= htmlspecialchars($f['home_name']) ?> vs <?= htmlspecialchars($f['away_name']) ?>
+</div>
 
 <!-- Match header -->
 <div class="header">
